@@ -336,7 +336,7 @@ body.home #resetBtn{display:none}
     </main>
 
     <p class="hint" id="hint"></p>
-    <p class="foot"><span class="build" id="build">B56</span></p>
+    <p class="foot"><span class="build" id="build">B57</span></p>
   </div>
 </div>
 
@@ -344,7 +344,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B56";
+const BUILD = "B57";
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
 const SB_KEY = "sb_publishable_4mXRj6JDcG1aJyuOWmF8-Q_hjHIRid7";
@@ -353,56 +353,56 @@ const SITE_URL = location.origin + location.pathname;
 
 /* 50 fruits. Photos for Apple and Cherry; emoji or a drawn portrait for the rest. */
 const FRUITS = [
-  {n:"Apple",img:"assets/apple.png",c:"#b3121c"},
-  {n:"Apricot",c:"#f4a259"},
-  {n:"Avocado",e:"🥑",c:"#3f5e2a"},
-  {n:"Banana",e:"🍌",c:"#e0a800"},
-  {n:"Blackberry",c:"#3b1e4a"},
-  {n:"Blueberry",e:"🫐",c:"#3d4fa0"},
-  {n:"Cantaloupe",e:"🍈",c:"#e8a060"},
-  {n:"Cherry",img:"assets/cherry.png",c:"#8e0c16"},
-  {n:"Clementine",c:"#ff9a3c"},
-  {n:"Coconut",e:"🥥",c:"#7a5a40"},
-  {n:"Cranberry",c:"#9b1b30"},
-  {n:"Date",c:"#7a4a26"},
-  {n:"Dragonfruit",c:"#c8207a"},
-  {n:"Durian",c:"#b8a040"},
-  {n:"Elderberry",c:"#3e2450"},
-  {n:"Fig",c:"#6b3fa0"},
-  {n:"Gooseberry",c:"#7fa82e"},
-  {n:"Grapefruit",c:"#ff6f5e"},
-  {n:"Grapes",e:"🍇",c:"#6d3a8f"},
-  {n:"Guava",c:"#e89090"},
-  {n:"Honeydew",c:"#c5dc7a"},
-  {n:"Jackfruit",c:"#c99a12"},
-  {n:"Kiwi",e:"🥝",c:"#5c9a28"},
-  {n:"Kumquat",c:"#ffb347"},
-  {n:"Lemon",e:"🍋",c:"#d8c21e"},
-  {n:"Lime",c:"#8cc22a"},
-  {n:"Lychee",c:"#e89a92"},
-  {n:"Mandarin",c:"#ff8c2e"},
-  {n:"Mango",e:"🥭",c:"#f09a10"},
-  {n:"Mangosteen",c:"#5a2040"},
-  {n:"Nectarine",c:"#e0583e"},
-  {n:"Olive",e:"🫒",c:"#6b7a2e"},
-  {n:"Orange",e:"🍊",c:"#ff7f00"},
-  {n:"Papaya",c:"#ff9150"},
-  {n:"Passionfruit",c:"#4e3370"},
-  {n:"Peach",e:"🍑",c:"#e89070"},
-  {n:"Pear",e:"🍐",c:"#a8c040"},
-  {n:"Persimmon",c:"#e0582a"},
-  {n:"Pineapple",e:"🍍",c:"#e8b830"},
-  {n:"Plum",c:"#6e2c6e"},
-  {n:"Pomegranate",c:"#a3123c"},
-  {n:"Pomelo",c:"#dce88a"},
-  {n:"Quince",c:"#c8b048"},
-  {n:"Raspberry",c:"#c9164a"},
-  {n:"Starfruit",c:"#e8c83a"},
-  {n:"Strawberry",e:"🍓",c:"#d92a40"},
-  {n:"Tangerine",c:"#ff7a1a"},
-  {n:"Tomato",e:"🍅",c:"#d8301e"},
-  {n:"Watermelon",e:"🍉",c:"#1f8f4a"},
-  {n:"Yuzu",c:"#d8cc3a"}
+  {n:"Apple",img:"assets/fruit/apple.jpg",c:"#b3121c"},
+  {n:"Apricot",img:"assets/fruit/apricot.jpg",c:"#f4a259"},
+  {n:"Avocado",img:"assets/fruit/avocado.jpg",e:"🥑",c:"#3f5e2a"},
+  {n:"Banana",img:"assets/fruit/banana.jpg",e:"🍌",c:"#e0a800"},
+  {n:"Blackberry",img:"assets/fruit/blackberry.jpg",c:"#3b1e4a"},
+  {n:"Blueberry",img:"assets/fruit/blueberry.jpg",e:"🫐",c:"#3d4fa0"},
+  {n:"Cantaloupe",img:"assets/fruit/cantaloupe.jpg",e:"🍈",c:"#e8a060"},
+  {n:"Cherry",img:"assets/fruit/cherry.jpg",c:"#8e0c16"},
+  {n:"Clementine",img:"assets/fruit/clementine.jpg",c:"#ff9a3c"},
+  {n:"Coconut",img:"assets/fruit/coconut.jpg",e:"🥥",c:"#7a5a40"},
+  {n:"Cranberry",img:"assets/fruit/cranberry.jpg",c:"#9b1b30"},
+  {n:"Date",img:"assets/fruit/date.jpg",c:"#7a4a26"},
+  {n:"Dragonfruit",img:"assets/fruit/dragonfruit.jpg",c:"#c8207a"},
+  {n:"Durian",img:"assets/fruit/durian.jpg",c:"#b8a040"},
+  {n:"Elderberry",img:"assets/fruit/elderberry.jpg",c:"#3e2450"},
+  {n:"Fig",img:"assets/fruit/fig.jpg",c:"#6b3fa0"},
+  {n:"Gooseberry",img:"assets/fruit/gooseberry.jpg",c:"#7fa82e"},
+  {n:"Grapefruit",img:"assets/fruit/grapefruit.jpg",c:"#ff6f5e"},
+  {n:"Grapes",img:"assets/fruit/grapes.jpg",e:"🍇",c:"#6d3a8f"},
+  {n:"Guava",img:"assets/fruit/guava.jpg",c:"#e89090"},
+  {n:"Honeydew",img:"assets/fruit/honeydew.jpg",c:"#c5dc7a"},
+  {n:"Jackfruit",img:"assets/fruit/jackfruit.jpg",c:"#c99a12"},
+  {n:"Kiwi",img:"assets/fruit/kiwi.jpg",e:"🥝",c:"#5c9a28"},
+  {n:"Kumquat",img:"assets/fruit/kumquat.jpg",c:"#ffb347"},
+  {n:"Lemon",img:"assets/fruit/lemon.jpg",e:"🍋",c:"#d8c21e"},
+  {n:"Lime",img:"assets/fruit/lime.jpg",c:"#8cc22a"},
+  {n:"Lychee",img:"assets/fruit/lychee.jpg",c:"#e89a92"},
+  {n:"Mandarin",img:"assets/fruit/mandarin.jpg",c:"#ff8c2e"},
+  {n:"Mango",img:"assets/fruit/mango.jpg",e:"🥭",c:"#f09a10"},
+  {n:"Mangosteen",img:"assets/fruit/mangosteen.jpg",c:"#5a2040"},
+  {n:"Nectarine",img:"assets/fruit/nectarine.jpg",c:"#e0583e"},
+  {n:"Olive",img:"assets/fruit/olive.jpg",e:"🫒",c:"#6b7a2e"},
+  {n:"Orange",img:"assets/fruit/orange.jpg",e:"🍊",c:"#ff7f00"},
+  {n:"Papaya",img:"assets/fruit/papaya.jpg",c:"#ff9150"},
+  {n:"Passionfruit",img:"assets/fruit/passionfruit.jpg",c:"#4e3370"},
+  {n:"Peach",img:"assets/fruit/peach.jpg",e:"🍑",c:"#e89070"},
+  {n:"Pear",img:"assets/fruit/pear.jpg",e:"🍐",c:"#a8c040"},
+  {n:"Persimmon",img:"assets/fruit/persimmon.jpg",c:"#e0582a"},
+  {n:"Pineapple",img:"assets/fruit/pineapple.jpg",e:"🍍",c:"#e8b830"},
+  {n:"Plum",img:"assets/fruit/plum.jpg",c:"#6e2c6e"},
+  {n:"Pomegranate",img:"assets/fruit/pomegranate.jpg",c:"#a3123c"},
+  {n:"Pomelo",img:"assets/fruit/pomelo.jpg",c:"#dce88a"},
+  {n:"Quince",img:"assets/fruit/quince.jpg",c:"#c8b048"},
+  {n:"Raspberry",img:"assets/fruit/raspberry.jpg",c:"#c9164a"},
+  {n:"Starfruit",img:"assets/fruit/starfruit.jpg",c:"#e8c83a"},
+  {n:"Strawberry",img:"assets/fruit/strawberry.jpg",e:"🍓",c:"#d92a40"},
+  {n:"Tangerine",img:"assets/fruit/tangerine.jpg",c:"#ff7a1a"},
+  {n:"Tomato",img:"assets/fruit/tomato.jpg",e:"🍅",c:"#d8301e"},
+  {n:"Watermelon",img:"assets/fruit/watermelon.jpg",e:"🍉",c:"#1f8f4a"},
+  {n:"Yuzu",img:"assets/fruit/yuzu.jpg",c:"#d8cc3a"}
 ];
 /* Dog breeds: common breeds, plus Labradoodle and Goldendoodle. No photos yet, so each gets a letter portrait. */
 const DOG_NAMES = ["Labrador Retriever", "French Bulldog", "Golden Retriever", "German Shepherd", "Poodle", "Bulldog", "Rottweiler", "Beagle", "Dachshund", "German Shorthaired Pointer", "Pembroke Welsh Corgi", "Australian Shepherd", "Yorkshire Terrier", "Boxer", "Cavalier King Charles Spaniel", "Doberman Pinscher", "Great Dane", "Miniature Schnauzer", "Siberian Husky", "Bernese Mountain Dog", "Shih Tzu", "Boston Terrier", "Pomeranian", "Havanese", "Shetland Sheepdog", "Brittany", "English Springer Spaniel", "Cocker Spaniel", "Maltese", "Chihuahua", "Border Collie", "Vizsla", "Weimaraner", "Collie", "Bichon Frise", "Basset Hound", "Pug", "Mastiff", "Saint Bernard", "Greyhound", "Dalmatian", "Australian Cattle Dog", "Newfoundland", "Rhodesian Ridgeback", "Shiba Inu", "Labradoodle", "Goldendoodle", "Akita", "Alaskan Malamute", "Chow Chow", "Jack Russell Terrier", "Lhasa Apso", "Papillon", "Pekingese", "Shar-Pei", "Whippet", "Bloodhound", "Samoyed", "Scottish Terrier", "Irish Setter", "Great Pyrenees", "Miniature Pinscher", "Cane Corso", "Bull Terrier"];
