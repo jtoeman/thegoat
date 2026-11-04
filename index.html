@@ -363,7 +363,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B66";
+const BUILD = "B67";
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
 const SB_KEY = "sb_publishable_4mXRj6JDcG1aJyuOWmF8-Q_hjHIRid7";
@@ -525,7 +525,7 @@ CATEGORIES.forEach(cat => {
 });
 /* Mashups: every category's items in one shuffled pool. Each item keeps its own portrait style. */
 const MASHUP = {id:"mashup", name:"Mashups", e:"🎲", bg:"linear-gradient(135deg,#8a2be2,#ff2d95)", items:[], ladderKey:"goat_mashup_ladder_v1", seeded:false, art:"letter", mashup:true};
-CATEGORIES.forEach(cat => cat.items.forEach(f => { f.art = cat.art; MASHUP.items.push(f); }));
+CATEGORIES.forEach(cat => cat.items.forEach(f => { f.art = cat.art; if(!f.img && cat.art === "letter") f.img = "assets/" + cat.id + "/" + photoSlug(f.n) + ".jpg"; MASHUP.items.push(f); }));
 MASHUP.byName = {}; MASHUP.bySlug = {};
 MASHUP.items.forEach(f => { MASHUP.byName[f.n] = f; MASHUP.bySlug[f.s] = f; });
 /* Word list. The game reads the "GOAT words" workbook when the page loads (see README for the layout):
@@ -556,6 +556,8 @@ function parseCSV(text){
 }
 /* Rebuilds CATEGORIES (in place) and MASHUP from the Categories tab text and the category tabs' text (by tab id).
    Throws if nothing usable is found. */
+/* Photo file names: assets/<category>/<name slug>.jpg, e.g. "Ford F-150" -> ford-f-150.jpg */
+function photoSlug(name){ return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
 function applyWords(indexText, tabTexts){
   const idx = parseCSV(indexText).filter(r => r.category && r["tab id"]);
   const cats = [], ids = new Set();
@@ -567,7 +569,9 @@ function applyWords(indexText, tabTexts){
     parseCSV(tabTexts[r["tab id"]] || "").forEach(w => {
       if(!w.name || (w.on || "TRUE").toUpperCase() === "FALSE" || seen.has(w.name)) return;
       seen.add(w.name);
-      items.push({ n: w.name, c: w.color || "#444444", e: w.emoji || undefined, img: w.photo || undefined, code: w.code || undefined });
+      const letterArt = (r.art || "").toLowerCase() !== "fruit";
+      items.push({ n: w.name, c: w.color || "#444444", e: w.emoji || undefined,
+        img: w.photo || (letterArt ? "assets/" + id + "/" + photoSlug(w.name) + ".jpg" : undefined), code: w.code || undefined });
     });
     if(items.length < 2){ console.warn("category has fewer than 2 visible words, skipped:", r.category); return; }
     cats.push({
@@ -900,11 +904,20 @@ function fruitSVG(f){
 }
 
 /* ---------- rendering ---------- */
+/* A photo that fails to load becomes the letter portrait, so breeds without a photo still show something. */
+function portraitFallback(img){
+  const t = img.dataset.letter || "?";
+  const s = document.createElement("span");
+  s.className = "letter" + (t.length > 1 ? " two" : "");
+  s.setAttribute("aria-hidden", "true");
+  s.textContent = t;
+  img.replaceWith(s);
+}
 function portraitHTML(f){
-  if(f.img) return `<img src="${f.img}" alt="${f.n}" onerror="this.style.display='none'">`;
+  const t = f.code || f.n[0];
+  if(f.img) return `<img src="${f.img}" alt="${f.n}" data-letter="${t}" onerror="portraitFallback(this)">`;
   if(f.e) return `<span class="glyph" aria-hidden="true">${f.e}</span>`;
   if((f.art || CUR.art) === "letter"){
-    const t = f.code || f.n[0];
     return `<span class="letter${t.length > 1 ? " two" : ""}" aria-hidden="true">${t}</span>`;
   }
   return fruitSVG(f);
