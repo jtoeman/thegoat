@@ -246,6 +246,7 @@ body.home #resetBtn{display:none}
         <p class="tally" id="tally"></p>
         <p class="seed-note hidden" id="seedNote">Sample data: 10 placeholder players fill the counts until 10 real players join. Not real picks.</p>
         <p class="facts" id="facts"></p>
+        <label class="skip-picker"><input type="checkbox" id="resultSkip"> <span>Don't show this every time</span></label>
         <div class="actions">
           <button class="btn" id="shareBtn"><span><svg class="ico" viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 14v5h14v-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Challenge a friend</span></button>
           <button class="btn primary" id="nextBtn"><span>Next matchup</span></button>
@@ -349,7 +350,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B64";
+const BUILD = "B65";
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
 const SB_KEY = "sb_publishable_4mXRj6JDcG1aJyuOWmF8-Q_hjHIRid7";
@@ -996,7 +997,7 @@ function renderStats(winner, loser, note){
   else if(!statsReady) facts = statsError ? "Couldn't reach the pilot database. It will retry automatically." : "Loading the pilot count…";
   else if(total <= 1) facts = "First pick on this matchup. The count fills in as people play.";
   else facts = `Popular across ${total} picks on this matchup.`;
-  $("facts").textContent = facts + " Pilot: your pick is saved with device type, browser, OS, language, region and timezone.";
+  $("facts").textContent = facts;
 }
 
 function showResult(winner, loser){
@@ -1706,7 +1707,10 @@ document.addEventListener("keydown", e => {
 /* "Don't show this every time" on the category picker. Saved per browser. */
 const skipPicker = readStore("goat_picker_skip") === true;
 $("pickerSkip").checked = skipPicker;
-$("pickerSkip").addEventListener("change", e => writeStore("goat_picker_skip", e.target.checked));
+$("resultSkip").checked = skipPicker;
+function setSkipPicker(on){ writeStore("goat_picker_skip", on); $("pickerSkip").checked = on; $("resultSkip").checked = on; }
+$("pickerSkip").addEventListener("change", e => setSkipPicker(e.target.checked));
+$("resultSkip").addEventListener("change", e => setSkipPicker(e.target.checked));
 
 function init(){
   $("build").textContent = BUILD;
