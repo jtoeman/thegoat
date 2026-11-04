@@ -341,7 +341,7 @@ body.home #resetBtn{display:none}
     </main>
 
     <p class="hint" id="hint"></p>
-    <p class="foot"><span class="build" id="build">B62</span></p>
+    <p class="foot"><span class="build" id="build">B63</span></p>
   </div>
 </div>
 
@@ -349,7 +349,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B62";
+const BUILD = "B63";
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
 const SB_KEY = "sb_publishable_4mXRj6JDcG1aJyuOWmF8-Q_hjHIRid7";
@@ -514,10 +514,13 @@ const MASHUP = {id:"mashup", name:"Mashups", e:"🎲", bg:"linear-gradient(135de
 CATEGORIES.forEach(cat => cat.items.forEach(f => { f.art = cat.art; MASHUP.items.push(f); }));
 MASHUP.byName = {}; MASHUP.bySlug = {};
 MASHUP.items.forEach(f => { MASHUP.byName[f.n] = f; MASHUP.bySlug[f.s] = f; });
-/* Word list. The game reads the "GOAT words" sheet when the page loads (see words.csv for the layout).
-   The built-in lists above are the fallback if the sheet can't be reached or has no usable rows. */
-const WORDS_URL = "https://docs.google.com/spreadsheets/d/1ZOd21VFtqLjAT-tIiFwkZBodAXMP7JEYxmH84vXGIkA/export?format=csv&gid=0";
-/* Minimal CSV reader: quoted fields, doubled quotes, CRLF or LF. Returns one object per row, keyed by header. */
+/* Word list. The game reads the "GOAT words" workbook when the page loads (see README for the layout):
+   the Categories tab lists each category and its tab id, and each category tab holds its words.
+   The built-in lists above are the fallback if the workbook can't be reached or has no usable categories. */
+const WORDS_FILE = "1ZOd21VFtqLjAT-tIiFwkZBodAXMP7JEYxmH84vXGIkA";   // replace with the workbook's ID once it is set up
+const INDEX_GID = 0;                                                    // the Categories tab must be the first tab
+function sheetCSVUrl(gid){ return "https://docs.google.com/spreadsheets/d/" + WORDS_FILE + "/export?format=csv&gid=" + gid; }
+/* Minimal CSV reader: quoted fields, doubled quotes, CRLF or LF. Returns one object per row, keyed by lowercase header. */
 function parseCSV(text){
   const rows = []; let row = [], field = "", q = false;
   text = text.replace(/^\uFEFF/, "");
@@ -537,31 +540,31 @@ function parseCSV(text){
   const head = (rows.shift() || []).map(h => h.trim().toLowerCase());
   return rows.filter(r => r.some(c => c.trim())).map(r => Object.fromEntries(head.map((h, i) => [h, (r[i] || "").trim()])));
 }
-/* Rebuilds CATEGORIES (in place) and MASHUP from the sheet text. Throws if nothing usable is found. */
-function applyWords(text){
-  const rows = parseCSV(text);
-  const catRows = rows.filter(r => r.type === "category" && r.category);
-  const wordRows = rows.filter(r => r.type === "word" && r.category && r.name && r.on.toUpperCase() !== "FALSE");
+/* Rebuilds CATEGORIES (in place) and MASHUP from the Categories tab text and the category tabs' text (by tab id).
+   Throws if nothing usable is found. */
+function applyWords(indexText, tabTexts){
+  const idx = parseCSV(indexText).filter(r => r.category && r["tab id"]);
   const cats = [], ids = new Set();
-  catRows.forEach(r => {
-    if(ids.has(r.category)) { console.warn("duplicate category in sheet, skipped:", r.category); return; }
-    ids.add(r.category);
+  idx.forEach(r => {
+    const id = r.category.toLowerCase().replace(/[^a-z0-9]/g, "");
+    if(!id || ids.has(id)){ console.warn("category id missing or repeated, skipped:", r.category); return; }
+    ids.add(id);
     const seen = new Set(), items = [];
-    wordRows.forEach(w => {
-      if(w.category !== r.category || seen.has(w.name)) return;
+    parseCSV(tabTexts[r["tab id"]] || "").forEach(w => {
+      if(!w.name || (w.on || "TRUE").toUpperCase() === "FALSE" || seen.has(w.name)) return;
       seen.add(w.name);
       items.push({ n: w.name, c: w.color || "#444444", e: w.emoji || undefined, img: w.photo || undefined, code: w.code || undefined });
     });
-    if(items.length < 2){ console.warn("category has fewer than 2 words, skipped:", r.category); return; }
+    if(items.length < 2){ console.warn("category has fewer than 2 visible words, skipped:", r.category); return; }
     cats.push({
-      id: r.category, name: r.name || r.category, e: r.emoji || "🎲",
-      bg: r.bg || "linear-gradient(135deg,#444444,#222222)", items,
+      id, name: r["display name"] || r.category, e: r.emoji || "🎲",
+      bg: r.background || "linear-gradient(135deg,#444444,#222222)", items,
       art: r.art === "fruit" ? "fruit" : "letter",
-      ladderKey: r.ladder || ("goat_" + r.category + "_ladder_v1"),
-      seeded: r.seeded.toUpperCase() === "TRUE"
+      ladderKey: r["ladder key"] || ("goat_" + id + "_ladder_v1"),
+      seeded: (r.seeded || "").toUpperCase() === "TRUE"
     });
   });
-  if(!cats.length) throw new Error("no usable categories in the word sheet");
+  if(!cats.length) throw new Error("no usable categories in the workbook");
   CATEGORIES.length = 0;
   cats.forEach(cat => {
     cat.byName = {}; cat.bySlug = {};
@@ -575,11 +578,19 @@ function applyWords(text){
 }
 async function loadWords(){
   try{
-    const res = await withTimeout(fetch(WORDS_URL, { cache: "no-store" }), 5000);
-    if(!res.ok) throw new Error("HTTP " + res.status);
-    applyWords(await res.text());
+    const idxRes = await withTimeout(fetch(sheetCSVUrl(INDEX_GID), { cache: "no-store" }), 5000);
+    if(!idxRes.ok) throw new Error("HTTP " + idxRes.status);
+    const indexText = await idxRes.text();
+    const tabIds = parseCSV(indexText).filter(r => r.category && r["tab id"]).map(r => r["tab id"]);
+    const tabTexts = {};
+    await Promise.all(tabIds.map(async gid => {
+      const res = await withTimeout(fetch(sheetCSVUrl(gid), { cache: "no-store" }), 5000);
+      if(!res.ok) throw new Error("HTTP " + res.status + " for tab " + gid);
+      tabTexts[gid] = await res.text();
+    }));
+    applyWords(indexText, tabTexts);
   }catch(e){
-    console.warn("word sheet not loaded, using built-in lists", e);
+    console.warn("word workbook not loaded, using built-in lists", e);
   }
 }
 const DRAG_THRESHOLD = 0.4;   // a drag must cross 40% of the stage width toward the rival to win
