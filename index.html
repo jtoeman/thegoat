@@ -1,0 +1,1597 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>The GOAT</title>
+<style>
+/* Phone-first versus screen. Pinned to the viewport; nothing scrolls. One fixed dark look. */
+:root{
+  --ink:#070a14; --paper:#ffffff; --yellow:#ffd23f; --blue:#2aa4ff; --orange:#ff6a1a; --red:#ff2a1a; --go:#5cff8a; --mute:#8a93b0; --panel:#0c1224;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0; height:100%; background:var(--ink); color:var(--paper); overflow:hidden}
+body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font-size:14px}
+.display{font-family:Impact,"Haettenschweiler","Arial Narrow Bold",sans-serif; text-transform:uppercase; letter-spacing:.04em}
+
+.app{
+  position:fixed; inset:0; display:flex; justify-content:center;
+  padding-top:8px; padding-bottom:8px;
+  padding-left:max(12px, env(safe-area-inset-left, 0px));
+  padding-right:max(12px, env(safe-area-inset-right, 0px));
+}
+.shell{width:100%; max-width:560px; height:100%; display:flex; flex-direction:column; gap:8px; min-height:0}
+
+.topbar{display:flex; align-items:center; gap:6px; height:34px; flex:none; min-width:0}
+.brand{font-size:15px; line-height:1; font-style:italic; text-shadow:3px 3px 0 #000; white-space:nowrap; cursor:pointer}
+.brand .cat{color:var(--orange)}
+.round{background:var(--yellow); color:#111; padding:2px 9px; transform:skewX(-12deg); font-size:14px; border:2px solid #000; box-shadow:2px 2px 0 #000; white-space:nowrap; flex:none}
+.round span{display:inline-block; transform:skewX(12deg)}
+.champ{flex:1; min-width:0; font-size:12px; color:var(--mute); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.champ b{color:var(--yellow); font-weight:700}
+.build{font-size:10px; color:var(--mute); flex:none; font-variant-numeric:tabular-nums}
+.reset{flex:none; font-size:12px; padding:5px 7px; min-height:30px; border:2px solid #000; box-shadow:2px 2px 0 #000; background:#e8303a; color:#fff; cursor:pointer; transform:skewX(-8deg)}
+.reset span{display:inline-block; transform:skewX(8deg)}
+.stats-btn{background:#2d6fd6}
+#statsBody{flex:1; min-height:0; overflow-y:auto}
+#cpBars{flex:1; min-height:0; overflow-y:auto; margin:8px 0}
+#rankList{flex:1; min-height:0; overflow-y:auto}
+.stat-row{display:flex; justify-content:space-between; margin:0; padding:4px 2px; border-bottom:1px solid #222c48; font-size:14px; font-variant-numeric:tabular-nums}
+.stat-row b{color:var(--yellow)}
+.bar-row{display:flex; align-items:center; gap:8px; padding:4px 2px; border-bottom:1px solid #222c48; font-size:13px; font-variant-numeric:tabular-nums}
+.bar-row.hit{background:rgba(255,210,63,.16); border-left:4px solid var(--yellow); padding-left:6px}
+.bar-name{flex:0 0 40%; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.bar-track{flex:1; height:14px; background:#222c48; border:2px solid #000; position:relative; min-width:40px}
+.bar-fill{position:absolute; left:0; top:0; bottom:0; background:linear-gradient(90deg, var(--yellow), var(--orange)); transition:width .4s ease}
+.bar-row b{flex:0 0 28px; text-align:right; color:var(--yellow)}
+.stat-row.hit{background:rgba(255,210,63,.16); border-left:4px solid var(--yellow); padding-left:8px}
+
+.stage{
+  position:relative; flex:1; min-height:0; border-radius:12px; overflow:hidden; border:3px solid #000;
+  background:radial-gradient(ellipse at 50% 35%, #1d2752 0%, #0b1024 55%, #05070f 100%);
+  box-shadow:0 8px 24px rgba(0,0,0,.6);
+}
+
+.fighter{position:absolute; top:0; bottom:0; width:50%; touch-action:none; user-select:none; -webkit-user-select:none; cursor:pointer; z-index:2; min-width:0; overflow:hidden; --p:0}
+.fighter[data-side="a"]{left:0}
+.fighter[data-side="b"]{right:0}
+.fighter.dragging{z-index:6; cursor:grabbing; transition:none}
+.fighter.snapping{transition:transform .2s ease}
+.fighter.charging{box-shadow:inset 0 0 0 calc(var(--p) * 8px) var(--yellow)}
+.fighter.ready{box-shadow:inset 0 0 0 8px var(--go), inset 0 0 28px var(--go)}
+
+.portrait{
+  position:absolute; inset:0; overflow:hidden;
+  background:radial-gradient(circle at 50% 30%, var(--c,#444) 0%, #111 90%);
+  display:grid; place-items:center; transition:filter .2s ease; pointer-events:none;
+}
+.fighter[data-side="a"] .portrait{clip-path:polygon(0 0, 96% 0, 58% 100%, 0 100%)}
+.fighter[data-side="b"] .portrait{clip-path:polygon(38% 0, 100% 0, 100% 100%, 2% 100%)}
+.portrait img{width:100%; height:100%; object-fit:cover; display:block}
+.portrait .fruit-svg{width:70%; height:70%; max-width:340px; max-height:340px; filter:drop-shadow(0 8px 10px rgba(0,0,0,.5))}
+.portrait .glyph{font-size:clamp(56px,22vw,120px); line-height:1; filter:drop-shadow(0 6px 8px rgba(0,0,0,.55))}
+.portrait .letter{font-family:Impact,"Arial Narrow Bold",sans-serif; font-size:clamp(80px,34vw,190px); line-height:1; color:rgba(255,255,255,.92); text-shadow:0 5px 0 rgba(0,0,0,.45); padding-bottom:20%}
+.portrait .letter.two{font-size:clamp(60px,26vw,150px); letter-spacing:.04em}
+.fighter.over .portrait{filter:brightness(1.35) saturate(1.2)}
+.fighter.won .portrait{filter:brightness(1.12)}
+.fighter.lost .portrait{filter:grayscale(.85) brightness(.5)}
+
+.label{
+  position:absolute; left:0; right:0; bottom:0; padding:28px 6px 12px; pointer-events:none;
+  background:linear-gradient(180deg, rgba(7,10,20,0), rgba(7,10,20,.88) 60%);
+  display:flex; flex-direction:column; align-items:center; gap:8px; min-width:0;
+}
+.plate{
+  transform:skewX(-12deg); background:var(--paper); color:#0b0b0b; border:3px solid #000; box-shadow:3px 3px 0 #000;
+  padding:3px 9px; font-family:Impact,"Haettenschweiler","Arial Narrow Bold",sans-serif; text-transform:uppercase;
+  font-size:clamp(13px,4.4vw,22px); letter-spacing:.03em; line-height:1.15; text-align:center;
+  max-width:100%; overflow-wrap:normal; word-break:normal; min-height:30px;
+}
+.plate span{display:block; transform:skewX(12deg)}
+.fighter.won .plate{background:var(--yellow)}
+.pick{
+  pointer-events:auto;
+  transform:skewX(-10deg); font-family:Impact,"Haettenschweiler",sans-serif; text-transform:uppercase; letter-spacing:.08em;
+  font-size:15px; color:#fff; background:#e8303a; border:3px solid #000; box-shadow:3px 3px 0 #000;
+  padding:4px 18px; cursor:pointer; min-height:36px;
+}
+.pick:disabled{opacity:.35; cursor:default}
+.pick span{display:inline-block; transform:skewX(10deg)}
+
+.slashes{position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:1; overflow:visible}
+.slashes line{vector-effect:non-scaling-stroke; stroke-linecap:square}
+.slashes .outline{stroke:#000; stroke-width:20px}
+.slashes .blue{stroke:var(--blue); stroke-width:10px; filter:drop-shadow(0 0 6px rgba(42,164,255,.7))}
+.slashes .red{stroke:var(--red); stroke-width:10px; filter:drop-shadow(0 0 6px rgba(255,42,26,.7))}
+
+.vs-streak{display:block; text-align:center; font-size:.5em; line-height:1.1; color:var(--yellow); margin-top:.15em; text-shadow:0 3px 0 #000}
+.vs{
+  position:absolute; left:50%; top:42%; transform:translate(-50%,-50%); z-index:3; pointer-events:none;
+  font-family:Impact,"Haettenschweiler",sans-serif; font-size:clamp(30px,10vw,52px); font-style:italic; line-height:1;
+  color:#fff; text-shadow:0 4px 0 #000, 0 0 18px var(--orange), 0 0 6px var(--orange);
+}
+
+.overlay{
+  position:absolute; inset:0; z-index:5; padding:12px 14px 14px;
+  background:linear-gradient(180deg, rgba(7,10,20,.97), rgba(7,10,20,.98) 55%);
+  display:flex; flex-direction:column; gap:6px; min-height:0; overflow:hidden;
+}
+.overlay.hidden{display:none !important}
+.ko{font-size:clamp(30px,10vw,50px); line-height:1; color:var(--yellow); text-shadow:3px 3px 0 #000; font-style:italic; margin:0; overflow-wrap:anywhere}
+.ko-sub{color:var(--mute); font-size:13px; margin:0}
+.tag{display:inline-block; font-size:10px; color:var(--mute); border:1px solid #2b3556; border-radius:4px; padding:0 5px; margin-left:6px; vertical-align:middle; text-transform:uppercase; letter-spacing:.06em}
+.overall-label{display:flex; justify-content:space-between; gap:8px; font-size:13px; font-variant-numeric:tabular-nums; margin-top:4px}
+.track{height:14px; background:#222c48; border:2px solid #000; overflow:hidden; position:relative; flex:none}
+.fill{height:100%; width:0; background:linear-gradient(90deg, var(--yellow), var(--orange)); transition:width .7s ease}
+.tally{margin:0; font-size:13px; color:#cfd6ea; font-variant-numeric:tabular-nums}
+.seed-note{margin:0; font-size:10px; line-height:1.3; color:var(--mute); opacity:.85}
+.facts{margin:2px 0 0; border-left:4px solid var(--orange); padding:2px 0 2px 8px; font-size:12px; line-height:1.35; color:#cfd6ea}
+.actions{display:flex; gap:8px; margin-top:auto}
+.btn{flex:1; font-family:Impact,"Haettenschweiler",sans-serif; text-transform:uppercase; letter-spacing:.06em; font-size:15px; padding:8px 10px; border:3px solid #000; box-shadow:3px 3px 0 #000; cursor:pointer; min-height:42px; background:#1b2440; color:#fff; transform:skewX(-8deg)}
+.btn span{display:inline-block; transform:skewX(8deg)}
+.btn.primary{background:var(--yellow); color:#111}
+.btn:focus-visible,.pick:focus-visible,.reset:focus-visible{outline:3px solid var(--blue); outline-offset:3px}
+.dots{display:flex; gap:8px; justify-content:center; margin:6px 0}
+.dot{width:12px; height:12px; border:2px solid #000; background:#2b3556; transform:skewX(-12deg)}
+.dot.on{background:var(--yellow)}
+
+.hint{flex:none; color:var(--mute); text-align:center; font-size:12px; margin:0; height:16px; line-height:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.hint.go{color:var(--go)}
+.toast{position:fixed; left:50%; bottom:calc(20px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%); max-width:calc(100% - 32px); background:var(--yellow); color:#111; font-family:Impact,sans-serif; text-transform:uppercase; letter-spacing:.05em; padding:8px 16px; border:3px solid #000; box-shadow:4px 4px 0 #000; font-size:15px; z-index:20; text-align:center}.cat-pill{flex:1 1 auto; min-width:0; display:flex; align-items:center; gap:6px; min-height:30px; padding:4px 8px; font-size:14px; color:#fff; background:#1b2440; border:2px solid #000; box-shadow:2px 2px 0 #000; cursor:pointer; white-space:nowrap}
+.cat-pill span{overflow:hidden; text-overflow:ellipsis}
+.cat-pill .chev{color:var(--yellow); flex:none}
+.foot{flex:none; height:12px; margin:0; text-align:right; line-height:12px}
+.picker{position:absolute; inset:0; z-index:7; background:var(--ink); padding:14px 14px 12px; display:flex; flex-direction:column; gap:12px; min-height:0; overflow:hidden}
+.picker-title{font-size:clamp(26px,9vw,40px); margin:0; text-align:center}
+.picker-note{margin:0; text-align:center}
+.tiles{flex:1; min-height:0; overflow-y:auto; display:grid; grid-template-columns:1fr 1fr; gap:12px; align-content:start; padding:10px 10px 12px}
+.tile{position:relative; min-height:150px; padding:14px 12px; display:flex; flex-direction:column; justify-content:space-between; text-align:left; color:#fff; border:3px solid #000; border-radius:16px; box-shadow:4px 4px 0 #000; cursor:pointer; font-family:system-ui,-apple-system,Arial,sans-serif}
+.tile-e{font-size:44px; line-height:1; filter:drop-shadow(0 3px 2px rgba(0,0,0,.4))}
+.tile-name{font-size:22px; line-height:1.05; text-shadow:2px 2px 0 #000; overflow-wrap:anywhere}
+.tile-n{font-size:12px; opacity:.92; text-shadow:1px 1px 0 #000}
+.tile.current{outline:4px solid var(--yellow); outline-offset:3px}
+.tile.current:hover::after{content:"Now playing"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; border-radius:13px; background:rgba(7,10,20,.72); color:#fff; font:22px/1 Impact,"Arial Narrow",system-ui,sans-serif; text-transform:uppercase; text-shadow:2px 2px 0 #000}
+.tile-goat{position:absolute; right:10px; top:10px; max-width:60%; font-size:12px; line-height:1.2; text-align:right; text-shadow:1px 1px 0 #000; overflow-wrap:anywhere}
+/* Welcome modal: a card centered over the category screen */
+#intro{position:absolute; inset:0; z-index:10; background:rgba(5,7,14,.8); display:flex; align-items:center; justify-content:center; padding:18px}
+.intro-card{position:relative; width:100%; max-width:360px; padding:26px 20px 20px; text-align:center; overflow:hidden; background:linear-gradient(165deg,#1d2650,#0b1024 70%); border:3px solid #000; border-radius:18px; box-shadow:6px 6px 0 #000, 0 0 0 3px var(--yellow); animation:introPop .5s cubic-bezier(.2,1.35,.4,1) both}
+.intro-band{position:absolute; left:-10%; right:-10%; top:0; height:14px; transform:skewY(-4deg); background:linear-gradient(90deg,#e8303a 0 50%,#2d6fd6 50% 100%); border-bottom:3px solid #000}
+.intro-title{margin:14px 0 10px; font-size:clamp(36px,12vw,52px); line-height:.95; color:var(--yellow); text-shadow:3px 3px 0 #000; animation:introWobble 2.6s ease-in-out infinite}
+.intro-q{margin:14px 0 2px; font-size:clamp(18px,6vw,24px); line-height:1.1; color:#fff; text-shadow:2px 2px 0 #000}
+.intro-q span{color:var(--orange)}
+.intro-cta{margin:0 0 6px; color:var(--yellow)}
+.intro-go{width:100%; animation:introPulse 1.6s ease-out infinite}
+@keyframes introPop{from{transform:scale(.6) rotate(-5deg); opacity:0} to{transform:none; opacity:1}}
+@keyframes introWobble{0%,100%{transform:rotate(-2deg)} 50%{transform:rotate(2deg)}}
+@keyframes introPulse{0%{box-shadow:0 0 0 0 rgba(255,210,63,.75)} 70%,100%{box-shadow:0 0 0 12px rgba(255,210,63,0)}}
+@media (prefers-reduced-motion: reduce){ .intro-card,.intro-title,.intro-go{animation:none} }
+.ico{display:inline-block; width:14px; height:14px; fill:currentColor; vertical-align:-2px; margin-right:5px}
+.picker-brand{font-style:italic; font-size:clamp(30px,11vw,48px); line-height:1; margin:0; text-align:center; text-shadow:3px 3px 0 #000}
+/* Home screen (category picker): top bar shows only the brand and Stats */
+body.home .brand, body.home .round, body.home .streak, body.home .cat-pill{display:none}
+body.home #statsBtn{margin-left:auto}
+body.home #resetBtn{display:none}
+#statsPanel{z-index:8}
+.overlay.dialog{z-index:9; background:rgba(7,10,20,.97); justify-content:center; gap:14px}
+.dlg-body{margin:0; font-size:15px; line-height:1.4; color:#cfd6ea}
+.btn.danger{background:#e8303a; color:#fff}
+.actions-col{display:flex; flex-direction:column; gap:10px}
+#resetItems{flex:1; min-height:0; overflow-y:auto}
+.reset-row{width:100%; background:none; border:0; border-bottom:1px solid #222c48; color:#fff; font:inherit; text-align:left; cursor:pointer; padding:8px 2px}
+.reset-row b{color:var(--yellow)}
+/* Result is a centred modal, so the stage stays visible around it. Swipe left or right for the next round. */
+#result{
+  inset:auto; left:12px; right:12px; top:50%; bottom:auto; transform:translateY(-50%);
+  max-height:90%; overflow-y:auto; background:#0c1224; border:3px solid #000; border-radius:14px;
+  box-shadow:6px 6px 0 #000; padding:14px; z-index:6;
+}
+.btn .ico{vertical-align:-2px; margin-right:5px}
+#shareText{white-space:pre-line}
+.share-url{width:100%; font:inherit; font-size:13px; padding:10px; color:#fff; background:#0c1224; border:2px solid #2b3556; border-radius:6px; user-select:all; -webkit-user-select:all}
+.mini{font:inherit; font-size:12px; min-width:34px; min-height:30px; margin-left:6px; padding:2px 6px; background:#1b2440; color:#fff; border:2px solid #000; box-shadow:2px 2px 0 #000; cursor:pointer}
+.mini:disabled{opacity:.3; cursor:default}
+.rank-row{align-items:center}
+.rank-btns{display:flex; flex:none}
+.hidden{display:none !important}
+@media (prefers-reduced-motion: reduce){ *{transition:none !important} }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="shell">
+    <div class="topbar">
+      <div class="brand display" id="brand">The GOAT</div>
+      <button class="cat-pill display" id="catBtn" aria-haspopup="true"><span id="catLabel">Fruit</span><span class="chev" aria-hidden="true">&#9662;</span></button>
+      <div class="round display"><span id="roundLabel">R1</span></div>
+      <span class="streak display" id="streakBadge"></span>
+      <button class="reset stats-btn display" id="statsBtn"><span><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="1" y="9" width="3.5" height="6"/><rect x="6.25" y="5" width="3.5" height="10"/><rect x="11.5" y="1" width="3.5" height="14"/></svg>Stats</span></button>
+    </div>
+
+    <main class="stage" id="stage">
+      <section class="fighter" data-side="a">
+        <div class="portrait" id="pa"></div>
+        <div class="label">
+          <div class="plate" id="na"></div>
+          <button class="pick display" data-side="a"><span>Pick</span></button>
+        </div>
+      </section>
+
+      <svg class="slashes" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        <line class="outline" x1="48" y1="0" x2="29" y2="100"/>
+        <line class="outline" x1="69" y1="0" x2="51" y2="100"/>
+        <line class="blue" x1="48" y1="0" x2="29" y2="100"/>
+        <line class="red" x1="69" y1="0" x2="51" y2="100"/>
+      </svg>
+      <div class="vs display" aria-hidden="true">VS<span class="vs-streak" id="vsStreak"></span></div>
+
+      <section class="fighter" data-side="b">
+        <div class="portrait" id="pb"></div>
+        <div class="label">
+          <div class="plate" id="nb"></div>
+          <button class="pick display" data-side="b"><span>Pick</span></button>
+        </div>
+      </section>
+
+      <section class="overlay hidden" id="result" aria-live="polite">
+        <p class="ko display" id="koText"></p>
+        <p class="ko-sub" id="koSub"></p>
+        <div class="overall-label"><span id="overallLabel"></span><span class="tag">Pilot</span></div>
+        <div class="track"><div class="fill" id="overallFill"></div></div>
+        <p class="tally" id="tally"></p>
+        <p class="seed-note hidden" id="seedNote">Sample data: 10 placeholder players fill the counts until 10 real players join. Not real picks.</p>
+        <p class="facts" id="facts"></p>
+        <div class="actions">
+          <button class="btn" id="shareBtn"><span><svg class="ico" viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 14v5h14v-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Challenge a friend</span></button>
+          <button class="btn primary" id="nextBtn"><span>Next matchup</span></button>
+        </div>
+        <div class="actions" style="margin-top:0">
+          <button class="btn hidden" id="oopsBtn"><span>Oops, undo</span></button>
+          <button class="btn" id="randomBtn"><span>Start a new match</span></button>
+        </div>
+        <div class="actions" style="margin-top:0">
+          <button class="btn primary hidden" id="resultCrown"><span>This is the GOAT</span></button>
+        </div>
+      </section>
+
+      <section class="overlay hidden" id="ladderEnd"></section>
+
+      <section class="overlay hidden" id="checkpoint" aria-live="polite">
+        <p class="ko-sub">Checkpoint</p>
+        <p class="ko display" id="cpTitle"></p>
+        <p class="ko-sub" id="cpBody"></p>
+        <div id="cpBars" class="rows"></div>
+        <div class="actions-col">
+          <button class="btn primary" id="cpGo"><span>Keep going</span></button>
+          <button class="btn" id="cpFresh"><span>Start fresh in this category</span></button>
+          <button class="btn" id="cpCrown"><span>This is the GOAT</span></button>
+          <button class="btn" id="cpChange"><span>Change category</span></button>
+        </div>
+      </section>
+
+      <section class="overlay hidden" id="statsPanel" aria-live="polite">
+        <p class="ko display">Your stats</p>
+        <div id="statsBody" class="rows"></div>
+        <div class="actions">
+          <button class="btn" id="resetBtn"><span>Reset</span></button>
+          <button class="btn" id="statsReset"><span>Reset stats…</span></button>
+          <button class="btn primary" id="statsClose"><span>Close</span></button>
+        </div>
+      </section>
+
+      <section class="overlay hidden" id="resetPanel" aria-live="polite">
+        <p class="ko display">Reset stats</p>
+        <p class="ko-sub">Remove accidental picks. Removed picks also stop counting in the shared stats.</p>
+        <div class="actions-col">
+          <button class="btn" id="rsItem"><span>Reset one item</span></button>
+          <button class="btn" id="rsCat"><span>Reset this category</span></button>
+          <button class="btn danger" id="rsAll"><span>Delete all my stats</span></button>
+        </div>
+        <div id="resetItems" class="rows hidden"></div>
+        <div class="actions"><button class="btn primary" id="resetBack"><span>Back</span></button></div>
+      </section>
+
+      <section class="overlay dialog hidden" id="shareSheet" role="dialog" aria-modal="true" aria-label="Challenge a friend">
+        <p class="ko display">Challenge a friend</p>
+        <p class="dlg-body" id="shareText"></p>
+        <input class="share-url" id="shareUrl" type="text" readonly>
+        <p class="dlg-body" id="shareMsg"></p>
+        <div class="actions-col">
+          <button class="btn primary" id="shareCopy"><span>Copy link</span></button>
+          <button class="btn" id="shareNative"><span>Share…</span></button>
+          <button class="btn" id="shareClose"><span>Done</span></button>
+        </div>
+      </section>
+
+      <section class="hidden" id="intro" role="dialog" aria-modal="true" aria-label="Welcome to The GOAT">
+        <div class="intro-card">
+          <div class="intro-band" aria-hidden="true"></div>
+          <p class="display intro-title">Welcome to<br>The GOAT!</p>
+          <p class="dlg-body">Two items face off. Pick the one you like better. The winner stays on and faces the next, until one is left standing. That is your GOAT.</p>
+          <p class="display intro-q">What's <span>your</span> greatest of all time?</p>
+          <p class="dlg-body intro-cta">Click to find out!</p>
+          <div class="actions"><button class="btn primary intro-go" id="introGo"><span>Let's go</span></button></div>
+        </div>
+      </section>
+
+      <section class="overlay dialog hidden" id="dialog" role="alertdialog" aria-modal="true">
+        <p class="ko display" id="dlgTitle"></p>
+        <p class="dlg-body" id="dlgBody"></p>
+        <div class="actions">
+          <button class="btn" id="dlgCancel"><span>Cancel</span></button>
+          <button class="btn danger" id="dlgOk"><span>OK</span></button>
+        </div>
+      </section>
+
+      <section class="picker hidden" id="picker" aria-label="Choose a category">
+        <p class="display picker-brand">The GOAT</p>
+        <p class="ko display picker-title">Choose a category</p>
+        <div class="tiles" id="tiles"></div>
+        <div class="actions">
+          <button class="btn" id="pickerBack"><span>Back</span></button>
+        </div>
+        <p class="ko-sub picker-note">Tap a box to play.</p>
+      </section>
+    </main>
+
+    <p class="hint" id="hint"></p>
+    <p class="foot"><span class="build" id="build">B56</span></p>
+  </div>
+</div>
+
+<div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const BUILD = "B56";
+/* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
+const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
+const SB_KEY = "sb_publishable_4mXRj6JDcG1aJyuOWmF8-Q_hjHIRid7";
+/* The page's own address, so challenge links and shares point at this site, not the claude.ai artifact. */
+const SITE_URL = location.origin + location.pathname;
+
+/* 50 fruits. Photos for Apple and Cherry; emoji or a drawn portrait for the rest. */
+const FRUITS = [
+  {n:"Apple",img:"assets/apple.png",c:"#b3121c"},
+  {n:"Apricot",c:"#f4a259"},
+  {n:"Avocado",e:"🥑",c:"#3f5e2a"},
+  {n:"Banana",e:"🍌",c:"#e0a800"},
+  {n:"Blackberry",c:"#3b1e4a"},
+  {n:"Blueberry",e:"🫐",c:"#3d4fa0"},
+  {n:"Cantaloupe",e:"🍈",c:"#e8a060"},
+  {n:"Cherry",img:"assets/cherry.png",c:"#8e0c16"},
+  {n:"Clementine",c:"#ff9a3c"},
+  {n:"Coconut",e:"🥥",c:"#7a5a40"},
+  {n:"Cranberry",c:"#9b1b30"},
+  {n:"Date",c:"#7a4a26"},
+  {n:"Dragonfruit",c:"#c8207a"},
+  {n:"Durian",c:"#b8a040"},
+  {n:"Elderberry",c:"#3e2450"},
+  {n:"Fig",c:"#6b3fa0"},
+  {n:"Gooseberry",c:"#7fa82e"},
+  {n:"Grapefruit",c:"#ff6f5e"},
+  {n:"Grapes",e:"🍇",c:"#6d3a8f"},
+  {n:"Guava",c:"#e89090"},
+  {n:"Honeydew",c:"#c5dc7a"},
+  {n:"Jackfruit",c:"#c99a12"},
+  {n:"Kiwi",e:"🥝",c:"#5c9a28"},
+  {n:"Kumquat",c:"#ffb347"},
+  {n:"Lemon",e:"🍋",c:"#d8c21e"},
+  {n:"Lime",c:"#8cc22a"},
+  {n:"Lychee",c:"#e89a92"},
+  {n:"Mandarin",c:"#ff8c2e"},
+  {n:"Mango",e:"🥭",c:"#f09a10"},
+  {n:"Mangosteen",c:"#5a2040"},
+  {n:"Nectarine",c:"#e0583e"},
+  {n:"Olive",e:"🫒",c:"#6b7a2e"},
+  {n:"Orange",e:"🍊",c:"#ff7f00"},
+  {n:"Papaya",c:"#ff9150"},
+  {n:"Passionfruit",c:"#4e3370"},
+  {n:"Peach",e:"🍑",c:"#e89070"},
+  {n:"Pear",e:"🍐",c:"#a8c040"},
+  {n:"Persimmon",c:"#e0582a"},
+  {n:"Pineapple",e:"🍍",c:"#e8b830"},
+  {n:"Plum",c:"#6e2c6e"},
+  {n:"Pomegranate",c:"#a3123c"},
+  {n:"Pomelo",c:"#dce88a"},
+  {n:"Quince",c:"#c8b048"},
+  {n:"Raspberry",c:"#c9164a"},
+  {n:"Starfruit",c:"#e8c83a"},
+  {n:"Strawberry",e:"🍓",c:"#d92a40"},
+  {n:"Tangerine",c:"#ff7a1a"},
+  {n:"Tomato",e:"🍅",c:"#d8301e"},
+  {n:"Watermelon",e:"🍉",c:"#1f8f4a"},
+  {n:"Yuzu",c:"#d8cc3a"}
+];
+/* Dog breeds: common breeds, plus Labradoodle and Goldendoodle. No photos yet, so each gets a letter portrait. */
+const DOG_NAMES = ["Labrador Retriever", "French Bulldog", "Golden Retriever", "German Shepherd", "Poodle", "Bulldog", "Rottweiler", "Beagle", "Dachshund", "German Shorthaired Pointer", "Pembroke Welsh Corgi", "Australian Shepherd", "Yorkshire Terrier", "Boxer", "Cavalier King Charles Spaniel", "Doberman Pinscher", "Great Dane", "Miniature Schnauzer", "Siberian Husky", "Bernese Mountain Dog", "Shih Tzu", "Boston Terrier", "Pomeranian", "Havanese", "Shetland Sheepdog", "Brittany", "English Springer Spaniel", "Cocker Spaniel", "Maltese", "Chihuahua", "Border Collie", "Vizsla", "Weimaraner", "Collie", "Bichon Frise", "Basset Hound", "Pug", "Mastiff", "Saint Bernard", "Greyhound", "Dalmatian", "Australian Cattle Dog", "Newfoundland", "Rhodesian Ridgeback", "Shiba Inu", "Labradoodle", "Goldendoodle", "Akita", "Alaskan Malamute", "Chow Chow", "Jack Russell Terrier", "Lhasa Apso", "Papillon", "Pekingese", "Shar-Pei", "Whippet", "Bloodhound", "Samoyed", "Scottish Terrier", "Irish Setter", "Great Pyrenees", "Miniature Pinscher", "Cane Corso", "Bull Terrier"];
+const DOG_PAL = ["#9a6a3a","#3a3a40","#c9a27a","#d9b77a","#d08a3a","#7a4a2a","#5a6070","#6b4a2a","#d8a040","#7d8a96","#5a6e8a","#c8b070","#b08ac0","#8a7a5a","#3e2a20","#a8322a"];
+const DOGS = DOG_NAMES.map((n, i) => ({ n, c: DOG_PAL[i % DOG_PAL.length] }));
+/* 50 US states. Letter portraits show the postal code. */
+const STATES = [
+  {n:"Alabama",code:"AL",c:"#8b1e2d"}, {n:"Alaska",code:"AK",c:"#2b5d8a"}, {n:"Arizona",code:"AZ",c:"#b5562a"},
+  {n:"Arkansas",code:"AR",c:"#6b3b2a"}, {n:"California",code:"CA",c:"#d9a02b"}, {n:"Colorado",code:"CO",c:"#3b6e8f"},
+  {n:"Connecticut",code:"CT",c:"#4a5c7a"}, {n:"Delaware",code:"DE",c:"#6f8f3a"}, {n:"Florida",code:"FL",c:"#2a9d8f"},
+  {n:"Georgia",code:"GA",c:"#8a6d3b"}, {n:"Hawaii",code:"HI",c:"#3a9a8a"}, {n:"Idaho",code:"ID",c:"#5c8a3a"},
+  {n:"Illinois",code:"IL",c:"#2c4f8a"}, {n:"Indiana",code:"IN",c:"#7a5a2a"}, {n:"Iowa",code:"IA",c:"#c9a040"},
+  {n:"Kansas",code:"KS",c:"#d4a017"}, {n:"Kentucky",code:"KY",c:"#6b2e3b"}, {n:"Louisiana",code:"LA",c:"#7a3e6e"},
+  {n:"Maine",code:"ME",c:"#35505e"}, {n:"Maryland",code:"MD",c:"#8a2a3a"}, {n:"Massachusetts",code:"MA",c:"#4d4d8a"},
+  {n:"Michigan",code:"MI",c:"#3d6f9a"}, {n:"Minnesota",code:"MN",c:"#5a8ab0"}, {n:"Mississippi",code:"MS",c:"#5a3a2a"},
+  {n:"Missouri",code:"MO",c:"#a33a3a"}, {n:"Montana",code:"MT",c:"#7a6a4a"}, {n:"Nebraska",code:"NE",c:"#3f7a5a"},
+  {n:"Nevada",code:"NV",c:"#7a7a8a"}, {n:"New Hampshire",code:"NH",c:"#3e5a7a"}, {n:"New Jersey",code:"NJ",c:"#b07a3a"},
+  {n:"New Mexico",code:"NM",c:"#c26a3a"}, {n:"New York",code:"NY",c:"#2a3a6a"}, {n:"North Carolina",code:"NC",c:"#3a6a5a"},
+  {n:"North Dakota",code:"ND",c:"#6a7a4a"}, {n:"Ohio",code:"OH",c:"#b8322a"}, {n:"Oklahoma",code:"OK",c:"#8a4a3a"},
+  {n:"Oregon",code:"OR",c:"#2f6f4a"}, {n:"Pennsylvania",code:"PA",c:"#4a4a6a"}, {n:"Rhode Island",code:"RI",c:"#3a5aa0"},
+  {n:"South Carolina",code:"SC",c:"#5a7a3a"}, {n:"South Dakota",code:"SD",c:"#9a7a3a"}, {n:"Tennessee",code:"TN",c:"#6a3a6a"},
+  {n:"Texas",code:"TX",c:"#a8322a"}, {n:"Utah",code:"UT",c:"#b86a3a"}, {n:"Vermont",code:"VT",c:"#3a7a3a"},
+  {n:"Virginia",code:"VA",c:"#4a3a5a"}, {n:"Washington",code:"WA",c:"#2a6a7a"}, {n:"West Virginia",code:"WV",c:"#5a6a3a"},
+  {n:"Wisconsin",code:"WI",c:"#3a5a8a"}, {n:"Wyoming",code:"WY",c:"#9a5a3a"}
+];
+/* Car models: mainstream cars, a few luxury cars, a DeLorean and a Model T. Letter portraits for now. */
+const CARS = [
+  {n:"Ford Model T",c:"#9a6a3a"},
+  {n:"DeLorean DMC-12",c:"#3a3a40"},
+  {n:"Ford F-150",c:"#c9a27a"},
+  {n:"Ford Mustang",c:"#d9b77a"},
+  {n:"Ford Explorer",c:"#d08a3a"},
+  {n:"Ford Focus",c:"#7a4a2a"},
+  {n:"Chevrolet Corvette",c:"#5a6070"},
+  {n:"Chevrolet Camaro",c:"#6b4a2a"},
+  {n:"Chevrolet Silverado",c:"#d8a040"},
+  {n:"Chevrolet Bolt",c:"#7d8a96"},
+  {n:"Dodge Charger",c:"#5a6e8a"},
+  {n:"Dodge Grand Caravan",c:"#c8b070"},
+  {n:"Jeep Wrangler",c:"#b08ac0"},
+  {n:"Jeep Cherokee",c:"#8a7a5a"},
+  {n:"Ram 1500",c:"#3e2a20"},
+  {n:"Toyota Camry",c:"#a8322a"},
+  {n:"Toyota Corolla",c:"#9a6a3a"},
+  {n:"Toyota Prius",c:"#3a3a40"},
+  {n:"Toyota RAV4",c:"#c9a27a"},
+  {n:"Toyota Tacoma",c:"#d9b77a"},
+  {n:"Honda Civic",c:"#d08a3a"},
+  {n:"Honda Accord",c:"#7a4a2a"},
+  {n:"Honda CR-V",c:"#5a6070"},
+  {n:"Nissan Altima",c:"#6b4a2a"},
+  {n:"Nissan Leaf",c:"#d8a040"},
+  {n:"Nissan GT-R",c:"#7d8a96"},
+  {n:"Hyundai Elantra",c:"#5a6e8a"},
+  {n:"Hyundai Tucson",c:"#c8b070"},
+  {n:"Kia Soul",c:"#b08ac0"},
+  {n:"Subaru Outback",c:"#8a7a5a"},
+  {n:"Mazda MX-5 Miata",c:"#3e2a20"},
+  {n:"Volkswagen Beetle",c:"#a8322a"},
+  {n:"Volkswagen Golf",c:"#9a6a3a"},
+  {n:"Tesla Model 3",c:"#3a3a40"},
+  {n:"Tesla Model Y",c:"#c9a27a"},
+  {n:"Tesla Model S",c:"#d9b77a"},
+  {n:"Mini Cooper",c:"#d08a3a"},
+  {n:"Fiat 500",c:"#7a4a2a"},
+  {n:"Volvo XC90",c:"#5a6070"},
+  {n:"Porsche 911",c:"#6b4a2a"},
+  {n:"BMW 3 Series",c:"#d8a040"},
+  {n:"Mercedes-Benz S-Class",c:"#7d8a96"},
+  {n:"Rolls-Royce Phantom",c:"#5a6e8a"},
+  {n:"Lamborghini Aventador",c:"#c8b070"},
+  {n:"Genesis G80",c:"#b08ac0"},
+  {n:"Genesis GV70",c:"#8a7a5a"},
+  {n:"Acura MDX",c:"#3e2a20"},
+  {n:"Lexus RX",c:"#a8322a"},
+  {n:"Audi A4",c:"#9a6a3a"},
+  {n:"Audi Q5",c:"#3a3a40"},
+  {n:"Cadillac CT5",c:"#c9a27a"},
+  {n:"Lincoln Navigator",c:"#d9b77a"},
+  {n:"Volvo XC60",c:"#d08a3a"},
+  {n:"Land Rover Range Rover",c:"#7a4a2a"}
+];
+/* Categories. To add one, append an entry. Fruit keeps its original pilot keys and ladder key,
+   so existing picks still count. art: "fruit" draws silhouettes, "letter" draws a letter portrait. */
+const CATEGORIES = [
+  {id:"fruit",  name:"Fruit",      e:"🍓", bg:"linear-gradient(135deg,#ff6a1a,#e8303a)", items:FRUITS,  ladderKey:"goat_fruit_ladder_v9",  seeded:true,  art:"fruit"},
+  {id:"dogs",   name:"Dog breeds", e:"🐶", bg:"linear-gradient(135deg,#2aa4ff,#2d4fd6)", items:DOGS,    ladderKey:"goat_dogs_ladder_v1",   seeded:false, art:"letter"},
+  {id:"states", name:"US states",  e:"🗺️", bg:"linear-gradient(135deg,#5cff8a,#1f9a4a)", items:STATES,  ladderKey:"goat_states_ladder_v1", seeded:false, art:"letter"},
+  {id:"cars",   name:"Car models", e:"🚗", bg:"linear-gradient(135deg,#ffb020,#b8322a)", items:CARS,    ladderKey:"goat_cars_ladder_v1",   seeded:false, art:"letter"}
+];
+CATEGORIES.forEach(cat => {
+  cat.byName = {}; cat.bySlug = {};
+  cat.items.forEach(f => { f.s = f.n.toLowerCase().replace(/[^a-z]/g, ""); cat.byName[f.n] = f; cat.bySlug[f.s] = f; });
+});
+const DRAG_THRESHOLD = 0.4;   // a drag must cross 40% of the stage width toward the rival to win
+const CARD_FOLLOW = 0.5;      // share of the finger distance the fighter card moves
+
+const $ = id => document.getElementById(id);
+let CUR = CATEGORIES[0];      // the category being played
+let S = null;                 // ladder state for CUR: {champ, queue, round, streak, ranked}
+let mode = "ladder";          // "ladder", "challenge" or "oneoff"
+let challengePair = null;     // [x, y] when opened from a challenge link or random match
+let current = {a:"", b:""};   // names on the a/b fighters
+let voted = false;
+let resetArmed = false;
+let resetTimer = null;
+
+/* ---------- pilot data ----------
+   Supabase table "votes": one row per viewer, category and matchup. Only the latest pick per matchup counts.
+   Everyone reads all votes. Each viewer signs in anonymously and can only write their own rows.
+   Fruit keys are "Apple__Banana". Other categories prefix the category: "dogs:Beagle__Pug".
+   If Supabase cannot be reached, the game still works and stats are hidden. */
+let db = null;                // Supabase client once connected, else null
+let uid = null;               // this viewer's Supabase user id, or null if sign-in failed
+let myPicks = {};             // key -> {w, c, b, o, l, r, z, t, g}; this viewer's picks, all categories
+let othersPicks = new Map();  // viewer id -> picks object, for everyone else
+let statsReady = false;
+const SESSION_START = Date.now();   // picks made since this page opened count as "this session"
+let pollTimer = null;
+const POLL_MS = 15000;
+let writeChain = Promise.resolve();
+let lastResult = null;        // {winner, loser} while the result panel is open
+let winCounts = {};           // item name -> times picked as a winner in CUR, all viewers
+let lastPick = null;          // {key, previous, snapshotS, time}: the one pick that "Oops" can undo
+let oopsTimer = null;
+const OOPS_MS = 5000;
+
+function recomputeWins(){
+  const w = {};
+  const add = picks => Object.keys(picks || {}).forEach(k => {
+    const v = picks[k];
+    if(v && v.w && parseKey(k).cat === CUR.id) w[v.w] = (w[v.w] || 0) + 1;
+  });
+  othersPicks.forEach(add);
+  add(myPicks);
+  winCounts = w;
+}
+
+function pairKey(x, y){ return [x, y].sort().join("__"); }
+function keyFor(x, y){ return (CUR.id === "fruit" ? "" : CUR.id + ":") + pairKey(x, y); }
+function parseKey(k){
+  const i = k.indexOf(":");
+  const [x, y] = (i < 0 ? k : k.slice(i + 1)).split("__");
+  return { cat: i < 0 ? "fruit" : k.slice(0, i), x, y };
+}
+
+/* Coarse device facts saved with each pick. No exact location: the page cannot get city or state. */
+function deviceInfo(){
+  const ua = navigator.userAgent || "";
+  const touch = (navigator.maxTouchPoints || 0) > 0;
+  const minSide = Math.min(window.innerWidth || 0, window.innerHeight || 0);
+  const c = touch ? (minSide < 768 ? "phone" : "tablet") : "desktop";
+  const b = /Edg\//.test(ua) ? "Edge" : /OPR\//.test(ua) ? "Opera" : /Firefox|FxiOS/.test(ua) ? "Firefox"
+          : /Chrome|CriosChrome|Chromium/.test(ua) ? "Chrome" : /Safari/.test(ua) ? "Safari" : "Other";
+  const o = /iPhone|iPod/.test(ua) ? "iOS" : /iPad/.test(ua) ? "iPadOS" : /Android/.test(ua) ? "Android"
+          : /Mac OS X|Macintosh/.test(ua) ? "macOS" : /Windows/.test(ua) ? "Windows" : /Linux/.test(ua) ? "Linux" : "Other";
+  const l = navigator.language || null;                           // e.g. en-US
+  const reg = l && l.split("-")[1];
+  const r = reg && /^[A-Z]{2}$/i.test(reg) ? reg.toUpperCase() : null;   // region hint from locale
+  let z = null;
+  try{ z = Intl.DateTimeFormat().resolvedOptions().timeZone || null; }catch(e){}  // e.g. America/New_York
+  return { c, b, o, l, r, z };
+}
+const DEVICE = deviceInfo();
+
+/* ---------- storage (guarded: viewers can block or wipe it) ---------- */
+function readStore(key){ try{ return JSON.parse(localStorage.getItem(key) || "null"); }catch(e){ return null; } }
+function writeStore(key, value){ try{ localStorage.setItem(key, JSON.stringify(value)); }catch(e){} }
+function loadLadder(cat){ const s = readStore(cat.ladderKey); return (s && typeof s.champ === "string" && Array.isArray(s.queue)) ? s : null; }
+function saveLadder(){ writeStore(CUR.ladderKey, S); }
+
+/* ---------- helpers ---------- */
+function buzz(ms){ try{ if(navigator.vibrate) navigator.vibrate(ms); }catch(e){} }  // Android only; iOS Safari has no vibration API
+function toast(msg){
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.remove("hidden");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.classList.add("hidden"), 2200);
+}
+const SCENARIO_SEED = 20261102;
+function seededRandom(s){
+  return function(){
+    s |= 0; s = s + 0x6D2B79F5 | 0;
+    let t = Math.imul(s ^ s >>> 15, 1 | s);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function shuffleList(arr){
+  const a = arr.slice();
+  for(let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+/* Ties in the most-picked order are broken by a fixed shuffle per category. The shuffle is seeded, so every
+   player sees the same order and pick data stacks up on the same matchups. It is not alphabetical. */
+function tieRanks(cat){
+  if(cat.tie) return cat.tie;
+  const idx = cat.items.map((_, i) => i);
+  const rnd = seededRandom(SCENARIO_SEED + [...cat.id].reduce((a, ch) => a + ch.charCodeAt(0), 0));
+  for(let i = idx.length - 1; i > 0; i--){ const j = Math.floor(rnd() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; }
+  cat.tie = {};
+  idx.forEach((itemIndex, pos) => { cat.tie[cat.items[itemIndex].n] = pos; });
+  return cat.tie;
+}
+/* A run picks a champion from the items not yet ranked. Each finished run ranks its champion; the next
+   run excludes everything ranked so far. If prevChamp is still unranked (mid-run Reset), the run continues from it. */
+function newRunState(ranked, prevChamp, shuffle){
+  // most-picked first (times picked as a winner), seeded shuffle on ties. The first item opens the run.
+  const tie = tieRanks(CUR);
+  // A fresh start (shuffle) uses a new random order every time instead of the fixed one.
+  const order = shuffle
+    ? shuffleList(CUR.items.map(f => f.n))
+    : CUR.items.map(f => f.n).sort((a, b) => (winCounts[b] || 0) - (winCounts[a] || 0) || tie[a] - tie[b]);
+  const left = order.filter(n => !ranked.includes(n) && n !== prevChamp);
+  if(prevChamp && CUR.byName[prevChamp] && !ranked.includes(prevChamp)){
+    return { champ: prevChamp, queue: left, round: 0, streak: 0, ranked };
+  }
+  return { champ: left.shift(), queue: left, round: 0, streak: 0, ranked };
+}
+
+/* ---------- tallies ---------- */
+function countsFor(key, x, y){
+  const c = {[x]:0, [y]:0};
+  othersPicks.forEach(picks => {
+    const v = picks && picks[key];
+    if(v && v.w in c) c[v.w]++;
+  });
+  const mine = myPicks[key];
+  if(mine && mine.w in c) c[mine.w]++;
+  return c;
+}
+
+/* Sample players are not loaded on the Supabase version. The table starts empty, so the counts are real. */
+const seedActive = false;
+
+/* Turns a list of vote rows (from Supabase) into the local pick maps. */
+function onVotes(rows){
+  statsReady = true;
+  const next = new Map();
+  let mine = {};
+  rows.forEach(r => {
+    const key = (r.category === "fruit" ? "" : r.category + ":") + r.matchup_key;
+    if(uid && r.user_id === uid){
+      mine[key] = { w: r.winner, t: r.picked_at || 0, c: r.device_type, b: r.browser, o: r.os,
+                    l: r.browser_language, r: r.region_hint, z: r.timezone, g: r.crowned ? 1 : 0 };
+      return;
+    }
+    if(r.is_seed) return;
+    if(!next.has(r.user_id)) next.set(r.user_id, {});
+    next.get(r.user_id)[key] = { w: r.winner };
+  });
+  othersPicks = next;
+  // local picks win over a fetch that may lag our own write
+  myPicks = Object.assign({}, mine, myPicks);
+  recomputeWins();
+  if(lastResult) renderStats(lastResult.winner, lastResult.loser);
+}
+
+/* Reads every vote, a page at a time (Supabase returns at most 1000 rows per request). */
+async function fetchVotes(){
+  const all = [];
+  const PAGE = 1000;
+  for(let from = 0; ; from += PAGE){
+    const { data, error } = await db.from("votes")
+      .select("user_id, category, matchup_key, winner, picked_at, device_type, browser, os, browser_language, region_hint, timezone, crowned, is_seed")
+      .order("id", { ascending: true })
+      .range(from, from + PAGE - 1);
+    if(error) throw error;
+    all.push(...data);
+    if(data.length < PAGE) break;
+  }
+  return all;
+}
+async function refreshVotes(){
+  if(!db) return;
+  try{
+    onVotes(await fetchVotes());
+  }catch(e){
+    console.warn("votes not loaded", e);
+    if(lastResult) renderStats(lastResult.winner, lastResult.loser, "Stats stopped (" + (e && e.code || "error") + ").");
+  }
+}
+
+async function connectPilot(){
+  if(!window.supabase){
+    if(lastResult) renderStats(lastResult.winner, lastResult.loser);
+    return;
+  }
+  try{
+    db = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
+    const { data: sess } = await db.auth.getSession();
+    if(!sess || !sess.session){
+      const { error } = await db.auth.signInAnonymously();
+      if(error) throw error;
+    }
+    const { data: u } = await db.auth.getUser();
+    uid = u && u.user ? u.user.id : null;
+  }catch(e){
+    console.warn("pilot sign-in failed", e);
+    uid = null;
+  }
+  await refreshVotes();
+  clearInterval(pollTimer);
+  pollTimer = setInterval(refreshVotes, POLL_MS);
+  if(lastResult) renderStats(lastResult.winner, lastResult.loser);
+}
+
+/* Converts this viewer's picks (keyed as in myPicks) into rows for the votes table. */
+function pickRows(picks){
+  return Object.keys(picks).map(k => {
+    const p = parseKey(k), e = picks[k];
+    return {
+      user_id: uid,
+      category: p.cat,
+      matchup_key: p.x + "__" + p.y,
+      winner: e.w,
+      loser: e.w === p.x ? p.y : p.x,
+      device_type: e.c || null,
+      browser: e.b || null,
+      os: e.o || null,
+      browser_language: e.l || null,
+      region_hint: e.r || null,
+      timezone: e.z || null,
+      picked_at: e.t || Date.now(),
+      crowned: !!e.g,
+      is_seed: false,
+      updated_at: new Date().toISOString()
+    };
+  });
+}
+
+/* Saves one pick. Writes are queued so only one write runs at a time. */
+function savePick(key, entry){
+  if(!db || !uid) return Promise.resolve(false);
+  const row = pickRows({ [key]: entry })[0];
+  const job = writeChain.then(async () => {
+    const { error } = await db.from("votes").upsert(row, { onConflict: "user_id,category,matchup_key" });
+    if(error) throw error;
+  });
+  writeChain = job.catch(() => {});
+  return job.then(() => true, e => { console.warn("pick not saved", e); return false; });
+}
+
+/* Replaces all of this viewer's rows with myPicks (used by reset, undo and crown). Queued like savePick. */
+function writePicks(){
+  if(!db || !uid) return;
+  writeChain = writeChain.then(async () => {
+    const { error: delErr } = await db.from("votes").delete().eq("user_id", uid);
+    if(delErr) throw delErr;
+    const rows = pickRows(myPicks);
+    if(rows.length){
+      const { error } = await db.from("votes").insert(rows);
+      if(error) throw error;
+    }
+  }).catch(e => console.warn("picks not saved", e));
+}
+
+/* ---------- drawn fruit (placeholder art, no photos needed) ----------
+   Fruits without a photo or emoji get a simple SVG silhouette in their color. */
+const BERRY_FRUITS = new Set(["Blackberry","Blueberry","Cranberry","Elderberry","Gooseberry","Grapes","Lychee","Raspberry","Strawberry"]);
+const LONG_FRUITS = new Set(["Banana","Starfruit"]);
+function fruitSVG(f){
+  const c = f.c, hi = "rgba(255,255,255,.55)";
+  let body;
+  if(BERRY_FRUITS.has(f.n)){
+    body = [[100,120,46],[58,168,42],[142,168,42],[100,200,38],[72,116,34],[128,116,34]].map(([x,y,r]) =>
+      `<circle cx="${x}" cy="${y}" r="${r}" fill="${c}"/><circle cx="${x - r*.35}" cy="${y - r*.35}" r="${r*.25}" fill="${hi}"/>`).join("");
+  } else if(LONG_FRUITS.has(f.n)){
+    body = `<path d="M62 44 Q150 120 118 226 Q104 246 86 232 Q120 140 52 70 Z" fill="${c}"/>
+            <path d="M70 66 Q112 130 100 206" stroke="${hi}" stroke-width="9" fill="none" stroke-linecap="round"/>`;
+  } else {
+    body = `<ellipse cx="100" cy="150" rx="70" ry="82" fill="${c}"/>
+            <ellipse cx="76" cy="120" rx="18" ry="30" fill="${hi}"/>
+            <path d="M100 68 Q104 50 120 46" stroke="#3a2a1a" stroke-width="8" fill="none" stroke-linecap="round"/>`;
+  }
+  return `<svg class="fruit-svg" viewBox="0 0 200 260" aria-hidden="true"><ellipse cx="100" cy="248" rx="60" ry="8" fill="rgba(0,0,0,.35)"/>${body}</svg>`;
+}
+
+/* ---------- rendering ---------- */
+function portraitHTML(f){
+  if(f.img) return `<img src="${f.img}" alt="${f.n}" onerror="this.style.display='none'">`;
+  if(f.e) return `<span class="glyph" aria-hidden="true">${f.e}</span>`;
+  if(CUR.art === "letter"){
+    const t = f.code || f.n[0];
+    return `<span class="letter${t.length > 1 ? " two" : ""}" aria-hidden="true">${t}</span>`;
+  }
+  return fruitSVG(f);
+}
+function setFighter(side, name){
+  const f = CUR.byName[name];
+  if(!f) throw new Error("name not in " + CUR.id + ": " + name);
+  const portrait = $("p" + side);
+  portrait.style.setProperty("--c", f.c);
+  portrait.innerHTML = portraitHTML(f);
+  $("n" + side).innerHTML = `<span>${f.n}</span>`;
+}
+function updateStatus(){
+  if(mode === "oneoff"){ $("roundLabel").textContent = "1v1"; return; }
+  if(mode === "challenge"){ $("roundLabel").textContent = "VS"; return; }
+  $("roundLabel").textContent = `R${S.round + 1}`;
+}
+function resetFighterVisuals(){
+  document.querySelectorAll(".fighter").forEach(c => {
+    c.classList.remove("won","lost","over","charging","ready","dragging","snapping");
+    c.style.transform = "";
+    c.style.setProperty("--p", 0);
+  });
+}
+function setHint(text, go){
+  const h = $("hint");
+  h.textContent = text;
+  h.classList.toggle("go", !!go);
+}
+
+function renderMatch(){
+  try{
+    if(mode === "ladder" && S){
+      const bad = !CUR.byName[S.champ] || S.queue.some(n => !CUR.byName[n]);
+      if(bad){ S = newRunState((S.ranked || []).filter(n => CUR.byName[n])); saveLadder(); }
+    }
+    renderMatchInner();
+  }catch(err){
+    console.warn("render failed, restarting run", err);
+    mode = "ladder"; challengePair = null;
+    S = newRunState([]); saveLadder();
+    renderMatchInner();
+  }
+}
+function renderMatchInner(){
+  hideOops();
+  voted = false;
+  lastResult = null;
+  $("result").classList.add("hidden");
+  $("ladderEnd").classList.add("hidden");
+  $("checkpoint").classList.add("hidden");
+  resetFighterVisuals();
+  if(mode === "ladder" && S && S.round > 0 && S.round % 10 === 0 && S.checkpoint !== S.round && S.queue.length){
+    return showCheckpoint();
+  }
+
+  let x, y;
+  if(mode === "challenge" || mode === "oneoff"){
+    [x, y] = challengePair;
+  } else {
+    if(!S.queue.length) return showLadderEnd();
+    x = S.champ;
+    y = S.queue[0];
+  }
+
+  current = Math.random() < 0.5 ? {a:y, b:x} : {a:x, b:y};   // random side so position never signals the champion
+  setFighter("a", current.a);
+  setFighter("b", current.b);
+  document.querySelectorAll(".pick").forEach(b => b.disabled = false);
+  setHint("Press and drag a fighter toward the rival, or tap to pick.", false);
+  // countdown under VS: items still in this run, champion included (50, 49, 48...)
+  $("vsStreak").textContent = mode === "ladder" && S ? `(${S.queue.length + 1})` : "";
+  updateStatus();
+}
+
+function renderStats(winner, loser, note){
+  const key = keyFor(winner, loser);
+  $("seedNote").classList.toggle("hidden", !(db && seedActive && CUR.seeded));
+  $("koText").textContent = `${winner} wins`;
+  $("koSub").textContent = `You picked ${winner} over ${loser}.`;
+  const fill = $("overallFill");
+  if(!db){
+    $("overallLabel").textContent = "Pilot stats not available here";
+    fill.style.width = "0%";
+    $("tally").textContent = "";
+    $("facts").textContent = "This view cannot reach the pilot database, so picks are not being counted.";
+    return;
+  }
+  const c = countsFor(key, winner, loser);
+  const total = c[winner] + c[loser];
+  const pct = total ? Math.round(100 * c[winner] / total) : 50;
+  $("overallLabel").textContent = !statsReady ? "Counting picks…" : total ? `${winner} ${pct}% of picks` : "No picks counted yet";
+  requestAnimationFrame(() => requestAnimationFrame(() => { fill.style.width = (statsReady && total ? pct : 0) + "%"; }));
+  $("tally").textContent = statsReady ? `${winner} ${c[winner]} · ${loser} ${c[loser]} · ${total} total` : "";
+  let facts;
+  if(note) facts = note;
+  else if(!uid) facts = "Picks are not saved until sign-in finishes.";
+  else if(!statsReady) facts = "Loading the pilot count…";
+  else if(total <= 1) facts = "First pick on this matchup. The count fills in as people play.";
+  else facts = `Popular across ${total} picks on this matchup.`;
+  $("facts").textContent = facts + " Pilot: your pick is saved with device type, browser, OS, language, region and timezone.";
+}
+
+function showResult(winner, loser){
+  lastResult = { winner, loser };
+  $("result").style.transition = "";
+  $("result").style.transform = "";
+  renderStats(winner, loser);
+  $("result").classList.remove("hidden");
+  setCrownLabels();
+  $("resultCrown").classList.toggle("hidden", !(mode === "ladder" && S && S.queue.length));
+  setHint("Swipe left or right, or press Space, for the next round.", false);
+  updateStatus();
+}
+
+/* Run end: the ranking. Edit lets you move a ranked item up or down with the arrow buttons.
+   Moving changes only the order of the list. It does not record any picks. */
+let rankEdit = false;
+function renderRankList(){
+  const n = S.ranked.length;
+  $("rankList").innerHTML = S.ranked.map((f, i) => `
+    <div class="stat-row rank-row">
+      <span>${i + 1}. ${f}</span>
+      ${rankEdit ? `<span class="rank-btns">
+        <button class="mini" data-act="up" data-i="${i}" ${i === 0 ? "disabled" : ""} aria-label="Move ${f} up">&#9650;</button>
+        <button class="mini" data-act="down" data-i="${i}" ${i === n - 1 ? "disabled" : ""} aria-label="Move ${f} down">&#9660;</button>
+      </span>` : ""}
+    </div>`).join("");
+}
+function showLadderEnd(){
+  setHint("Tap Find to continue.", false);
+  if(S.champ && !S.ranked.includes(S.champ)){ S.ranked.push(S.champ); saveLadder(); }
+  const n = S.ranked.length;
+  const done = n >= CUR.items.length;
+  const heading = done ? "Fully sorted" : (n === 1 ? `Your GOAT of ${CUR.name.toLowerCase()}` : `Rank #${n}`);
+  rankEdit = false;
+  $("ladderEnd").innerHTML = `
+    <p class="ko-sub">${heading}</p>
+    <p class="ko display">${S.champ}</p>
+    <div id="rankList" class="rows"></div>
+    <div class="actions">
+      <button class="btn" id="rankEdit"><span>Edit</span></button>
+      <button class="btn" id="rankShare"><span>Share</span></button>
+      <button class="btn primary" id="nextRank"><span>${done ? "Start over" : "Find #" + (n + 1)}</span></button>
+    </div>`;
+  renderRankList();
+  $("ladderEnd").classList.remove("hidden");
+  $("nextRank").onclick = () => {
+    mode = "ladder";
+    challengePair = null;
+    S = newRunState(done ? [] : S.ranked);
+    saveLadder();
+    renderMatch();
+  };
+  updateStatus();
+}
+$("ladderEnd").addEventListener("click", e => {
+  if(e.target.closest("#rankShare")){ shareRanking(); return; }
+  if(e.target.closest("#rankEdit")){
+    rankEdit = !rankEdit;
+    e.target.closest("#rankEdit").querySelector("span").textContent = rankEdit ? "Done" : "Edit";
+    renderRankList();
+    return;
+  }
+  const b = e.target.closest(".mini");
+  if(!b) return;
+  const i = Number(b.dataset.i), j = b.dataset.act === "up" ? i - 1 : i + 1;
+  if(j < 0 || j >= S.ranked.length) return;
+  [S.ranked[i], S.ranked[j]] = [S.ranked[j], S.ranked[i]];
+  saveLadder();
+  renderRankList();
+});
+
+/* ---------- actions ---------- */
+function castVote(side){
+  if(voted) return;
+  voted = true;
+  buzz(18);
+  const winner = current[side];
+  const loser = current[side === "a" ? "b" : "a"];
+  const snapshotS = JSON.parse(JSON.stringify(S));   // ladder state before this pick, for Oops
+
+  /* The winner is always the champion and faces the next item, including after a challenge link.
+     The loser drops out. A champion who was not in the matchup goes to the back of the queue.
+     A ranked item winning an off-ladder match does not change the run. */
+  if(!S.ranked.includes(winner)){
+    const old = S.champ;
+    S.queue = S.queue.filter(n => n !== winner && n !== loser);
+    if(old !== winner && old !== loser) S.queue.push(old);
+    S.streak = winner === old ? (S.streak || 0) + 1 : 1;   // wins in a row for the current champion
+    S.champ = winner;
+    S.round++;
+  }
+  saveLadder();
+
+  const key = keyFor(winner, loser);
+  const entry = Object.assign({ w: winner }, DEVICE, { t: Date.now() });
+  const previous = myPicks[key];
+  myPicks[key] = entry;
+  lastPick = { key, previous, snapshotS, time: Date.now() };
+  showOops();
+  savePick(key, entry).then(ok => {
+    if(!ok){
+      if(previous === undefined) delete myPicks[key]; else myPicks[key] = previous;
+      toast(uid ? "Pick not saved. Check your connection." : "Sign in to save your picks");
+      if(lastResult) renderStats(lastResult.winner, lastResult.loser);
+    }
+  });
+
+  document.querySelectorAll(".fighter").forEach(c => {
+    c.classList.remove("dragging","charging","ready","over");
+    c.style.transform = "";
+    c.classList.add(c.dataset.side === side ? "won" : "lost");
+  });
+  document.querySelectorAll(".pick").forEach(b => b.disabled = true);
+  showResult(winner, loser);
+}
+
+/* Challenge links use a plain hash, on this site's own address.
+   Fruit: #vs-apple-banana. Other categories: #vs-dogs-beagle-pug. */
+function challengeUrl(x, y){
+  const head = CUR.id === "fruit" ? "" : CUR.id + "-";
+  return SITE_URL + "#vs-" + head + CUR.byName[x].s + "-" + CUR.byName[y].s;
+}
+function openShare(text, url){
+  $("shareText").textContent = text;
+  $("shareUrl").value = url;
+  $("shareMsg").textContent = "";
+  $("shareNative").classList.toggle("hidden", !navigator.share);
+  $("shareSheet").classList.remove("hidden");
+  setTimeout(() => { $("shareUrl").focus(); $("shareUrl").select(); }, 50);
+}
+function shareMatch(x, y){
+  openShare(`Blind vote: ${x} or ${y}? Pick first, then see how the crowd voted.`, challengeUrl(x, y));
+}
+function shareRanking(){
+  const list = S.ranked.slice(0, 10).map((f, i) => `${i + 1}. ${f}`).join("\n")
+    + (S.ranked.length > 10 ? `\n…and ${S.ranked.length - 10} more` : "");
+  openShare(`My ${CUR.name} ranking on The GOAT:\n${list}`, SITE_URL);
+}
+function legacyCopy(){
+  const i = $("shareUrl");
+  i.focus(); i.select(); i.setSelectionRange(0, 9999);
+  try{ return document.execCommand("copy"); }catch(e){ return false; }
+}
+async function copyLink(){
+  const text = $("shareText").textContent + "\n" + $("shareUrl").value;
+  try{
+    if(navigator.clipboard && window.isSecureContext){ await navigator.clipboard.writeText(text); return true; }
+  }catch(e){}
+  return legacyCopy();
+}
+$("shareCopy").addEventListener("click", async () => {
+  const ok = await copyLink();
+  $("shareMsg").textContent = ok ? "Copied. Send it to your friend." : "Could not copy here. The link is selected. Copy it yourself.";
+});
+$("shareNative").addEventListener("click", () => {
+  navigator.share({ title: "The GOAT", text: $("shareText").textContent, url: $("shareUrl").value })
+    .catch(() => { $("shareMsg").textContent = "Sharing was closed or blocked here. Use Copy link instead."; });
+});
+$("shareClose").addEventListener("click", () => $("shareSheet").classList.add("hidden"));
+
+function startNewLadder(){
+  const prev = S && S.champ;
+  mode = "ladder";
+  challengePair = null;
+  S = newRunState(S.ranked || [], prev);
+  saveLadder();
+  renderMatch();
+}
+
+/* Two-tap reset instead of confirm(), which viewers block. Resets the ladder only, not shared picks. */
+function handleReset(){
+  if(!resetArmed){
+    resetArmed = true;
+    $("resetBtn").querySelector("span").textContent = "Sure?";
+    clearTimeout(resetTimer);
+    resetTimer = setTimeout(disarmReset, 3000);
+    return;
+  }
+  disarmReset();
+  $("statsPanel").classList.add("hidden");
+  startNewLadder();
+  toast("Fresh ladder started");
+}
+function disarmReset(){
+  resetArmed = false;
+  clearTimeout(resetTimer);
+  $("resetBtn").querySelector("span").textContent = "Reset";
+}
+
+/* ---------- category picker ----------
+   Opened from the category button. Shows one box per category. Tap a box to play it. Back closes.
+   Each category keeps its own ladder and stats. */
+function openPicker(){
+  renderPicker();
+  document.body.classList.add("home");
+  $("picker").classList.remove("hidden");
+}
+function closePicker(){
+  $("picker").classList.add("hidden");
+  document.body.classList.remove("home");
+}
+/* The current #1 of a category is the first item in its ranking, if any run has finished. */
+function categoryTop(c){
+  const st = c === CUR ? S : readStore(c.ladderKey);
+  return (st && Array.isArray(st.ranked) && st.ranked[0]) || null;
+}
+function renderPicker(){
+  $("tiles").innerHTML = CATEGORIES.map(c => {
+    const top = categoryTop(c);
+    return `
+    <button class="tile${c === CUR ? " current" : ""}" data-id="${c.id}" style="background:${c.bg}">
+      <span class="tile-e" aria-hidden="true">${c.e}</span>
+      <span class="tile-name display">${c.name} (${c.items.length})</span>
+      ${top ? `<span class="tile-goat">👑 ${top}</span>` : ""}
+    </button>`;
+  }).join("");
+}
+function setCategory(cat){
+  if(cat === CUR) return;
+  if(S) saveLadder();
+  CUR = cat;
+  S = null;
+  writeStore("goat_cat", cat.id);
+  $("catLabel").textContent = cat.name;
+  mode = "ladder";
+  challengePair = null;
+  lastResult = null;
+  ["result","ladderEnd","statsPanel","checkpoint"].forEach(id => $(id).classList.add("hidden"));
+  hideOops();
+  history.replaceState(null, "", location.href.split("#")[0]);
+  recomputeWins();
+  S = loadLadder(cat) || newRunState([]);
+  if(!Array.isArray(S.ranked)) S.ranked = [];
+  saveLadder();
+  renderMatch();
+}
+$("introGo").addEventListener("click", () => {
+  writeStore("goat_intro_seen", true);
+  $("intro").classList.add("hidden");
+});
+$("brand").addEventListener("click", () => { if(!document.body.classList.contains("home")) openPicker(); });   // logo returns to home
+$("catBtn").addEventListener("click", openPicker);
+$("pickerBack").addEventListener("click", closePicker);
+$("tiles").addEventListener("click", e => {
+  const b = e.target.closest(".tile");
+  if(!b) return;
+  setCategory(CATEGORIES.find(c => c.id === b.dataset.id));
+  closePicker();
+});
+
+/* ---------- press, drag or tap ----------
+   Press and drag a fighter toward the rival. The border fills yellow as you go. Past 40% of the
+   stage width it turns green and buzzes once. Release past that line to pick. Release short and it
+   snaps back. A press with no drag is a tap and picks that fighter. */
+document.querySelectorAll(".fighter").forEach(card => {
+  const side = card.dataset.side;
+  const stage = $("stage");
+  let sx = 0, sy = 0, active = false, moved = false, wasReady = false;
+
+  const measure = dx => {
+    const width = stage.getBoundingClientRect().width;
+    const towardRival = side === "a" ? dx > 0 : dx < 0;
+    const progress = towardRival ? Math.min(1, Math.abs(dx) / (DRAG_THRESHOLD * width)) : 0;
+    return { towardRival, progress, ready: progress >= 1 };
+  };
+
+  card.addEventListener("pointerdown", e => {
+    if(voted || e.target.closest("button")) return;
+    active = true; moved = false; wasReady = false;
+    sx = e.clientX; sy = e.clientY;
+    card.setPointerCapture(e.pointerId);
+  });
+
+  card.addEventListener("pointermove", e => {
+    if(!active) return;
+    const dx = e.clientX - sx, dy = e.clientY - sy;
+    if(!moved && Math.hypot(dx, dy) < 8) return;   // still a tap
+    moved = true;
+    card.classList.add("dragging");
+    card.style.transform = `translateX(${dx * CARD_FOLLOW}px)`;   // the card follows the finger at half distance
+    const m = measure(dx);
+    card.style.setProperty("--p", Math.min(1, m.progress * 1.6).toFixed(3));   // colour fills faster; the lock point is unchanged
+    card.classList.toggle("charging", m.progress > 0 && !m.ready);
+    card.classList.toggle("ready", m.ready);
+    if(m.ready && !wasReady){
+      buzz(12);
+      setHint("Let go to lock in " + current[side], true);
+    } else if(!m.ready && wasReady){
+      setHint("Keep going to lock in " + current[side], false);
+    } else if(!m.ready && m.progress > 0 && !wasReady){
+      setHint("Keep going to lock in " + current[side], false);
+    }
+    wasReady = m.ready;
+  });
+
+  const finish = e => {
+    if(!active) return;
+    active = false;
+    const dx = e.clientX - sx;
+    const m = measure(dx);
+    card.classList.remove("dragging","charging","ready");
+    if(!moved){
+      castVote(side);
+    } else if(m.ready){
+      castVote(side);
+    } else {
+      card.classList.add("snapping");
+      card.style.transform = "";
+      card.style.setProperty("--p", 0);
+      setTimeout(() => card.classList.remove("snapping"), 220);
+      setHint("Press and drag a fighter toward the rival, or tap to pick.", false);
+    }
+  };
+  card.addEventListener("pointerup", finish);
+  const abort = () => {
+    if(!active) return;
+    active = false;
+    card.classList.remove("dragging","charging","ready");
+    card.classList.add("snapping");
+    card.style.transform = "";
+    card.style.setProperty("--p", 0);
+    setTimeout(() => card.classList.remove("snapping"), 220);
+    setHint("Press and drag a fighter toward the rival, or tap to pick.", false);
+  };
+  card.addEventListener("pointercancel", abort);
+  card.addEventListener("lostpointercapture", abort);
+});
+
+document.querySelectorAll(".pick").forEach(btn => {
+  btn.addEventListener("click", () => castVote(btn.dataset.side));
+});
+
+$("nextBtn").addEventListener("click", () => {
+  if(mode === "challenge" || mode === "oneoff"){
+    mode = "ladder";
+    challengePair = null;
+    history.replaceState(null, "", location.href.split("#")[0]);
+  }
+  renderMatch();
+});
+$("shareBtn").addEventListener("click", () => shareMatch(current.a, current.b));
+$("resetBtn").addEventListener("click", handleReset);
+
+/* ---------- oops (undo the last pick) ----------
+   Only the most recent pick, only for 5 seconds, only before Next. Removes that pick from your record
+   (or restores the earlier pick on the same matchup) and puts the matchup back with the ladder as it was. */
+function showOops(){
+  $("oopsBtn").classList.remove("hidden");
+  clearTimeout(oopsTimer);
+  oopsTimer = setTimeout(hideOops, OOPS_MS);
+}
+function hideOops(){
+  clearTimeout(oopsTimer);
+  $("oopsBtn").classList.add("hidden");
+  lastPick = null;
+}
+function undoLastPick(){
+  if(!lastPick || Date.now() - lastPick.time > OOPS_MS){ hideOops(); return; }
+  const { key, previous, snapshotS } = lastPick;
+  hideOops();
+  S = snapshotS;
+  saveLadder();
+  if(previous) myPicks[key] = previous; else delete myPicks[key];
+  writePicks();
+  recomputeWins();
+  renderMatch();
+  toast("Pick undone");
+}
+$("oopsBtn").addEventListener("click", undoLastPick);
+
+/* ---------- random match ---------- */
+function startRandomMatch(){
+  const items = CUR.items;
+  const a = items[Math.floor(Math.random() * items.length)].n;
+  let b;
+  do { b = items[Math.floor(Math.random() * items.length)].n; } while(b === a);
+  mode = "oneoff";
+  challengePair = [a, b];
+  $("result").classList.add("hidden");
+  renderMatch();
+}
+$("randomBtn").addEventListener("click", openPicker);   // the button opens the category picker
+
+/* ---------- your stats ---------- */
+function othersCounts(key, x, y){
+  const c = {[x]:0, [y]:0};
+  othersPicks.forEach(picks => {
+    const v = picks && picks[key];
+    if(v && v.w in c) c[v.w]++;
+  });
+  return c;
+}
+/* Winners of the most recent picks in this category (newest first), as bar rows, most wins first. */
+function recentWinnerBars(n){
+  const picks = Object.keys(myPicks)
+    .filter(k => parseKey(k).cat === CUR.id)
+    .map(k => myPicks[k])
+    .sort((a, b) => b.t - a.t)
+    .slice(0, n);
+  const counts = {};
+  picks.forEach(e => { counts[e.w] = (counts[e.w] || 0) + 1; });
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  const max = entries.length ? entries[0][1] : 1;
+  const rows = entries.map(([f, c]) => `<div class="bar-row"><span class="bar-name">${f}</span><span class="bar-track"><span class="bar-fill" style="width:${Math.round(100 * c / max)}%"></span></span><b>${c}</b></div>`).join("");
+  return { total: picks.length, rows };
+}
+function openStats(){
+  const body = $("statsBody");
+  if(document.body.classList.contains("home")){
+    // Home screen has no category selected, so Stats summarises every category.
+    body.innerHTML = CATEGORIES.map(c => {
+      const n = Object.keys(myPicks).filter(k => parseKey(k).cat === c.id).length;
+      const top = categoryTop(c);
+      return `<div class="stat-row"><span>${c.name}</span><b>${n} matchups${top ? " · 👑 " + top : ""}</b></div>`;
+    }).join("");
+  } else if(!db || !uid){
+    body.innerHTML = `<p class="ko-sub">Sign in to see your stats.</p>`;
+  } else if(!statsReady){
+    body.innerHTML = `<p class="ko-sub">Loading…</p>`;
+  } else {
+    const keys = Object.keys(myPicks).filter(k => parseKey(k).cat === CUR.id);
+    let agree = 0, counted = 0, sessionTotal = 0;
+    const session = {};
+    keys.forEach(k => {
+      const entry = myPicks[k];
+      if(entry.t >= SESSION_START){
+        session[entry.w] = (session[entry.w] || 0) + 1;
+        sessionTotal++;
+      }
+      const { x, y } = parseKey(k);
+      const c = othersCounts(k, x, y);
+      if(c[x] + c[y] === 0) return;
+      counted++;
+      const crowd = c[x] > c[y] ? x : (c[y] > c[x] ? y : null);
+      if(crowd === entry.w) agree++;
+    });
+    const entries = Object.entries(session).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    const max = entries.length ? entries[0][1] : 1;
+    const hit = n => [current.a, current.b].includes(n) ? " hit" : "";
+    body.innerHTML = `
+      <p class="ko-sub">All time in ${CUR.name.toLowerCase()}: <b>${keys.length}</b> matchups. Agreed with the crowd: <b>${counted ? agree + " of " + counted : "not enough picks yet"}</b></p>
+      <p class="ko-sub">This session: <b>${sessionTotal}</b> picks. Winners, most first:</p>`
+      + (entries.length
+        ? entries.map(([f, n]) => `<div class="bar-row${hit(f)}"><span class="bar-name">${f}</span><span class="bar-track"><span class="bar-fill" style="width:${Math.round(100 * n / max)}%"></span></span><b>${n}</b></div>`).join("")
+        : `<p class="ko-sub">No picks yet this session.</p>`);
+  }
+  $("statsPanel").classList.remove("hidden");
+}
+$("statsBtn").addEventListener("click", openStats);
+$("statsClose").addEventListener("click", () => $("statsPanel").classList.add("hidden"));
+
+/* Crown buttons name the current champion, e.g. "Cherry is the GOAT". */
+function setCrownLabels(){
+  const label = S && S.champ ? `👑 ${S.champ} is the GOAT` : "👑 This is the GOAT";
+  $("resultCrown").querySelector("span").textContent = label;
+  $("cpCrown").querySelector("span").textContent = label;
+}
+
+/* ---------- this is the GOAT ----------
+   Declares the current champion the GOAT. Records a win for the champion over every item still left in
+   the run (marked g:1 so it can be told apart from a normal pick), then ends the run with the champion ranked. */
+async function crownGoat(){
+  if(mode !== "ladder" || !S || !S.queue.length) return;
+  const champ = S.champ, rest = S.queue.slice();
+  if(!await confirmBox(`Crown ${champ} the GOAT?`,
+      `Records ${champ} over the ${rest.length} remaining ${CUR.name.toLowerCase()}, then ends this run with ${champ} ranked #${S.ranked.length + 1}.`,
+      "Crown")) return;
+  rest.forEach(n => { myPicks[keyFor(champ, n)] = Object.assign({ w: champ, g: 1 }, DEVICE, { t: Date.now() }); });
+  recomputeWins();
+  writePicks();
+  hideOops();
+  if(!S.ranked.includes(champ)) S.ranked.push(champ);
+  S.queue = [];
+  saveLadder();
+  ["statsPanel", "checkpoint", "resetPanel", "resetItems"].forEach(id => $(id).classList.add("hidden"));
+  renderMatch();
+}
+$("resultCrown").addEventListener("click", crownGoat);
+$("cpCrown").addEventListener("click", crownGoat);
+
+/* ---------- checkpoint ----------
+   Every 10 picks in a run, pause and ask: keep going, start fresh in this category, or change category.
+   Picks are saved either way. Start fresh keeps this category's rankings and begins a new run. */
+function showCheckpoint(){
+  $("cpTitle").textContent = `${S.round} picks in`;
+  $("cpBody").textContent = `${CUR.name}: champion ${S.champ}, ${S.queue.length} left in this run.`;
+  setCrownLabels();
+  const bars = recentWinnerBars(10);
+  $("cpBars").innerHTML = `<p class="ko-sub">Last <b>${bars.total}</b> picks. Winners, most first:</p>`
+    + (bars.rows || `<p class="ko-sub">No picks yet.</p>`);
+  $("checkpoint").classList.remove("hidden");
+  setHint("Choose how to continue.", false);
+  updateStatus();
+}
+function passCheckpoint(){
+  S.checkpoint = S.round;
+  saveLadder();
+  $("checkpoint").classList.add("hidden");
+}
+$("cpGo").addEventListener("click", () => { passCheckpoint(); renderMatch(); });
+$("cpFresh").addEventListener("click", () => {
+  passCheckpoint();
+  mode = "ladder"; challengePair = null;
+  S = newRunState(S.ranked || [], null, true);
+  saveLadder();
+  renderMatch();
+  toast("Fresh run started");
+});
+$("cpChange").addEventListener("click", () => { passCheckpoint(); renderMatch(); openPicker(); });
+
+/* ---------- reset (accidental picks) ----------
+   Reset one item: removes your picks that involve it. Reset a category: removes your picks in it and restarts its run.
+   Delete all: removes every pick and every run. Each one asks first; delete all asks twice. */
+function confirmBox(title, body, label){
+  return new Promise(resolve => {
+    $("dlgTitle").textContent = title;
+    $("dlgBody").textContent = body;
+    $("dlgOk").querySelector("span").textContent = label;
+    const done = v => {
+      $("dialog").classList.add("hidden");
+      $("dlgOk").onclick = null;
+      $("dlgCancel").onclick = null;
+      resolve(v);
+    };
+    $("dlgOk").onclick = () => done(true);
+    $("dlgCancel").onclick = () => done(false);
+    $("dialog").classList.remove("hidden");
+  });
+}
+const catTest = (k, p) => p.cat === CUR.id;
+const itemTest = name => (k, p) => p.cat === CUR.id && (p.x === name || p.y === name);
+function countPicks(test){ return Object.keys(myPicks).filter(k => test(k, parseKey(k))).length; }
+function removePicks(test){
+  const next = {};
+  Object.keys(myPicks).forEach(k => { if(!test(k, parseKey(k))) next[k] = myPicks[k]; });
+  myPicks = next;
+  hideOops();
+  recomputeWins();
+  writePicks();
+}
+function restartRun(cat){
+  writeStore(cat.ladderKey, null);
+  if(cat === CUR){
+    mode = "ladder"; challengePair = null; lastResult = null;
+    S = newRunState([]);
+    saveLadder();
+    renderMatch();
+  }
+}
+function closeReset(){
+  $("statsPanel").classList.add("hidden");
+  $("resetPanel").classList.add("hidden");
+  $("resetItems").classList.add("hidden");
+}
+function showItemList(){
+  const rows = CUR.items
+    .map(f => ({ n: f.n, c: countPicks(itemTest(f.n)) }))
+    .filter(r => r.c > 0)
+    .sort((a, b) => b.c - a.c || a.n.localeCompare(b.n));
+  $("resetItems").innerHTML = rows.length
+    ? rows.map(r => `<button class="stat-row reset-row" data-item="${r.n}"><span>${r.n}</span><b>${r.c} pick${r.c === 1 ? "" : "s"}</b></button>`).join("")
+    : `<p class="ko-sub">No picks in ${CUR.name.toLowerCase()} yet.</p>`;
+  $("resetItems").classList.remove("hidden");
+}
+$("statsReset").addEventListener("click", () => {
+  $("statsPanel").classList.add("hidden");
+  $("resetItems").classList.add("hidden");
+  $("resetPanel").classList.remove("hidden");
+});
+$("resetBack").addEventListener("click", () => { $("resetPanel").classList.add("hidden"); openStats(); });
+$("rsItem").addEventListener("click", showItemList);
+$("resetItems").addEventListener("click", async e => {
+  const b = e.target.closest(".reset-row");
+  if(!b) return;
+  const name = b.dataset.item;
+  const test = itemTest(name);
+  const n = countPicks(test);
+  if(!await confirmBox(`Reset ${name}?`, `Removes your ${n} pick${n === 1 ? "" : "s"} involving ${name} from your stats. Your current run is not changed.`, "Reset")) return;
+  removePicks(test);
+  closeReset();
+  toast(`${name} reset`);
+});
+$("rsCat").addEventListener("click", async () => {
+  const n = countPicks(catTest);
+  if(!await confirmBox(`Reset ${CUR.name}?`, `Removes your ${n} pick${n === 1 ? "" : "s"} in ${CUR.name} and starts a fresh run in that category. Other categories are not changed.`, "Reset")) return;
+  removePicks(catTest);
+  restartRun(CUR);
+  closeReset();
+  toast(`${CUR.name} reset`);
+});
+$("rsAll").addEventListener("click", async () => {
+  if(!await confirmBox("Delete all your stats?", "Removes every pick you have made in every category, and every run and ranking. Your picks stop counting in the shared stats.", "Continue")) return;
+  if(!await confirmBox("Are you sure?", "This cannot be undone.", "Delete everything")) return;
+  removePicks(() => true);
+  CATEGORIES.forEach(c => writeStore(c.ladderKey, null));
+  restartRun(CUR);
+  closeReset();
+  toast("All stats deleted");
+});
+
+/* ---------- keyboard ----------
+   In a match: 1 or Left Arrow votes the left fighter, 2 or Right Arrow votes the right fighter.
+   On the round result: Left Arrow, Right Arrow or Space goes to the next matchup. */
+document.addEventListener("keydown", e => {
+  if(e.metaKey || e.ctrlKey || e.altKey) return;
+  const t = e.target && e.target.tagName;
+  if(t === "INPUT" || t === "TEXTAREA") return;
+  if(!$("ladderEnd").classList.contains("hidden")){
+    // run finished: Left, Right or Space starts the next run (Find #N / Start over)
+    if(!rankEdit && (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === " ")){
+      e.preventDefault();
+      const b = $("nextRank");
+      if(b) b.click();
+    }
+    return;
+  }
+  const open = ["picker", "statsPanel", "resetPanel", "dialog", "shareSheet", "checkpoint", "ladderEnd", "intro"]
+    .some(id => !$(id).classList.contains("hidden"));
+  if(open) return;
+  const resultOpen = !$("result").classList.contains("hidden");
+  if(resultOpen){
+    if(e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === " "){
+      e.preventDefault();
+      $("nextBtn").click();
+    }
+    return;
+  }
+  if(e.key === "1" || e.key === "ArrowLeft"){ e.preventDefault(); castVote("a"); }
+  else if(e.key === "2" || e.key === "ArrowRight"){ e.preventDefault(); castVote("b"); }
+});
+
+/* ---------- the only swipe ----------
+   On the round result, drag the card left or right. It follows your finger and flies off past the
+   swipe distance, which moves to the next round. Less than that, it springs back. No other swipes. */
+(function(){
+  const stage = $("stage");
+  const SWIPE = 80;
+  const OPEN_PANELS = ["picker", "statsPanel", "resetPanel", "dialog", "shareSheet", "checkpoint", "ladderEnd", "intro"];
+  let g = null;
+  const resultEl = () => $("result");
+  const modalOpen = () => OPEN_PANELS.some(id => !$(id).classList.contains("hidden"));
+  stage.addEventListener("pointerdown", e => {
+    g = null;
+    if(e.target.closest("button")) return;
+    if(modalOpen() || resultEl().classList.contains("hidden")) return;
+    g = { x: e.clientX, dx: 0, w: stage.getBoundingClientRect().width };
+    resultEl().style.transition = "none";
+  });
+  stage.addEventListener("pointermove", e => {
+    if(!g) return;
+    g.dx = e.clientX - g.x;
+    resultEl().style.transform = `translate(${g.dx}px, -50%)`;
+  });
+  const release = () => {
+    if(!g) return;
+    const { dx, w } = g;
+    g = null;
+    const el = resultEl();
+    el.style.transition = "transform .25s ease";
+    if(Math.abs(dx) > SWIPE){
+      el.style.transform = `translate(${dx < 0 ? -w - 60 : w + 60}px, -50%)`;
+      setTimeout(() => $("nextBtn").click(), 250);
+    } else {
+      el.style.transform = "translate(0, -50%)";
+    }
+  };
+  stage.addEventListener("pointerup", release);
+  stage.addEventListener("pointercancel", release);
+})();
+
+/* ---------- init ---------- */
+function init(){
+  $("build").textContent = BUILD;
+  // challenge links: #vs-apple-banana (fruit) or #vs-dogs-beagle-pug. Tolerant of stray characters after the link.
+  const raw = (location.hash.match(/#vs-([a-z-]+)/i) || [])[1];
+  let challenge = null;
+  if(raw){
+    const t = raw.toLowerCase().split("-").filter(Boolean);
+    const cat = t.length === 3 ? CATEGORIES.find(c => c.id === t[0]) : (t.length === 2 ? CATEGORIES[0] : null);
+    const x = cat && t.length >= 2 ? cat.bySlug[t[t.length - 2]] : null;
+    const y = cat && t.length >= 2 ? cat.bySlug[t[t.length - 1]] : null;
+    if(cat && x && y && x !== y) challenge = { cat, x: x.n, y: y.n };
+  }
+  CUR = challenge ? challenge.cat : (CATEGORIES.find(c => c.id === readStore("goat_cat")) || CATEGORIES[0]);
+  $("catLabel").textContent = CUR.name;
+  recomputeWins();
+  S = loadLadder(CUR) || newRunState([]);
+  if(!Array.isArray(S.ranked)) S.ranked = [];
+  saveLadder();
+  if(challenge){
+    mode = "challenge";
+    challengePair = [challenge.x, challenge.y];
+  }
+  renderMatch();
+  if(!challenge){
+    openPicker();
+    // First visit only: the welcome card explains the game. Dismissing it saves the flag.
+    if(!readStore("goat_intro_seen")) $("intro").classList.remove("hidden");
+  }
+  connectPilot();   // game works without it; stats appear when Supabase connects
+}
+init();
+</script>
+</body>
+</html>
