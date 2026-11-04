@@ -145,6 +145,8 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .picker{position:absolute; inset:0; z-index:7; background:var(--ink); padding:14px 14px 12px; display:flex; flex-direction:column; gap:12px; min-height:0; overflow:hidden}
 .picker-title{font-size:clamp(26px,9vw,40px); margin:0; text-align:center}
 .picker-note{margin:0; text-align:center}
+.skip-picker{display:flex; align-items:center; justify-content:center; gap:8px; margin:10px 0 0; font-size:14px; color:#fff; cursor:pointer}
+.skip-picker input{width:18px; height:18px; margin:0; accent-color:var(--yellow)}
 .tiles{flex:1; min-height:0; overflow-y:auto; display:grid; grid-template-columns:1fr 1fr; gap:12px; align-content:start; padding:10px 10px 12px}
 .tile{position:relative; min-height:150px; padding:14px 12px; display:flex; flex-direction:column; justify-content:space-between; text-align:left; color:#fff; border:3px solid #000; border-radius:16px; box-shadow:4px 4px 0 #000; cursor:pointer; font-family:system-ui,-apple-system,Arial,sans-serif}
 .tile-e{font-size:44px; line-height:1; filter:drop-shadow(0 3px 2px rgba(0,0,0,.4))}
@@ -332,11 +334,12 @@ body.home #resetBtn{display:none}
           <button class="btn" id="pickerBack"><span>Back</span></button>
         </div>
         <p class="ko-sub picker-note">Tap a box to play.</p>
+        <label class="skip-picker"><input type="checkbox" id="pickerSkip"> <span>Don't show this every time</span></label>
       </section>
     </main>
 
     <p class="hint" id="hint"></p>
-    <p class="foot"><span class="build" id="build">B57</span></p>
+    <p class="foot"><span class="build" id="build">B58</span></p>
   </div>
 </div>
 
@@ -344,7 +347,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B57";
+const BUILD = "B58";
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
 const SB_KEY = "sb_publishable_4mXRj6JDcG1aJyuOWmF8-Q_hjHIRid7";
@@ -520,6 +523,7 @@ let uid = null;               // this viewer's Supabase user id, or null if sign
 let myPicks = {};             // key -> {w, c, b, o, l, r, z, t, g}; this viewer's picks, all categories
 let othersPicks = new Map();  // viewer id -> picks object, for everyone else
 let statsReady = false;
+let statsError = false;       // true when the last vote fetch failed or timed out
 const SESSION_START = Date.now();   // picks made since this page opened count as "this session"
 let pollTimer = null;
 const POLL_MS = 15000;
@@ -677,11 +681,16 @@ async function fetchVotes(){
   }
   return all;
 }
+function withTimeout(p, ms){
+  return Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms))]);
+}
 async function refreshVotes(){
   if(!db) return;
   try{
-    onVotes(await fetchVotes());
+    onVotes(await withTimeout(fetchVotes(), 10000));
+    statsError = false;
   }catch(e){
+    statsError = true;
     console.warn("votes not loaded", e);
     if(lastResult) renderStats(lastResult.winner, lastResult.loser, "Stats stopped (" + (e && e.code || "error") + ").");
   }
@@ -694,9 +703,9 @@ async function connectPilot(){
   }
   try{
     db = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
-    const { data: sess } = await db.auth.getSession();
+    const { data: sess } = await withTimeout(db.auth.getSession(), 8000);
     if(!sess || !sess.session){
-      const { error } = await db.auth.signInAnonymously();
+      const { error } = await withTimeout(db.auth.signInAnonymously(), 8000);
       if(error) throw error;
     }
     const { data: u } = await db.auth.getUser();
@@ -879,13 +888,14 @@ function renderStats(winner, loser, note){
   const c = countsFor(key, winner, loser);
   const total = c[winner] + c[loser];
   const pct = total ? Math.round(100 * c[winner] / total) : 50;
-  $("overallLabel").textContent = !statsReady ? "Counting picks…" : total ? `${winner} ${pct}% of picks` : "No picks counted yet";
+  $("overallLabel").textContent = !statsReady ? (statsError ? "Stats unavailable right now" : "Counting picks…")
+    : total ? `${winner} ${pct}% of picks` : "No picks counted yet";
   requestAnimationFrame(() => requestAnimationFrame(() => { fill.style.width = (statsReady && total ? pct : 0) + "%"; }));
   $("tally").textContent = statsReady ? `${winner} ${c[winner]} · ${loser} ${c[loser]} · ${total} total` : "";
   let facts;
   if(note) facts = note;
   else if(!uid) facts = "Picks are not saved until sign-in finishes.";
-  else if(!statsReady) facts = "Loading the pilot count…";
+  else if(!statsReady) facts = statsError ? "Couldn't reach the pilot database. It will retry automatically." : "Loading the pilot count…";
   else if(total <= 1) facts = "First pick on this matchup. The count fills in as people play.";
   else facts = `Popular across ${total} picks on this matchup.`;
   $("facts").textContent = facts + " Pilot: your pick is saved with device type, browser, OS, language, region and timezone.";
@@ -1561,6 +1571,11 @@ document.addEventListener("keydown", e => {
 })();
 
 /* ---------- init ---------- */
+/* "Don't show this every time" on the category picker. Saved per browser. */
+const skipPicker = readStore("goat_picker_skip") === true;
+$("pickerSkip").checked = skipPicker;
+$("pickerSkip").addEventListener("change", e => writeStore("goat_picker_skip", e.target.checked));
+
 function init(){
   $("build").textContent = BUILD;
   // challenge links: #vs-apple-banana (fruit) or #vs-dogs-beagle-pug. Tolerant of stray characters after the link.
@@ -1585,7 +1600,7 @@ function init(){
   }
   renderMatch();
   if(!challenge){
-    openPicker();
+    if(!skipPicker) openPicker();
     // First visit only: the welcome card explains the game. Dismissing it saves the flag.
     if(!readStore("goat_intro_seen")) $("intro").classList.remove("hidden");
   }
