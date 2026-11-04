@@ -341,7 +341,7 @@ body.home #resetBtn{display:none}
     </main>
 
     <p class="hint" id="hint"></p>
-    <p class="foot"><span class="build" id="build">B61</span></p>
+    <p class="foot"><span class="build" id="build">B62</span></p>
   </div>
 </div>
 
@@ -349,7 +349,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B61";
+const BUILD = "B62";
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
 const SB_KEY = "sb_publishable_4mXRj6JDcG1aJyuOWmF8-Q_hjHIRid7";
@@ -514,6 +514,74 @@ const MASHUP = {id:"mashup", name:"Mashups", e:"🎲", bg:"linear-gradient(135de
 CATEGORIES.forEach(cat => cat.items.forEach(f => { f.art = cat.art; MASHUP.items.push(f); }));
 MASHUP.byName = {}; MASHUP.bySlug = {};
 MASHUP.items.forEach(f => { MASHUP.byName[f.n] = f; MASHUP.bySlug[f.s] = f; });
+/* Word list. The game reads the "GOAT words" sheet when the page loads (see words.csv for the layout).
+   The built-in lists above are the fallback if the sheet can't be reached or has no usable rows. */
+const WORDS_URL = "https://docs.google.com/spreadsheets/d/1ZOd21VFtqLjAT-tIiFwkZBodAXMP7JEYxmH84vXGIkA/export?format=csv&gid=0";
+/* Minimal CSV reader: quoted fields, doubled quotes, CRLF or LF. Returns one object per row, keyed by header. */
+function parseCSV(text){
+  const rows = []; let row = [], field = "", q = false;
+  text = text.replace(/^\uFEFF/, "");
+  for(let i = 0; i < text.length; i++){
+    const ch = text[i];
+    if(q){
+      if(ch === '"'){ if(text[i + 1] === '"'){ field += '"'; i++; } else q = false; }
+      else field += ch;
+    } else if(ch === '"') q = true;
+    else if(ch === ","){ row.push(field); field = ""; }
+    else if(ch === "\n" || ch === "\r"){
+      if(ch === "\r" && text[i + 1] === "\n") i++;
+      row.push(field); rows.push(row); row = []; field = "";
+    } else field += ch;
+  }
+  if(field || row.length){ row.push(field); rows.push(row); }
+  const head = (rows.shift() || []).map(h => h.trim().toLowerCase());
+  return rows.filter(r => r.some(c => c.trim())).map(r => Object.fromEntries(head.map((h, i) => [h, (r[i] || "").trim()])));
+}
+/* Rebuilds CATEGORIES (in place) and MASHUP from the sheet text. Throws if nothing usable is found. */
+function applyWords(text){
+  const rows = parseCSV(text);
+  const catRows = rows.filter(r => r.type === "category" && r.category);
+  const wordRows = rows.filter(r => r.type === "word" && r.category && r.name && r.on.toUpperCase() !== "FALSE");
+  const cats = [], ids = new Set();
+  catRows.forEach(r => {
+    if(ids.has(r.category)) { console.warn("duplicate category in sheet, skipped:", r.category); return; }
+    ids.add(r.category);
+    const seen = new Set(), items = [];
+    wordRows.forEach(w => {
+      if(w.category !== r.category || seen.has(w.name)) return;
+      seen.add(w.name);
+      items.push({ n: w.name, c: w.color || "#444444", e: w.emoji || undefined, img: w.photo || undefined, code: w.code || undefined });
+    });
+    if(items.length < 2){ console.warn("category has fewer than 2 words, skipped:", r.category); return; }
+    cats.push({
+      id: r.category, name: r.name || r.category, e: r.emoji || "🎲",
+      bg: r.bg || "linear-gradient(135deg,#444444,#222222)", items,
+      art: r.art === "fruit" ? "fruit" : "letter",
+      ladderKey: r.ladder || ("goat_" + r.category + "_ladder_v1"),
+      seeded: r.seeded.toUpperCase() === "TRUE"
+    });
+  });
+  if(!cats.length) throw new Error("no usable categories in the word sheet");
+  CATEGORIES.length = 0;
+  cats.forEach(cat => {
+    cat.byName = {}; cat.bySlug = {};
+    cat.items.forEach(f => { f.s = f.n.toLowerCase().replace(/[^a-z]/g, ""); f.art = cat.art; cat.byName[f.n] = f; cat.bySlug[f.s] = f; });
+    CATEGORIES.push(cat);
+  });
+  MASHUP.items = [];
+  CATEGORIES.forEach(cat => cat.items.forEach(f => MASHUP.items.push(f)));
+  MASHUP.byName = {}; MASHUP.bySlug = {};
+  MASHUP.items.forEach(f => { MASHUP.byName[f.n] = f; MASHUP.bySlug[f.s] = f; });
+}
+async function loadWords(){
+  try{
+    const res = await withTimeout(fetch(WORDS_URL, { cache: "no-store" }), 5000);
+    if(!res.ok) throw new Error("HTTP " + res.status);
+    applyWords(await res.text());
+  }catch(e){
+    console.warn("word sheet not loaded, using built-in lists", e);
+  }
+}
 const DRAG_THRESHOLD = 0.4;   // a drag must cross 40% of the stage width toward the rival to win
 const CARD_FOLLOW = 0.5;      // share of the finger distance the fighter card moves
 
@@ -1659,7 +1727,7 @@ function init(){
   }
   connectPilot();   // game works without it; stats appear when Supabase connects
 }
-init();
+loadWords().then(init);   // the word sheet loads first (5 second limit), then the game starts
 </script>
 </body>
 </html>
