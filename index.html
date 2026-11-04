@@ -145,7 +145,7 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .picker{position:absolute; inset:0; z-index:7; background:var(--ink); padding:14px 14px 12px; display:flex; flex-direction:column; gap:12px; min-height:0; overflow:hidden}
 .picker-title{font-size:clamp(26px,9vw,40px); margin:0; text-align:center}
 .picker-note{margin:0; text-align:center}
-.skip-picker{display:flex; align-items:center; justify-content:center; gap:8px; margin:10px 0 0; font-size:14px; color:#fff; cursor:pointer}
+.skip-picker{display:flex; align-items:center; justify-content:center; gap:8px; margin:-4px 0 0; font-size:15px; color:#fff; cursor:pointer}
 .skip-picker input{width:18px; height:18px; margin:0; accent-color:var(--yellow)}
 .tiles{flex:1; min-height:0; overflow-y:auto; display:grid; grid-template-columns:1fr 1fr; gap:12px; align-content:start; padding:10px 10px 12px}
 .tile{position:relative; min-height:150px; padding:14px 12px; display:flex; flex-direction:column; justify-content:space-between; text-align:left; color:#fff; border:3px solid #000; border-radius:16px; box-shadow:4px 4px 0 #000; cursor:pointer; font-family:system-ui,-apple-system,Arial,sans-serif}
@@ -331,17 +331,17 @@ body.home #resetBtn{display:none}
       <section class="picker hidden" id="picker" aria-label="Choose a category">
         <p class="display picker-brand">The GOAT</p>
         <p class="ko display picker-title">Choose a category</p>
+        <label class="skip-picker"><input type="checkbox" id="pickerSkip"> <span>Don't show this every time</span></label>
         <div class="tiles" id="tiles"></div>
         <div class="actions">
           <button class="btn" id="pickerBack"><span>Back</span></button>
         </div>
         <p class="ko-sub picker-note">Tap a box to play.</p>
-        <label class="skip-picker"><input type="checkbox" id="pickerSkip"> <span>Don't show this every time</span></label>
       </section>
     </main>
 
     <p class="hint" id="hint"></p>
-    <p class="foot"><span class="build" id="build">B59</span></p>
+    <p class="foot"><span class="build" id="build">B60</span></p>
   </div>
 </div>
 
@@ -349,7 +349,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B59";
+const BUILD = "B60";
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
 const SB_KEY = "sb_publishable_4mXRj6JDcG1aJyuOWmF8-Q_hjHIRid7";
@@ -537,6 +537,7 @@ const POLL_MS = 15000;
 let writeChain = Promise.resolve();
 let lastResult = null;        // {winner, loser} while the result panel is open
 let winCounts = {};           // item name -> times picked as a winner in CUR, all viewers
+let lastWinner = null;        // {cat, name, side}: the last ladder winner and the side ("a" left, "b" right) it stands on
 let lastPick = null;          // {key, previous, snapshotS, time}: the one pick that "Oops" can undo
 let oopsTimer = null;
 const OOPS_MS = 5000;
@@ -869,7 +870,11 @@ function renderMatchInner(){
     y = S.queue[0];
   }
 
-  current = Math.random() < 0.5 ? {a:y, b:x} : {a:x, b:y};   // random side so position never signals the champion
+  // The winner keeps its side until it is unseated. The challenger takes the other side.
+  // A new run starts on a random side so position never gives away the first champion.
+  const keep = mode === "ladder" && lastWinner && lastWinner.cat === CUR.id && lastWinner.name === x ? lastWinner.side : null;
+  if(keep) current = keep === "a" ? {a:x, b:y} : {a:y, b:x};
+  else current = Math.random() < 0.5 ? {a:y, b:x} : {a:x, b:y};
   setFighter("a", current.a);
   setFighter("b", current.b);
   document.querySelectorAll(".pick").forEach(b => b.disabled = false);
@@ -985,6 +990,7 @@ function castVote(side){
   buzz(18);
   const winner = current[side];
   const loser = current[side === "a" ? "b" : "a"];
+  lastWinner = { cat: CUR.id, name: winner, side: current.a === winner ? "a" : "b" };
   const snapshotS = JSON.parse(JSON.stringify(S));   // ladder state before this pick, for Oops
 
   /* The winner is always the champion and faces the next item, including after a challenge link.
