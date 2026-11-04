@@ -147,6 +147,14 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .picker-note{margin:0; text-align:center}
 .skip-picker{display:flex; align-items:center; justify-content:center; gap:8px; margin:-4px 0 0; font-size:15px; color:#fff; cursor:pointer}
 .skip-picker input{width:18px; height:18px; margin:0; accent-color:var(--yellow)}
+/* Skip-the-result mode: a short "Winner!" between matchups, then it fades and the next matchup loads. */
+.win-flash{position:absolute; inset:0; z-index:7; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; text-align:center; transition:opacity .35s ease; background:radial-gradient(circle at center, rgba(5,7,14,.82) 0, rgba(5,7,14,.55) 55%, rgba(5,7,14,0) 80%)}
+.win-flash.out{opacity:0}
+.wf-title{margin:0; font-size:clamp(56px,17vw,96px); line-height:.95; color:var(--yellow); text-shadow:4px 4px 0 #000, 0 0 24px rgba(255,210,63,.5); animation:wfPop .5s cubic-bezier(.2,1.6,.4,1) both, wfWobble 1s ease-in-out .5s infinite}
+.wf-name{margin:10px 0 0; font-size:clamp(18px,6vw,26px); color:#fff; text-shadow:2px 2px 0 #000; animation:wfPop .5s .15s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes wfPop{from{transform:scale(.3) rotate(-12deg); opacity:0} to{transform:none; opacity:1}}
+@keyframes wfWobble{0%,100%{transform:rotate(-3deg)} 50%{transform:rotate(3deg)}}
+@media (prefers-reduced-motion: reduce){ .wf-title,.wf-name{animation:none} }
 .tiles{flex:1; min-height:0; overflow-y:auto; display:grid; grid-template-columns:1fr 1fr; gap:12px; align-content:start; padding:10px 10px 12px}
 .tile{position:relative; min-height:150px; padding:14px 12px; display:flex; flex-direction:column; justify-content:space-between; text-align:left; color:#fff; border:3px solid #000; border-radius:16px; box-shadow:4px 4px 0 #000; cursor:pointer; font-family:system-ui,-apple-system,Arial,sans-serif}
 .tile-e{font-size:44px; line-height:1; filter:drop-shadow(0 3px 2px rgba(0,0,0,.4))}
@@ -238,6 +246,11 @@ body.home #resetBtn{display:none}
         </div>
       </section>
 
+      <div class="win-flash hidden" id="winFlash" aria-live="polite">
+        <p class="display wf-title">Winner!</p>
+        <p class="wf-name" id="wfName"></p>
+      </div>
+
       <section class="overlay hidden" id="result" aria-live="polite">
         <p class="ko display" id="koText"></p>
         <p class="ko-sub" id="koSub"></p>
@@ -278,6 +291,7 @@ body.home #resetBtn{display:none}
       <section class="overlay hidden" id="statsPanel" aria-live="polite">
         <p class="ko display">Your stats</p>
         <div id="statsBody" class="rows"></div>
+        <label class="skip-picker"><input type="checkbox" id="statsSkip"> <span>Don't show this every time</span></label>
         <div class="actions">
           <button class="btn" id="resetBtn"><span>Reset</span></button>
           <button class="btn" id="statsReset"><span>Reset stats…</span></button>
@@ -332,7 +346,6 @@ body.home #resetBtn{display:none}
       <section class="picker hidden" id="picker" aria-label="Choose a category">
         <p class="display picker-brand">The GOAT</p>
         <p class="ko display picker-title">Choose a category</p>
-        <label class="skip-picker"><input type="checkbox" id="pickerSkip"> <span>Don't show this every time</span></label>
         <div class="tiles" id="tiles"></div>
         <div class="actions">
           <button class="btn" id="pickerBack"><span>Back</span></button>
@@ -350,7 +363,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B65";
+const BUILD = "B66";
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
 const SB_KEY = "sb_publishable_4mXRj6JDcG1aJyuOWmF8-Q_hjHIRid7";
@@ -941,6 +954,7 @@ function renderMatchInner(){
   voted = false;
   lastResult = null;
   $("result").classList.add("hidden");
+  $("winFlash").classList.add("hidden");
   $("ladderEnd").classList.add("hidden");
   $("checkpoint").classList.add("hidden");
   resetFighterVisuals();
@@ -1113,7 +1127,20 @@ function castVote(side){
     c.classList.add(c.dataset.side === side ? "won" : "lost");
   });
   document.querySelectorAll(".pick").forEach(b => b.disabled = true);
-  showResult(winner, loser);
+  if(skipResult) showWinnerFlash(winner); else showResult(winner, loser);
+}
+
+/* Skip-the-result mode: "Winner!" pops, holds, fades, then the next matchup loads. `voted` stays true
+   until then, so extra taps or keys cannot pick again during the flash. */
+function showWinnerFlash(winner){
+  const el = $("winFlash");
+  $("wfName").textContent = winner;
+  el.classList.remove("out", "hidden");
+  void el.offsetWidth;   // restart the pop animation on repeat picks
+  setTimeout(() => {
+    el.classList.add("out");
+    setTimeout(() => { el.classList.add("hidden"); el.classList.remove("out"); advanceMatch(); }, 350);
+  }, 950);
 }
 
 /* Challenge links use a plain hash, on this site's own address.
@@ -1365,14 +1392,15 @@ document.querySelectorAll(".pick").forEach(btn => {
   btn.addEventListener("click", () => castVote(btn.dataset.side));
 });
 
-$("nextBtn").addEventListener("click", () => {
+function advanceMatch(){
   if(mode === "challenge" || mode === "oneoff"){
     mode = "ladder";
     challengePair = null;
     history.replaceState(null, "", location.href.split("#")[0]);
   }
   renderMatch();
-});
+}
+$("nextBtn").addEventListener("click", advanceMatch);
 $("shareBtn").addEventListener("click", () => shareMatch(current.a, current.b));
 $("resetBtn").addEventListener("click", handleReset);
 
@@ -1704,13 +1732,14 @@ document.addEventListener("keydown", e => {
 })();
 
 /* ---------- init ---------- */
-/* "Don't show this every time" on the category picker. Saved per browser. */
-const skipPicker = readStore("goat_picker_skip") === true;
-$("pickerSkip").checked = skipPicker;
-$("resultSkip").checked = skipPicker;
-function setSkipPicker(on){ writeStore("goat_picker_skip", on); $("pickerSkip").checked = on; $("resultSkip").checked = on; }
-$("pickerSkip").addEventListener("change", e => setSkipPicker(e.target.checked));
-$("resultSkip").addEventListener("change", e => setSkipPicker(e.target.checked));
+/* "Don't show this every time" on the result panel: skip the result between picks and flash "Winner!" instead.
+   Saved per browser. The Stats panel has the same checkbox so it can be turned back on. */
+let skipResult = readStore("goat_result_skip") === true;
+function setSkipResult(on){ skipResult = on; writeStore("goat_result_skip", on); $("resultSkip").checked = on; $("statsSkip").checked = on; }
+$("resultSkip").checked = skipResult;
+$("statsSkip").checked = skipResult;
+$("resultSkip").addEventListener("change", e => setSkipResult(e.target.checked));
+$("statsSkip").addEventListener("change", e => setSkipResult(e.target.checked));
 
 function init(){
   $("build").textContent = BUILD;
@@ -1736,7 +1765,7 @@ function init(){
   }
   renderMatch();
   if(!challenge){
-    if(!skipPicker) openPicker();
+    openPicker();
     // First visit only: the welcome card explains the game. Dismissing it saves the flag.
     if(!readStore("goat_intro_seen")) $("intro").classList.remove("hidden");
   }
