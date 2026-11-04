@@ -153,6 +153,8 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .tile-name{font-size:22px; line-height:1.05; text-shadow:2px 2px 0 #000; overflow-wrap:anywhere}
 .tile-n{font-size:12px; opacity:.92; text-shadow:1px 1px 0 #000}
 .tile.current{outline:4px solid var(--yellow); outline-offset:3px}
+.tile.mashup{grid-column:1 / -1}
+.tile.locked{filter:grayscale(1); opacity:.6; cursor:not-allowed; box-shadow:none}
 .tile.current:hover::after{content:"Now playing"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; border-radius:13px; background:rgba(7,10,20,.72); color:#fff; font:22px/1 Impact,"Arial Narrow",system-ui,sans-serif; text-transform:uppercase; text-shadow:2px 2px 0 #000}
 .tile-goat{position:absolute; right:10px; top:10px; max-width:60%; font-size:12px; line-height:1.2; text-align:right; text-shadow:1px 1px 0 #000; overflow-wrap:anywhere}
 /* Welcome modal: a card centered over the category screen */
@@ -339,7 +341,7 @@ body.home #resetBtn{display:none}
     </main>
 
     <p class="hint" id="hint"></p>
-    <p class="foot"><span class="build" id="build">B58</span></p>
+    <p class="foot"><span class="build" id="build">B59</span></p>
   </div>
 </div>
 
@@ -347,7 +349,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B58";
+const BUILD = "B59";
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
 const SB_KEY = "sb_publishable_4mXRj6JDcG1aJyuOWmF8-Q_hjHIRid7";
@@ -500,6 +502,11 @@ CATEGORIES.forEach(cat => {
   cat.byName = {}; cat.bySlug = {};
   cat.items.forEach(f => { f.s = f.n.toLowerCase().replace(/[^a-z]/g, ""); cat.byName[f.n] = f; cat.bySlug[f.s] = f; });
 });
+/* Mashups: every category's items in one shuffled pool. Each item keeps its own portrait style. */
+const MASHUP = {id:"mashup", name:"Mashups", e:"🎲", bg:"linear-gradient(135deg,#8a2be2,#ff2d95)", items:[], ladderKey:"goat_mashup_ladder_v1", seeded:false, art:"letter", mashup:true};
+CATEGORIES.forEach(cat => cat.items.forEach(f => { f.art = cat.art; MASHUP.items.push(f); }));
+MASHUP.byName = {}; MASHUP.bySlug = {};
+MASHUP.items.forEach(f => { MASHUP.byName[f.n] = f; MASHUP.bySlug[f.s] = f; });
 const DRAG_THRESHOLD = 0.4;   // a drag must cross 40% of the stage width toward the rival to win
 const CARD_FOLLOW = 0.5;      // share of the finger distance the fighter card moves
 
@@ -618,7 +625,7 @@ function newRunState(ranked, prevChamp, shuffle){
   // most-picked first (times picked as a winner), seeded shuffle on ties. The first item opens the run.
   const tie = tieRanks(CUR);
   // A fresh start (shuffle) uses a new random order every time instead of the fixed one.
-  const order = shuffle
+  const order = (shuffle || CUR.mashup)
     ? shuffleList(CUR.items.map(f => f.n))
     : CUR.items.map(f => f.n).sort((a, b) => (winCounts[b] || 0) - (winCounts[a] || 0) || tie[a] - tie[b]);
   const left = order.filter(n => !ranked.includes(n) && n !== prevChamp);
@@ -795,7 +802,7 @@ function fruitSVG(f){
 function portraitHTML(f){
   if(f.img) return `<img src="${f.img}" alt="${f.n}" onerror="this.style.display='none'">`;
   if(f.e) return `<span class="glyph" aria-hidden="true">${f.e}</span>`;
-  if(CUR.art === "letter"){
+  if((f.art || CUR.art) === "letter"){
     const t = f.code || f.n[0];
     return `<span class="letter${t.length > 1 ? " two" : ""}" aria-hidden="true">${t}</span>`;
   }
@@ -1106,6 +1113,33 @@ function categoryTop(c){
   const st = c === CUR ? S : readStore(c.ladderKey);
   return (st && Array.isArray(st.ranked) && st.ranked[0]) || null;
 }
+/* Distinct items this viewer has voted on in one category. */
+function categoryVotedItems(c){
+  const seen = new Set();
+  Object.keys(myPicks).forEach(k => { const p = parseKey(k); if(p.cat === c.id){ seen.add(p.x); seen.add(p.y); } });
+  return seen.size;
+}
+function mashupUnlocked(){ return CATEGORIES.every(c => categoryVotedItems(c) >= 10); }
+function mashupTileHTML(){
+  if(mashupUnlocked()){
+    const top = categoryTop(MASHUP);
+    return `
+    <button class="tile mashup${MASHUP === CUR ? " current" : ""}" data-id="mashup" style="background:${MASHUP.bg}">
+      <span class="tile-e" aria-hidden="true">${MASHUP.e}</span>
+      <span class="tile-name display">Mashups (${MASHUP.items.length})</span>
+      <span class="tile-n">Every category, shuffled together</span>
+      ${top ? `<span class="tile-goat">👑 ${top}</span>` : ""}
+    </button>`;
+  }
+  const prog = CATEGORIES.map(c => `${c.name} ${Math.min(categoryVotedItems(c), 10)}/10`).join(" · ");
+  return `
+    <button class="tile mashup locked" data-id="mashup" aria-disabled="true" style="background:#3a3f4d">
+      <span class="tile-e" aria-hidden="true">🔒</span>
+      <span class="tile-name display">Mashups</span>
+      <span class="tile-n">Locked. Vote on 10 items in every category to open it.</span>
+      <span class="tile-n">${prog}</span>
+    </button>`;
+}
 function renderPicker(){
   $("tiles").innerHTML = CATEGORIES.map(c => {
     const top = categoryTop(c);
@@ -1115,7 +1149,7 @@ function renderPicker(){
       <span class="tile-name display">${c.name} (${c.items.length})</span>
       ${top ? `<span class="tile-goat">👑 ${top}</span>` : ""}
     </button>`;
-  }).join("");
+  }).join("") + mashupTileHTML();
 }
 function setCategory(cat){
   if(cat === CUR) return;
@@ -1146,6 +1180,12 @@ $("pickerBack").addEventListener("click", closePicker);
 $("tiles").addEventListener("click", e => {
   const b = e.target.closest(".tile");
   if(!b) return;
+  if(b.dataset.id === "mashup"){
+    if(!mashupUnlocked()){ toast("Mashups unlock after 10 voted items in each category."); return; }
+    setCategory(MASHUP);
+    closePicker();
+    return;
+  }
   setCategory(CATEGORIES.find(c => c.id === b.dataset.id));
   closePicker();
 });
@@ -1494,7 +1534,7 @@ $("rsAll").addEventListener("click", async () => {
   if(!await confirmBox("Delete all your stats?", "Removes every pick you have made in every category, and every run and ranking. Your picks stop counting in the shared stats.", "Continue")) return;
   if(!await confirmBox("Are you sure?", "This cannot be undone.", "Delete everything")) return;
   removePicks(() => true);
-  CATEGORIES.forEach(c => writeStore(c.ladderKey, null));
+  [...CATEGORIES, MASHUP].forEach(c => writeStore(c.ladderKey, null));
   restartRun(CUR);
   closeReset();
   toast("All stats deleted");
@@ -1583,12 +1623,12 @@ function init(){
   let challenge = null;
   if(raw){
     const t = raw.toLowerCase().split("-").filter(Boolean);
-    const cat = t.length === 3 ? CATEGORIES.find(c => c.id === t[0]) : (t.length === 2 ? CATEGORIES[0] : null);
+    const cat = t.length === 3 ? (t[0] === "mashup" ? MASHUP : CATEGORIES.find(c => c.id === t[0])) : (t.length === 2 ? CATEGORIES[0] : null);
     const x = cat && t.length >= 2 ? cat.bySlug[t[t.length - 2]] : null;
     const y = cat && t.length >= 2 ? cat.bySlug[t[t.length - 1]] : null;
     if(cat && x && y && x !== y) challenge = { cat, x: x.n, y: y.n };
   }
-  CUR = challenge ? challenge.cat : (CATEGORIES.find(c => c.id === readStore("goat_cat")) || CATEGORIES[0]);
+  CUR = challenge ? challenge.cat : (CATEGORIES.find(c => c.id === readStore("goat_cat")) || (readStore("goat_cat") === "mashup" ? MASHUP : CATEGORIES[0]));
   $("catLabel").textContent = CUR.name;
   recomputeWins();
   S = loadLadder(CUR) || newRunState([]);
