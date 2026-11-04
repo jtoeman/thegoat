@@ -67,7 +67,7 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
   background:radial-gradient(circle at 50% 30%, var(--c,#444) 0%, #111 90%);
   display:grid; place-items:center; transition:filter .2s ease; pointer-events:none;
 }
-.fighter[data-side="a"] .portrait{clip-path:polygon(0 0, 88.3% 0, 65% 100%, 0 100%)}
+.fighter[data-side="a"] .portrait{clip-path:polygon(0 0, 95% 0, 71.7% 100%, 0 100%)}
 .fighter[data-side="b"] .portrait{clip-path:polygon(31.7% 0, 100% 0, 100% 100%, 8.3% 100%)}
 .portrait img{width:100%; height:100%; object-fit:cover; display:block}
 .portrait .fruit-svg{width:70%; height:70%; max-width:340px; max-height:340px; filter:drop-shadow(0 8px 10px rgba(0,0,0,.5))}
@@ -111,6 +111,9 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .slashes .red{stroke:var(--red); stroke-width:10px; filter:drop-shadow(0 0 6px rgba(255,42,26,.7))}
 
 .vs-streak{display:block; text-align:center; font-size:.5em; line-height:1.1; color:var(--yellow); margin-top:.15em; text-shadow:0 3px 0 #000}
+.vs::before{content:""; position:absolute; left:50%; top:50%; width:300%; aspect-ratio:1; transform:translate(-50%,-50%); z-index:-1; pointer-events:none;
+  background:repeating-conic-gradient(from 0deg, rgba(255,210,63,.85) 0deg 9deg, rgba(255,210,63,0) 9deg 30deg);
+  -webkit-mask:radial-gradient(circle, #000 0 24%, transparent 58%); mask:radial-gradient(circle, #000 0 24%, transparent 58%)}
 .vs{
   position:absolute; left:50%; top:42%; transform:translate(-50%,-50%); z-index:3; pointer-events:none;
   font-family:Impact,"Haettenschweiler",sans-serif; font-size:clamp(30px,10vw,52px); font-style:italic; line-height:1;
@@ -236,9 +239,9 @@ body.home #resetBtn{display:none}
       </section>
 
       <svg class="slashes" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-        <line class="outline" x1="53" y1="0" x2="39" y2="100"/>
+        <line class="outline" x1="57" y1="0" x2="43" y2="100"/>
         <line class="outline" x1="59" y1="0" x2="45" y2="100"/>
-        <line class="blue" x1="53" y1="0" x2="39" y2="100"/>
+        <line class="blue" x1="57" y1="0" x2="43" y2="100"/>
         <line class="red" x1="59" y1="0" x2="45" y2="100"/>
       </svg>
       <div class="vs display" aria-hidden="true">VS<span class="vs-streak" id="vsStreak"></span></div>
@@ -296,9 +299,8 @@ body.home #resetBtn{display:none}
       <section class="overlay hidden" id="statsPanel" aria-live="polite">
         <p class="ko display">Your stats</p>
         <div id="statsBody" class="rows"></div>
-        <label class="skip-picker"><input type="checkbox" id="statsSkip"> <span>Don't show this every time</span></label>
         <div class="actions">
-          <button class="btn" id="resetBtn"><span>Reset</span></button>
+          <button class="btn" id="resetBtn"><span>New ladder</span></button>
           <button class="btn" id="statsReset"><span>Reset stats…</span></button>
           <button class="btn primary" id="statsClose"><span>Close</span></button>
         </div>
@@ -360,7 +362,7 @@ body.home #resetBtn{display:none}
     </main>
 
     <p class="hint" id="hint"></p>
-    <p class="foot"><span class="build" id="build">B63</span></p>
+    <p class="foot"><span class="build" id="build"></span></p>
   </div>
 </div>
 
@@ -368,7 +370,8 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B68";
+const BUILD = "B69";
+document.getElementById("build").textContent = BUILD;
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
 const SB_KEY = "sb_publishable_4mXRj6JDcG1aJyuOWmF8-Q_hjHIRid7";
@@ -1231,7 +1234,7 @@ function handleReset(){
 function disarmReset(){
   resetArmed = false;
   clearTimeout(resetTimer);
-  $("resetBtn").querySelector("span").textContent = "Reset";
+  $("resetBtn").querySelector("span").textContent = "New ladder";
 }
 
 /* ---------- category picker ----------
@@ -1328,6 +1331,14 @@ $("tiles").addEventListener("click", e => {
   closePicker();
 });
 
+/* While a fighter is dragged toward the rival, it brightens and the rival grays. p runs 0 to 1. */
+function shade(side, p){
+  const mine = document.querySelector(`.fighter[data-side="${side}"] .portrait`);
+  const rival = document.querySelector(`.fighter[data-side="${side === "a" ? "b" : "a"}"] .portrait`);
+  if(mine) mine.style.filter = p ? `brightness(${(1 + 0.35 * p).toFixed(3)}) saturate(${(1 + 0.2 * p).toFixed(3)})` : "";
+  if(rival) rival.style.filter = p ? `grayscale(${(0.85 * p).toFixed(3)}) brightness(${(1 - 0.5 * p).toFixed(3)})` : "";
+}
+
 /* ---------- press, drag or tap ----------
    Press and drag a fighter toward the rival. The border fills yellow as you go. Past 40% of the
    stage width it turns green and buzzes once. Release past that line to pick. Release short and it
@@ -1360,6 +1371,7 @@ document.querySelectorAll(".fighter").forEach(card => {
     card.style.transform = `translateX(${dx * CARD_FOLLOW}px)`;   // the card follows the finger at half distance
     const m = measure(dx);
     card.style.setProperty("--p", Math.min(1, m.progress * 1.6).toFixed(3));   // colour fills faster; the lock point is unchanged
+    shade(side, m.towardRival ? m.progress : 0);
     card.classList.toggle("charging", m.progress > 0 && !m.ready);
     card.classList.toggle("ready", m.ready);
     if(m.ready && !wasReady){
@@ -1379,6 +1391,7 @@ document.querySelectorAll(".fighter").forEach(card => {
     const dx = e.clientX - sx;
     const m = measure(dx);
     card.classList.remove("dragging","charging","ready");
+    shade(side, 0);
     if(!moved){
       castVote(side);
     } else if(m.ready){
@@ -1395,6 +1408,7 @@ document.querySelectorAll(".fighter").forEach(card => {
   const abort = () => {
     if(!active) return;
     active = false;
+    shade(side, 0);
     card.classList.remove("dragging","charging","ready");
     card.classList.add("snapping");
     card.style.transform = "";
@@ -1753,11 +1767,9 @@ document.addEventListener("keydown", e => {
 /* "Don't show this every time" on the result panel: skip the result between picks and flash "Winner!" instead.
    Saved per browser. The Stats panel has the same checkbox so it can be turned back on. */
 let skipResult = readStore("goat_result_skip") === true;
-function setSkipResult(on){ skipResult = on; writeStore("goat_result_skip", on); $("resultSkip").checked = on; $("statsSkip").checked = on; }
+function setSkipResult(on){ skipResult = on; writeStore("goat_result_skip", on); $("resultSkip").checked = on; }
 $("resultSkip").checked = skipResult;
-$("statsSkip").checked = skipResult;
 $("resultSkip").addEventListener("change", e => setSkipResult(e.target.checked));
-$("statsSkip").addEventListener("change", e => setSkipResult(e.target.checked));
 
 function init(){
   $("build").textContent = BUILD;
