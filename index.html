@@ -349,7 +349,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B63";
+const BUILD = "B64";
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
 const SB_KEY = "sb_publishable_4mXRj6JDcG1aJyuOWmF8-Q_hjHIRid7";
@@ -517,7 +517,7 @@ MASHUP.items.forEach(f => { MASHUP.byName[f.n] = f; MASHUP.bySlug[f.s] = f; });
 /* Word list. The game reads the "GOAT words" workbook when the page loads (see README for the layout):
    the Categories tab lists each category and its tab id, and each category tab holds its words.
    The built-in lists above are the fallback if the workbook can't be reached or has no usable categories. */
-const WORDS_FILE = "1ZOd21VFtqLjAT-tIiFwkZBodAXMP7JEYxmH84vXGIkA";   // replace with the workbook's ID once it is set up
+const WORDS_FILE = "1FbM320qaloYDHZHRAvLfDiK-IeKeM4TUaQo_hve_KsU";
 const INDEX_GID = 0;                                                    // the Categories tab must be the first tab
 function sheetCSVUrl(gid){ return "https://docs.google.com/spreadsheets/d/" + WORDS_FILE + "/export?format=csv&gid=" + gid; }
 /* Minimal CSV reader: quoted fields, doubled quotes, CRLF or LF. Returns one object per row, keyed by lowercase header. */
