@@ -248,6 +248,8 @@ body.home #resetBtn{display:none}
 .global-block{width:100%; margin-top:4px}
 .global-block .ko-sub{margin:4px 0}
 .global-head{margin-top:10px; font-family:Impact,sans-serif; text-transform:uppercase; letter-spacing:.05em; color:#fff; font-size:15px}
+.goat-head{display:flex; justify-content:space-between; font-size:11px; color:var(--mute); text-transform:uppercase; letter-spacing:.05em; margin:6px 0 2px}
+.goat-count{flex:0 0 auto; min-width:44px; text-align:right; color:var(--yellow); font-variant-numeric:tabular-nums}
 .bar-rank{flex:0 0 18px; text-align:right; color:var(--mute); font-variant-numeric:tabular-nums}
 </style>
 </head>
@@ -408,7 +410,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B73";
+const BUILD = "B74";
 document.getElementById("build").textContent = BUILD;
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
@@ -834,7 +836,7 @@ function onVotes(rows){
     }
     if(r.is_seed) return;
     if(!next.has(r.user_id)) next.set(r.user_id, {});
-    next.get(r.user_id)[key] = { w: r.winner };
+    next.get(r.user_id)[key] = { w: r.winner, g: r.crowned ? 1 : 0 };
   });
   othersPicks = next;
   // local picks win over a fetch that may lag our own write
@@ -1680,9 +1682,10 @@ function globalBoards(){
   const add = (picks, who) => {
     Object.keys(picks).forEach(k => {
       const p = parseKey(k);
-      const b = boards[p.cat] || (boards[p.cat] = { wins: {}, players: new Set(), picks: 0 });
+      const b = boards[p.cat] || (boards[p.cat] = { wins: {}, crowns: {}, players: new Set(), picks: 0 });
       const w = picks[k].w;
       b.wins[w] = (b.wins[w] || 0) + 1;
+      if(picks[k].g){ (b.crowns[w] || (b.crowns[w] = new Set())).add(who); }
       b.picks++;
       b.players.add(who);
     });
@@ -1691,12 +1694,19 @@ function globalBoards(){
   add(myPicks, "me");
   return boards;
 }
+/* GOAT leaderboard: how many distinct players have crowned each item as their GOAT in this category. */
 function globalBars(c, n){
   const b = globalBoards()[c.id];
   if(!b) return `<p class="ko-sub">No picks yet.</p>`;
-  const top = Object.entries(b.wins).sort((x, y) => y[1] - x[1] || x[0].localeCompare(y[0])).slice(0, n);
-  const max = top[0][1];
-  return top.map(([f, w], i) => `<div class="bar-row"><span class="bar-rank">${i + 1}</span><span class="bar-name">${f}</span><span class="bar-track"><span class="bar-fill" data-w="${Math.round(100 * w / max)}"></span></span><b>${w}</b></div>`).join("");
+  const goats = f => (b.crowns[f] ? b.crowns[f].size : 0);
+  const top = Object.keys(b.crowns)
+    .filter(f => goats(f) > 0)
+    .sort((x, y) => goats(y) - goats(x) || b.wins[y] - b.wins[x] || x.localeCompare(y))
+    .slice(0, n);
+  if(!top.length) return `<p class="ko-sub">No one has crowned a GOAT in ${c.name} yet.</p>`;
+  const max = goats(top[0]);
+  return `<div class="goat-head"><span>Item</span><span>Players who call it the GOAT</span></div>`
+    + top.map((f, i) => `<div class="bar-row goat-row"><span class="bar-rank">${i + 1}</span><span class="bar-name">${f}</span><span class="bar-track"><span class="bar-fill" data-w="${Math.round(100 * goats(f) / max)}"></span></span><b class="goat-count">👑 ${goats(f)}</b></div>`).join("");
 }
 /* One category's leaderboard: a heading line with the player count, then the top n. */
 function globalBlockHTML(c, n){
