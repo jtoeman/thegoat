@@ -59,8 +59,9 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .fighter[data-side="b"]{right:0}
 .fighter.dragging{z-index:6; cursor:grabbing; transition:none}
 .fighter.snapping{transition:transform .2s ease}
-.fighter.charging{box-shadow:inset 0 0 0 calc(var(--p) * 8px) var(--yellow)}
-.fighter.ready{box-shadow:inset 0 0 0 8px var(--go), inset 0 0 28px var(--go)}
+/* Outlines follow the visible photo, including its slanted cut, so the empty part of the box gets no line. */
+.fighter.charging{filter:drop-shadow(calc(var(--p) * 2px) 0 0 var(--yellow)) drop-shadow(calc(var(--p) * -2px) 0 0 var(--yellow)) drop-shadow(0 calc(var(--p) * 2px) 0 var(--yellow)) drop-shadow(0 calc(var(--p) * -2px) 0 var(--yellow))}
+.fighter.ready{filter:drop-shadow(3px 0 0 var(--go)) drop-shadow(-3px 0 0 var(--go)) drop-shadow(0 3px 0 var(--go)) drop-shadow(0 -3px 0 var(--go)) drop-shadow(0 0 8px var(--go))}
 
 .portrait{
   position:absolute; inset:0; overflow:hidden;
@@ -288,6 +289,7 @@ body.home #resetBtn{display:none}
         <p class="ko display" id="cpTitle"></p>
         <p class="ko-sub" id="cpBody"></p>
         <div id="cpBars" class="rows"></div>
+        <label class="skip-picker"><input type="checkbox" id="cpShowStats"> <span>Show stats each time</span></label>
         <div class="actions-col">
           <button class="btn primary" id="cpGo"><span>Keep going</span></button>
           <button class="btn" id="cpFresh"><span>Start fresh in this category</span></button>
@@ -299,6 +301,7 @@ body.home #resetBtn{display:none}
       <section class="overlay hidden" id="statsPanel" aria-live="polite">
         <p class="ko display">Your stats</p>
         <div id="statsBody" class="rows"></div>
+        <label class="skip-picker"><input type="checkbox" id="statsShow"> <span>Show stats each time</span></label>
         <div class="actions">
           <button class="btn" id="resetBtn"><span>New ladder</span></button>
           <button class="btn" id="statsReset"><span>Reset stats…</span></button>
@@ -370,7 +373,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B69";
+const BUILD = "B70";
 document.getElementById("build").textContent = BUILD;
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
@@ -1767,9 +1770,18 @@ document.addEventListener("keydown", e => {
 /* "Don't show this every time" on the result panel: skip the result between picks and flash "Winner!" instead.
    Saved per browser. The Stats panel has the same checkbox so it can be turned back on. */
 let skipResult = readStore("goat_result_skip") === true;
-function setSkipResult(on){ skipResult = on; writeStore("goat_result_skip", on); $("resultSkip").checked = on; }
+function setSkipResult(on){
+  skipResult = on; writeStore("goat_result_skip", on);
+  $("resultSkip").checked = on;
+  $("cpShowStats").checked = !on;
+  $("statsShow").checked = !on;
+}
 $("resultSkip").checked = skipResult;
+$("cpShowStats").checked = !skipResult;
+$("statsShow").checked = !skipResult;
 $("resultSkip").addEventListener("change", e => setSkipResult(e.target.checked));
+$("cpShowStats").addEventListener("change", e => setSkipResult(!e.target.checked));
+$("statsShow").addEventListener("change", e => setSkipResult(!e.target.checked));
 
 function init(){
   $("build").textContent = BUILD;
