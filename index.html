@@ -243,6 +243,12 @@ body.home #resetBtn{display:none}
 .mash-card:not(.locked) .cc-meta{color:#fff; text-shadow:1px 1px 0 #000}
 .prog{display:block; height:10px; background:#222c48; border:2px solid #000; position:relative; overflow:hidden}
 .prog-fill{position:absolute; left:0; top:0; bottom:0; width:0; background:linear-gradient(90deg, var(--go), var(--blue)); transition:width .6s ease}
+
+/* B73: global leaderboards and checkbox layout */
+.global-block{width:100%; margin-top:4px}
+.global-block .ko-sub{margin:4px 0}
+.global-head{margin-top:10px; font-family:Impact,sans-serif; text-transform:uppercase; letter-spacing:.05em; color:#fff; font-size:15px}
+.bar-rank{flex:0 0 18px; text-align:right; color:var(--mute); font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
@@ -295,7 +301,7 @@ body.home #resetBtn{display:none}
         <p class="tally" id="tally"></p>
         <p class="seed-note hidden" id="seedNote">Sample data: 10 placeholder players fill the counts until 10 real players join. Not real picks.</p>
         <p class="facts" id="facts"></p>
-        <label class="skip-picker"><input type="checkbox" id="resultSkip"> <span>Don't show this every time</span></label>
+        <div id="resGlobal" class="global-block"></div>
         <div class="actions">
           <button class="btn" id="shareBtn"><span><svg class="ico" viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 14v5h14v-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Challenge a friend</span></button>
           <button class="btn primary" id="nextBtn"><span>Next matchup</span></button>
@@ -307,6 +313,7 @@ body.home #resetBtn{display:none}
         <div class="actions" style="margin-top:0">
           <button class="btn primary hidden" id="resultCrown"><span>This is the GOAT</span></button>
         </div>
+        <label class="skip-picker"><input type="checkbox" id="resultSkip"> <span>Don't show this every time</span></label>
       </section>
 
       <section class="overlay hidden" id="ladderEnd"></section>
@@ -316,24 +323,25 @@ body.home #resetBtn{display:none}
         <p class="ko display" id="cpTitle"></p>
         <p class="ko-sub" id="cpBody"></p>
         <div id="cpBars" class="rows"></div>
-        <label class="skip-picker"><input type="checkbox" id="cpShowStats"> <span>Show stats each time</span></label>
+        <div id="cpGlobal" class="global-block"></div>
         <div class="actions-col">
           <button class="btn primary" id="cpGo"><span>Keep going</span></button>
           <button class="btn" id="cpFresh"><span>Start fresh in this category</span></button>
           <button class="btn" id="cpCrown"><span>This is the GOAT</span></button>
           <button class="btn" id="cpChange"><span>Change category</span></button>
         </div>
+        <label class="skip-picker"><input type="checkbox" id="cpShowStats"> <span>Show stats between rounds</span></label>
       </section>
 
       <section class="overlay hidden" id="statsPanel" aria-live="polite">
         <p class="ko display">Your stats</p>
         <div id="statsBody" class="rows"></div>
-        <label class="skip-picker"><input type="checkbox" id="statsShow"> <span>Show stats each time</span></label>
         <div class="actions">
           <button class="btn" id="resetBtn"><span>New ladder</span></button>
           <button class="btn" id="statsReset"><span>Reset stats…</span></button>
           <button class="btn primary" id="statsClose"><span>Close</span></button>
         </div>
+        <label class="skip-picker"><input type="checkbox" id="statsShow"> <span>Show stats between rounds</span></label>
       </section>
 
       <section class="overlay hidden" id="resetPanel" aria-live="polite">
@@ -400,7 +408,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B72";
+const BUILD = "B73";
 document.getElementById("build").textContent = BUILD;
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
@@ -1085,6 +1093,8 @@ function renderStats(winner, loser, note){
 }
 
 function showResult(winner, loser){
+  $("resGlobal").innerHTML = globalBlockHTML(CUR, 3);
+  animateStats();
   lastResult = { winner, loser };
   $("result").style.transition = "";
   $("result").style.transform = "";
@@ -1557,8 +1567,8 @@ function matchupWord(n){ return n + (n === 1 ? " matchup" : " matchups"); }
 function matchupCount(c){
   return Object.keys(myPicks).filter(k => parseKey(k).cat === c.id).length;
 }
-function paintStats(){
-  const body = $("statsBody");
+function yoursHTML(){
+  let html;
   if(document.body.classList.contains("home")){
     const done = CATEGORIES.filter(c => categoryVotedItems(c) >= 10).length;
     const note = mashupUnlocked()
@@ -1600,13 +1610,13 @@ function paintStats(){
             <span class="cc-meta">${readyCats} of ${CATEGORIES.length} categories at 10 items</span>
           </span>
         </div>`;
-    body.innerHTML = `<p class="ko-sub">${note}</p>` + cards + mashCard;
+    html = `<p class="ko-sub">${note}</p>` + cards + mashCard;
   } else if(!db || !uid){
-    body.innerHTML = `<p class="ko-sub">Sign in to see your stats.</p>`;
-    return animateStats();
+    html = `<p class="ko-sub">Sign in to see your stats.</p>`;
+    return html;
   } else if(!statsReady){
-    body.innerHTML = `<p class="ko-sub">Loading…</p>`;
-    return animateStats();
+    html = `<p class="ko-sub">Loading…</p>`;
+    return html;
   } else {
     const keys = Object.keys(myPicks).filter(k => parseKey(k).cat === CUR.id);
     let agree = 0, counted = 0, sessionTotal = 0;
@@ -1633,7 +1643,7 @@ function paintStats(){
     const ring = pct === null
       ? `<div class="ring" style="background:#222c48"><span class="ring-in"><b>?</b><small>no data</small></span></div>`
       : `<div class="ring" style="background:conic-gradient(var(--go) ${pct * 3.6}deg, #222c48 0)"><span class="ring-in"><b>${pct}%</b><small>with crowd</small></span></div>`;
-    body.innerHTML = `
+    html = `
       <div class="stat-hero">
         ${ring}
         <div class="hero-nums">
@@ -1650,12 +1660,65 @@ function paintStats(){
         ? entries.map(([f, n]) => `<div class="bar-row${hit(f)}"><span class="bar-name">${f}</span><span class="bar-track"><span class="bar-fill" data-w="${Math.round(100 * n / max)}"></span></span><b>${n}</b></div>`).join("")
         : `<p class="ko-sub">${statsTab === "all" ? "No picks in this category yet." : "No picks yet this session."}</p>`);
   }
+  return html;
+}
+/* Stats panel: "Yours" (your picks) or "Everyone" (leaderboards across all real players). */
+let statsScope = "you";
+function paintStats(){
+  const seg = `<div class="seg" role="tablist">
+    <button type="button" role="tab" data-scope="you" class="${statsScope === "you" ? "on" : ""}">Yours</button>
+    <button type="button" role="tab" data-scope="everyone" class="${statsScope === "everyone" ? "on" : ""}">Everyone</button>
+  </div>`;
+  const html = statsScope === "everyone" ? everyoneHTML() : yoursHTML();
+  $("statsBody").innerHTML = seg + html;
   animateStats();
+}
+/* Global leaderboards: every real player's picks (seed rows excluded, as for crowd counts), plus this viewer's own.
+   A pick's wins are the times an item was chosen over its rival. Only totals are shown, never who picked what. */
+function globalBoards(){
+  const boards = {};
+  const add = (picks, who) => {
+    Object.keys(picks).forEach(k => {
+      const p = parseKey(k);
+      const b = boards[p.cat] || (boards[p.cat] = { wins: {}, players: new Set(), picks: 0 });
+      const w = picks[k].w;
+      b.wins[w] = (b.wins[w] || 0) + 1;
+      b.picks++;
+      b.players.add(who);
+    });
+  };
+  othersPicks.forEach((picks, who) => add(picks, who));
+  add(myPicks, "me");
+  return boards;
+}
+function globalBars(c, n){
+  const b = globalBoards()[c.id];
+  if(!b) return `<p class="ko-sub">No picks yet.</p>`;
+  const top = Object.entries(b.wins).sort((x, y) => y[1] - x[1] || x[0].localeCompare(y[0])).slice(0, n);
+  const max = top[0][1];
+  return top.map(([f, w], i) => `<div class="bar-row"><span class="bar-rank">${i + 1}</span><span class="bar-name">${f}</span><span class="bar-track"><span class="bar-fill" data-w="${Math.round(100 * w / max)}"></span></span><b>${w}</b></div>`).join("");
+}
+/* One category's leaderboard: a heading line with the player count, then the top n. */
+function globalBlockHTML(c, n){
+  if(!statsReady) return db ? `<p class="ko-sub">Loading everyone's picks…</p>` : "";
+  const b = globalBoards()[c.id];
+  if(!b) return `<p class="ko-sub">No picks from other players in ${c.name} yet.</p>`;
+  return `<p class="ko-sub">Everyone in ${c.name}: <b>${b.players.size}</b> ${b.players.size === 1 ? "player" : "players"}, <b>${b.picks}</b> picks</p>` + globalBars(c, n);
+}
+function everyoneHTML(){
+  if(!statsReady) return db ? `<p class="ko-sub">Loading everyone's picks…</p>` : `<p class="ko-sub">Connecting to see everyone's picks.</p>`;
+  if(document.body.classList.contains("home")){
+    const boards = globalBoards();
+    const cats = CATEGORIES.concat([MASHUP]).filter(c => boards[c.id]);
+    if(!cats.length) return `<p class="ko-sub">No picks from other players yet.</p>`;
+    return cats.map(c => `<p class="ko-sub global-head"><span>${c.e} ${c.name}</span></p>` + globalBars(c, 3)).join("");
+  }
+  return globalBlockHTML(CUR, 5);
 }
 /* Bars and progress fills start at zero and grow to their values once they are in the page. */
 function animateStats(){
   requestAnimationFrame(() => requestAnimationFrame(() => {
-    document.querySelectorAll("#statsBody [data-w]").forEach(el => { el.style.width = el.dataset.w + "%"; });
+    document.querySelectorAll("#statsBody [data-w], .global-block [data-w]").forEach(el => { el.style.width = el.dataset.w + "%"; });
   }));
 }
 function openStats(){
@@ -1664,6 +1727,8 @@ function openStats(){
 }
 $("statsBtn").addEventListener("click", openStats);
 $("statsBody").addEventListener("click", e => {
+  const scope = e.target.closest("[data-scope]");
+  if(scope){ statsScope = scope.dataset.scope; paintStats(); return; }
   const tab = e.target.closest("[data-tab]");
   if(tab){ statsTab = tab.dataset.tab; paintStats(); return; }
   const card = e.target.closest("[data-cat]");
@@ -1710,6 +1775,8 @@ $("cpCrown").addEventListener("click", crownGoat);
    Every 10 picks in a run, pause and ask: keep going, start fresh in this category, or change category.
    Picks are saved either way. Start fresh keeps this category's rankings and begins a new run. */
 function showCheckpoint(){
+  $("cpGlobal").innerHTML = globalBlockHTML(CUR, 5);
+  animateStats();
   $("cpTitle").textContent = `${S.round} picks in`;
   $("cpBody").textContent = `${CUR.name}: champion ${S.champ}, ${S.queue.length} left in this run.`;
   setCrownLabels();
