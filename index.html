@@ -157,7 +157,7 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .skip-picker{display:flex; align-items:center; justify-content:center; gap:8px; margin:-4px 0 0; font-size:15px; color:#fff; cursor:pointer}
 .skip-picker input{width:18px; height:18px; margin:0; accent-color:var(--yellow)}
 /* Skip-the-result mode: a short "Winner!" between matchups, then it fades and the next matchup loads. */
-.win-flash{position:absolute; inset:0; z-index:7; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; text-align:center; transition:opacity .35s ease; background:radial-gradient(circle at center, rgba(5,7,14,.82) 0, rgba(5,7,14,.55) 55%, rgba(5,7,14,0) 80%)}
+.win-flash{position:absolute; inset:0; z-index:7; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; text-align:center; transition:opacity .28s ease; background:radial-gradient(circle at center, rgba(5,7,14,.82) 0, rgba(5,7,14,.55) 55%, rgba(5,7,14,0) 80%)}
 .win-flash.out{opacity:0}
 .wf-title{margin:0; font-size:clamp(56px,17vw,96px); line-height:.95; color:var(--yellow); text-shadow:4px 4px 0 #000, 0 0 24px rgba(255,210,63,.5); animation:wfPop .5s cubic-bezier(.2,1.6,.4,1) both, wfWobble 1s ease-in-out .5s infinite}
 .wf-name{margin:10px 0 0; font-size:clamp(18px,6vw,26px); color:#fff; text-shadow:2px 2px 0 #000; animation:wfPop .5s .15s cubic-bezier(.2,1.6,.4,1) both}
@@ -410,7 +410,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B74";
+const BUILD = "B75";
 document.getElementById("build").textContent = BUILD;
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
@@ -1223,8 +1223,8 @@ function showWinnerFlash(winner){
   void el.offsetWidth;   // restart the pop animation on repeat picks
   setTimeout(() => {
     el.classList.add("out");
-    setTimeout(() => { el.classList.add("hidden"); el.classList.remove("out"); advanceMatch(); }, 350);
-  }, 950);
+    setTimeout(() => { el.classList.add("hidden"); el.classList.remove("out"); advanceMatch(); }, 280);
+  }, 760);
 }
 
 /* Challenge links use a plain hash, on this site's own address.
