@@ -256,6 +256,18 @@ body.home #resetBtn{display:none}
 .goat-head{display:flex; justify-content:space-between; font-size:11px; color:var(--mute); text-transform:uppercase; letter-spacing:.05em; margin:6px 0 2px}
 .goat-count{flex:0 0 auto; min-width:44px; text-align:right; color:var(--yellow); font-variant-numeric:tabular-nums}
 .bar-rank{flex:0 0 18px; text-align:right; color:var(--mute); font-variant-numeric:tabular-nums}
+
+/* B78: head-to-head rows */
+.h2h{padding:8px 2px 9px; border-bottom:1px solid #222c48}
+.h2h-names{display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size:15px; color:#fff}
+.h2h-a{text-align:left}
+.h2h-b{text-align:right}
+.h2h-crown{color:var(--yellow); font-size:12px; margin:0 6px; font-variant-numeric:tabular-nums}
+.h2h-bar{display:flex; height:14px; margin:6px 0 4px; border:2px solid #000; background:#222c48; overflow:hidden}
+.h2h-fill-a{width:0; background:linear-gradient(90deg,#2f8cff,#7fc4ff); transition:width .6s ease}
+.h2h-fill-b{width:0; background:linear-gradient(90deg,#ff6a4c,#e8413c); transition:width .6s ease}
+.h2h-rec{display:flex; justify-content:space-between; font-size:12px; color:var(--mute); font-variant-numeric:tabular-nums}
+.h2h-rec b{color:#fff}
 </style>
 </head>
 <body>
@@ -417,7 +429,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B77";
+const BUILD = "B78";
 document.getElementById("build").textContent = BUILD;
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
@@ -1107,7 +1119,7 @@ function renderStats(winner, loser, note){
 /* Minimum picks on a matchup before its crowd split is shown as a percentage. */
 const SAMPLE_MIN = 20;
 function showResult(winner, loser){
-  $("resGlobal").innerHTML = globalBlockHTML(CUR, 3);
+  $("resGlobal").innerHTML = globalBlockHTML(CUR, 2);
   animateStats();
   lastResult = { winner, loser };
   $("result").style.transition = "";
@@ -1719,8 +1731,11 @@ function globalBoards(){
   const add = (picks, who) => {
     Object.keys(picks).forEach(k => {
       const p = parseKey(k);
-      const b = boards[p.cat] || (boards[p.cat] = { wins: {}, crowns: {}, players: new Set(), picks: 0 });
+      const b = boards[p.cat] || (boards[p.cat] = { wins: {}, crowns: {}, pairs: {}, players: new Set(), picks: 0 });
       const w = picks[k].w;
+      const [pa, pb] = [p.x, p.y].sort();
+      const pair = b.pairs[pa + "|" + pb] || (b.pairs[pa + "|" + pb] = { a: pa, b: pb, aw: 0, bw: 0 });
+      if(w === pa) pair.aw++; else pair.bw++;
       b.wins[w] = (b.wins[w] || 0) + 1;
       if(picks[k].g){ (b.crowns[w] || (b.crowns[w] = new Set())).add(who); }
       b.picks++;
@@ -1731,19 +1746,27 @@ function globalBoards(){
   add(myPicks, "me");
   return boards;
 }
-/* GOAT leaderboard: how many distinct players have crowned each item as their GOAT in this category. */
+/* Head-to-head rows, the way a fight card or a sports matchup is laid out: fighter, split bar, fighter.
+   Each side's share of the picks in that pair, the pick count, and the number of players who have crowned it the GOAT. */
 function globalBars(c, n){
   const b = globalBoards()[c.id];
   if(!b) return `<p class="ko-sub">No picks yet.</p>`;
   const goats = f => (b.crowns[f] ? b.crowns[f].size : 0);
-  const top = Object.keys(b.crowns)
-    .filter(f => goats(f) > 0)
-    .sort((x, y) => goats(y) - goats(x) || b.wins[y] - b.wins[x] || x.localeCompare(y))
+  const crown = f => goats(f) ? `<span class="h2h-crown">👑 ${goats(f)}</span>` : "";
+  const pairs = Object.values(b.pairs)
+    .sort((x, y) => (y.aw + y.bw) - (x.aw + x.bw) || x.a.localeCompare(y.a))
     .slice(0, n);
-  if(!top.length) return `<p class="ko-sub">No one has crowned a GOAT in ${c.name} yet.</p>`;
-  const max = goats(top[0]);
-  return `<div class="goat-head"><span>Item</span><span>Players who call it the GOAT</span></div>`
-    + top.map((f, i) => `<div class="bar-row goat-row"><span class="bar-rank">${i + 1}</span><span class="bar-name">${f}</span><span class="bar-track"><span class="bar-fill" data-w="${Math.round(100 * goats(f) / max)}"></span></span><b class="goat-count">👑 ${goats(f)}</b></div>`).join("");
+  if(!pairs.length) return `<p class="ko-sub">No head-to-head picks yet.</p>`;
+  return `<div class="goat-head"><span>Head to head</span><span>Most played pairs</span></div>`
+    + pairs.map(q => {
+      const total = q.aw + q.bw;
+      const pa = Math.round(100 * q.aw / total), pb = 100 - pa;
+      return `<div class="h2h">
+        <div class="h2h-names"><span class="h2h-a">${crown(q.a)}${q.a}</span><span class="h2h-b">${q.b}${crown(q.b)}</span></div>
+        <div class="h2h-bar"><span class="h2h-fill-a" data-w="${pa}"></span><span class="h2h-fill-b" data-w="${pb}"></span></div>
+        <div class="h2h-rec"><span><b>${pa}%</b> · ${q.aw} picks</span><span>${q.bw} picks · <b>${pb}%</b></span></div>
+      </div>`;
+    }).join("");
 }
 /* One category's leaderboard: a heading line with the player count, then the top n. */
 function globalBlockHTML(c, n){
