@@ -159,6 +159,11 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 /* Skip-the-result mode: a short "Winner!" between matchups, then it fades and the next matchup loads. */
 .win-flash{position:absolute; inset:0; z-index:7; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; text-align:center; transition:opacity .28s ease; background:radial-gradient(circle at center, rgba(5,7,14,.82) 0, rgba(5,7,14,.55) 55%, rgba(5,7,14,0) 80%)}
 .win-flash.out{opacity:0}
+.win-flash{pointer-events:auto}
+.wf-share{margin-top:18px; pointer-events:auto; background:var(--yellow); color:#111; border:3px solid #000; box-shadow:3px 3px 0 #000; width:52px; height:52px; display:grid; place-items:center; cursor:pointer; transform:skewX(-8deg)}
+.wf-share svg{transform:skewX(8deg)}
+.wf-share:active{transform:translate(2px,2px) skewX(-8deg); box-shadow:1px 1px 0 #000}
+.hint-stats{display:flex; justify-content:center; margin:2px 0 0; font-size:12px}
 .wf-title{margin:0; font-size:clamp(56px,17vw,96px); line-height:.95; color:var(--yellow); text-shadow:4px 4px 0 #000, 0 0 24px rgba(255,210,63,.5); animation:wfPop .5s cubic-bezier(.2,1.6,.4,1) both, wfWobble 1s ease-in-out .5s infinite}
 .wf-name{margin:10px 0 0; font-size:clamp(18px,6vw,26px); color:#fff; text-shadow:2px 2px 0 #000; animation:wfPop .5s .15s cubic-bezier(.2,1.6,.4,1) both}
 @keyframes wfPop{from{transform:scale(.3) rotate(-12deg); opacity:0} to{transform:none; opacity:1}}
@@ -293,6 +298,7 @@ body.home #resetBtn{display:none}
       <div class="win-flash hidden" id="winFlash" aria-live="polite">
         <p class="display wf-title">Winner!</p>
         <p class="wf-name" id="wfName"></p>
+        <button type="button" class="wf-share" id="wfShare" aria-label="Share this matchup"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 14v5h14v-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div>
 
       <section class="overlay hidden" id="result" aria-live="polite">
@@ -402,6 +408,7 @@ body.home #resetBtn{display:none}
     </main>
 
     <p class="hint" id="hint"></p>
+    <label class="skip-picker hint-stats"><input type="checkbox" id="matchShowStats"> <span>Show stats between rounds</span></label>
     <p class="foot"><span class="build" id="build"></span></p>
   </div>
 </div>
@@ -410,7 +417,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B76";
+const BUILD = "B77";
 document.getElementById("build").textContent = BUILD;
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
@@ -1221,16 +1228,41 @@ function castVote(side){
 
 /* Skip-the-result mode: "Winner!" pops, holds, fades, then the next matchup loads. `voted` stays true
    until then, so extra taps or keys cannot pick again during the flash. */
+let flashTimer = null, flashHover = false, shareOpen = false;
 function showWinnerFlash(winner){
   const el = $("winFlash");
   $("wfName").textContent = winner;
   el.classList.remove("out", "hidden");
   void el.offsetWidth;   // restart the pop animation on repeat picks
-  setTimeout(() => {
-    el.classList.add("out");
-    setTimeout(() => { el.classList.add("hidden"); el.classList.remove("out"); advanceMatch(); }, 280);
-  }, 760);
+  flashHover = false; shareOpen = false;
+  scheduleFade();
 }
+/* The flash fades after 760 ms, unless the pointer is on it (so the share icon can be reached)
+   or the share sheet is open. Leaving the flash or closing the sheet starts the timer again. */
+function scheduleFade(){
+  clearTimeout(flashTimer);
+  if(flashHover || shareOpen) return;
+  flashTimer = setTimeout(startFadeOut, 760);
+}
+function startFadeOut(){
+  if(flashHover || shareOpen) return;
+  const el = $("winFlash");
+  el.classList.add("out");
+  setTimeout(() => { el.classList.add("hidden"); el.classList.remove("out"); advanceMatch(); }, 280);
+}
+$("winFlash").addEventListener("pointerenter", () => { flashHover = true; clearTimeout(flashTimer); });
+$("winFlash").addEventListener("pointerleave", () => { flashHover = false; scheduleFade(); });
+$("wfShare").addEventListener("click", e => {
+  e.stopPropagation();
+  shareOpen = true; clearTimeout(flashTimer);
+  shareMatch(current.a, current.b);
+});
+$("shareClose").addEventListener("click", () => {
+  if(!shareOpen) return;
+  shareOpen = false;
+  flashHover = false;   // the sheet covered the flash, so no pointerleave fired; the next move over it sets this again
+  if(!$("winFlash").classList.contains("hidden")) scheduleFade();
+});
 
 /* Challenge links use a plain hash, on this site's own address.
    Fruit: #vs-apple-banana. Other categories: #vs-dogs-beagle-pug. */
@@ -1987,13 +2019,16 @@ function setSkipResult(on){
   $("resultSkip").checked = on;
   $("cpShowStats").checked = !on;
   $("statsShow").checked = !on;
+  $("matchShowStats").checked = !on;
 }
 $("resultSkip").checked = skipResult;
 $("cpShowStats").checked = !skipResult;
 $("statsShow").checked = !skipResult;
+$("matchShowStats").checked = !skipResult;
 $("resultSkip").addEventListener("change", e => setSkipResult(e.target.checked));
 $("cpShowStats").addEventListener("change", e => setSkipResult(!e.target.checked));
 $("statsShow").addEventListener("change", e => setSkipResult(!e.target.checked));
+$("matchShowStats").addEventListener("change", e => setSkipResult(!e.target.checked));
 
 function init(){
   $("build").textContent = BUILD;
