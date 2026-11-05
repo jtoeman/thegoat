@@ -2,7 +2,7 @@
 
 Static site for The GOAT game. Single-file build in `index.html` plus image assets in `assets/`.
 
-Deployed to Cloudflare Pages project `goat` (https://goat.vomint.com).
+Deployed as Cloudflare Worker `thegoat` (https://goat.froobaloo.com, https://thegoat.froobaloo.com, https://froobaloo.com/goat and https://froobaloo.com/thegoat). Routing lives in `worker.js`; `goat.vomint.com` redirects here.
 Each push to `main` is the build that goes live.
 
 Votes are stored in Supabase (project `goat`, table `votes`).

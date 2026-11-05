@@ -1,0 +1,6 @@
+.git
+README.md
+sync-categories.gs
+worker.js
+wrangler.jsonc
+.assetsignore
