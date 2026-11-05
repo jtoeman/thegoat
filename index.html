@@ -124,8 +124,9 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .overlay{
   position:absolute; inset:0; z-index:5; padding:12px 14px 14px;
   background:linear-gradient(180deg, rgba(7,10,20,.97), rgba(7,10,20,.98) 55%);
-  display:flex; flex-direction:column; gap:6px; min-height:0; overflow:hidden;
+  display:flex; flex-direction:column; gap:6px; min-height:0; overflow-x:hidden; overflow-y:auto; overscroll-behavior:contain;
 }
+.overlay > *{flex-shrink:0}
 .overlay.hidden{display:none !important}
 .ko{font-size:clamp(30px,10vw,50px); line-height:1; color:var(--yellow); text-shadow:3px 3px 0 #000; font-style:italic; margin:0; overflow-wrap:anywhere}
 .ko-sub{color:var(--mute); font-size:13px; margin:0}
@@ -431,7 +432,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B79";
+const BUILD = "B80";
 document.getElementById("build").textContent = BUILD;
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
@@ -1854,7 +1855,7 @@ $("cpCrown").addEventListener("click", crownGoat);
    Every 10 picks in a run, pause and ask: keep going, start fresh in this category, or change category.
    Picks are saved either way. Start fresh keeps this category's rankings and begins a new run. */
 function showCheckpoint(){
-  $("cpGlobal").innerHTML = globalBlockHTML(CUR, 5);
+  $("cpGlobal").innerHTML = globalBlockHTML(CUR, 3);
   animateStats();
   $("cpTitle").textContent = `${S.round} picks in`;
   $("cpBody").textContent = `${CUR.name}: champion ${S.champ}, ${S.queue.length} left in this run.`;
