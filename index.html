@@ -238,6 +238,9 @@ body.home #resetBtn{display:none}
 .cc-body{flex:1; min-width:0; display:flex; flex-direction:column; gap:4px}
 .cc-body b{font-size:18px; font-weight:400; line-height:1}
 .cc-meta{font-size:12px; color:var(--mute)}
+.mash-card.locked{opacity:.75; filter:grayscale(.6)}
+.mash-card:not(.locked){background:linear-gradient(135deg,#8a2be2,#ff2d95)}
+.mash-card:not(.locked) .cc-meta{color:#fff; text-shadow:1px 1px 0 #000}
 .prog{display:block; height:10px; background:#222c48; border:2px solid #000; position:relative; overflow:hidden}
 .prog-fill{position:absolute; left:0; top:0; bottom:0; width:0; background:linear-gradient(90deg, var(--go), var(--blue)); transition:width .6s ease}
 </style>
@@ -397,7 +400,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B71";
+const BUILD = "B72";
 document.getElementById("build").textContent = BUILD;
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
@@ -1550,6 +1553,7 @@ function recentWinnerBars(n){
 /* Stats panel. Home shows progress toward Mashups per category, and a tap opens that category.
    In a game it shows an agreement ring, a session / all-time switch and animated winner bars. */
 let statsTab = "session";
+function matchupWord(n){ return n + (n === 1 ? " matchup" : " matchups"); }
 function matchupCount(c){
   return Object.keys(myPicks).filter(k => parseKey(k).cat === c.id).length;
 }
@@ -1560,19 +1564,43 @@ function paintStats(){
     const note = mashupUnlocked()
       ? "Mashups are open. Tap a category to play it."
       : `Mashups open when every category has 10 voted items: ${done} of ${CATEGORIES.length} ready.`;
-    body.innerHTML = `<p class="ko-sub">${note}</p>` + CATEGORIES.map(c => {
+    const cards = CATEGORIES.map(c => {
       const n = Math.min(categoryVotedItems(c), 10);
       const top = categoryTop(c);
       return `<button class="cat-card" data-cat="${c.id}" type="button">
         <span class="cc-e" aria-hidden="true">${c.e}</span>
         <span class="cc-body">
           <b class="display">${c.name}</b>
-          <span class="cc-meta">${matchupCount(c)} matchups${top ? " · 👑 " + top : ""}</span>
+          <span class="cc-meta">${matchupWord(matchupCount(c))}${top ? " · 👑 " + top : ""}</span>
           <span class="prog"><span class="prog-fill" data-w="${n * 10}"></span></span>
           <span class="cc-meta">${n} of 10 items voted</span>
         </span>
       </button>`;
     }).join("");
+    const readyCats = CATEGORIES.filter(c => categoryVotedItems(c) >= 10).length;
+    const mTop = categoryTop(MASHUP);
+    const mCount = matchupCount(MASHUP);
+    const unlocked = mashupUnlocked();
+    const mashCard = unlocked
+      ? `<button class="cat-card mash-card" data-cat="mashup" type="button">
+          <span class="cc-e" aria-hidden="true">${MASHUP.e}</span>
+          <span class="cc-body">
+            <b class="display">Mashups</b>
+            <span class="cc-meta">${matchupWord(mCount)}${mTop ? " · 👑 " + mTop : ""}</span>
+            <span class="prog"><span class="prog-fill" data-w="100"></span></span>
+            <span class="cc-meta">Open. Every category shuffled together. Tap to play.</span>
+          </span>
+        </button>`
+      : `<div class="cat-card mash-card locked" aria-disabled="true">
+          <span class="cc-e" aria-hidden="true">🔒</span>
+          <span class="cc-body">
+            <b class="display">Mashups</b>
+            <span class="cc-meta">${matchupWord(mCount)} so far</span>
+            <span class="prog"><span class="prog-fill" data-w="${Math.round(100 * readyCats / CATEGORIES.length)}"></span></span>
+            <span class="cc-meta">${readyCats} of ${CATEGORIES.length} categories at 10 items</span>
+          </span>
+        </div>`;
+    body.innerHTML = `<p class="ko-sub">${note}</p>` + cards + mashCard;
   } else if(!db || !uid){
     body.innerHTML = `<p class="ko-sub">Sign in to see your stats.</p>`;
     return animateStats();
@@ -1640,8 +1668,8 @@ $("statsBody").addEventListener("click", e => {
   if(tab){ statsTab = tab.dataset.tab; paintStats(); return; }
   const card = e.target.closest("[data-cat]");
   if(card){
-    const c = CATEGORIES.find(x => x.id === card.dataset.cat);
-    if(!c) return;
+    const c = card.dataset.cat === "mashup" ? MASHUP : CATEGORIES.find(x => x.id === card.dataset.cat);
+    if(!c || (c === MASHUP && !mashupUnlocked())) return;
     $("statsPanel").classList.add("hidden");
     setCategory(c);
     closePicker();
