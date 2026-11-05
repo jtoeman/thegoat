@@ -216,6 +216,30 @@ body.home #resetBtn{display:none}
 .rank-btns{display:flex; flex:none}
 .hidden{display:none !important}
 @media (prefers-reduced-motion: reduce){ *{transition:none !important} }
+
+/* B71: stats view and unlock toast */
+.toast-btn{margin-left:10px; font:inherit; text-transform:inherit; letter-spacing:inherit; color:var(--yellow); background:#111; border:2px solid #000; padding:3px 10px; cursor:pointer}
+.stat-hero{display:flex; align-items:center; gap:14px; padding:4px 2px 8px}
+.ring{flex:0 0 92px; width:92px; height:92px; border-radius:50%; border:3px solid #000; box-shadow:3px 3px 0 #000; display:grid; place-items:center}
+.ring-in{width:66px; height:66px; border-radius:50%; background:var(--panel); border:2px solid #000; display:flex; flex-direction:column; align-items:center; justify-content:center}
+.ring-in b{font:24px/1 Impact,sans-serif; color:var(--go)}
+.ring-in small{font-size:9px; color:var(--mute); text-transform:uppercase; letter-spacing:.04em; margin-top:2px}
+.hero-nums{display:grid; gap:6px; flex:1; min-width:0}
+.hero-nums div{display:flex; justify-content:space-between; gap:8px; font-size:13px; border-bottom:1px dashed #222c48; padding-bottom:4px}
+.hero-nums span{color:var(--mute)}
+.hero-nums b{color:var(--yellow); font-variant-numeric:tabular-nums; white-space:nowrap}
+.seg{display:flex; background:#1b2440; border:2px solid #000; margin:6px 0 6px}
+.seg button{flex:1; font:14px Impact,"Arial Narrow",sans-serif; text-transform:uppercase; letter-spacing:.05em; padding:7px 4px; background:none; color:var(--mute); border:0; cursor:pointer}
+.seg button.on{background:var(--yellow); color:#111}
+.cat-card{width:100%; display:flex; gap:10px; align-items:center; padding:9px 10px; margin:0 0 8px; background:var(--panel); color:#fff; border:2px solid #000; box-shadow:3px 3px 0 #000; cursor:pointer; text-align:left; font:inherit}
+.cat-card:hover{transform:translate(-1px,-1px); box-shadow:4px 4px 0 #000}
+.cat-card:active{transform:translate(1px,1px); box-shadow:1px 1px 0 #000}
+.cc-e{flex:0 0 36px; font-size:30px; text-align:center}
+.cc-body{flex:1; min-width:0; display:flex; flex-direction:column; gap:4px}
+.cc-body b{font-size:18px; font-weight:400; line-height:1}
+.cc-meta{font-size:12px; color:var(--mute)}
+.prog{display:block; height:10px; background:#222c48; border:2px solid #000; position:relative; overflow:hidden}
+.prog-fill{position:absolute; left:0; top:0; bottom:0; width:0; background:linear-gradient(90deg, var(--go), var(--blue)); transition:width .6s ease}
 </style>
 </head>
 <body>
@@ -373,7 +397,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B70";
+const BUILD = "B71";
 document.getElementById("build").textContent = BUILD;
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
@@ -703,6 +727,25 @@ function saveLadder(){ writeStore(CUR.ladderKey, S); }
 
 /* ---------- helpers ---------- */
 function buzz(ms){ try{ if(navigator.vibrate) navigator.vibrate(ms); }catch(e){} }  // Android only; iOS Safari has no vibration API
+/* Toast with one button. Used for the Mashups unlock: the button starts the mode straight away. */
+function toastAction(msg, label, fn, ms){
+  const t = $("toast");
+  t.textContent = "";
+  const span = document.createElement("span");
+  span.textContent = msg;
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "toast-btn";
+  btn.textContent = label;
+  btn.addEventListener("click", () => { clearTimeout(toast._t); t.classList.add("hidden"); fn(); });
+  t.append(span, btn);
+  t.classList.remove("hidden");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.classList.add("hidden"), ms || 2200);
+}
+function celebrateUnlock(){
+  toastAction("Mashups unlocked!", "Play now", () => { setCategory(MASHUP); closePicker(); }, 9000);
+}
 function toast(msg){
   const t = $("toast");
   t.textContent = msg;
@@ -1134,7 +1177,9 @@ function castVote(side){
   const key = keyFor(winner, loser);
   const entry = Object.assign({ w: winner }, DEVICE, { t: Date.now() });
   const previous = myPicks[key];
+  const wasUnlocked = mashupUnlocked();
   myPicks[key] = entry;
+  if(!wasUnlocked && mashupUnlocked()) setTimeout(celebrateUnlock, 300);
   lastPick = { key, previous, snapshotS, time: Date.now() };
   showOops();
   savePick(key, entry).then(ok => {
@@ -1502,25 +1547,45 @@ function recentWinnerBars(n){
   const rows = entries.map(([f, c]) => `<div class="bar-row"><span class="bar-name">${f}</span><span class="bar-track"><span class="bar-fill" style="width:${Math.round(100 * c / max)}%"></span></span><b>${c}</b></div>`).join("");
   return { total: picks.length, rows };
 }
-function openStats(){
+/* Stats panel. Home shows progress toward Mashups per category, and a tap opens that category.
+   In a game it shows an agreement ring, a session / all-time switch and animated winner bars. */
+let statsTab = "session";
+function matchupCount(c){
+  return Object.keys(myPicks).filter(k => parseKey(k).cat === c.id).length;
+}
+function paintStats(){
   const body = $("statsBody");
   if(document.body.classList.contains("home")){
-    // Home screen has no category selected, so Stats summarises every category.
-    body.innerHTML = CATEGORIES.map(c => {
-      const n = Object.keys(myPicks).filter(k => parseKey(k).cat === c.id).length;
+    const done = CATEGORIES.filter(c => categoryVotedItems(c) >= 10).length;
+    const note = mashupUnlocked()
+      ? "Mashups are open. Tap a category to play it."
+      : `Mashups open when every category has 10 voted items: ${done} of ${CATEGORIES.length} ready.`;
+    body.innerHTML = `<p class="ko-sub">${note}</p>` + CATEGORIES.map(c => {
+      const n = Math.min(categoryVotedItems(c), 10);
       const top = categoryTop(c);
-      return `<div class="stat-row"><span>${c.name}</span><b>${n} matchups${top ? " · 👑 " + top : ""}</b></div>`;
+      return `<button class="cat-card" data-cat="${c.id}" type="button">
+        <span class="cc-e" aria-hidden="true">${c.e}</span>
+        <span class="cc-body">
+          <b class="display">${c.name}</b>
+          <span class="cc-meta">${matchupCount(c)} matchups${top ? " · 👑 " + top : ""}</span>
+          <span class="prog"><span class="prog-fill" data-w="${n * 10}"></span></span>
+          <span class="cc-meta">${n} of 10 items voted</span>
+        </span>
+      </button>`;
     }).join("");
   } else if(!db || !uid){
     body.innerHTML = `<p class="ko-sub">Sign in to see your stats.</p>`;
+    return animateStats();
   } else if(!statsReady){
     body.innerHTML = `<p class="ko-sub">Loading…</p>`;
+    return animateStats();
   } else {
     const keys = Object.keys(myPicks).filter(k => parseKey(k).cat === CUR.id);
     let agree = 0, counted = 0, sessionTotal = 0;
-    const session = {};
+    const session = {}, allTime = {};
     keys.forEach(k => {
       const entry = myPicks[k];
+      allTime[entry.w] = (allTime[entry.w] || 0) + 1;
       if(entry.t >= SESSION_START){
         session[entry.w] = (session[entry.w] || 0) + 1;
         sessionTotal++;
@@ -1532,19 +1597,56 @@ function openStats(){
       const crowd = c[x] > c[y] ? x : (c[y] > c[x] ? y : null);
       if(crowd === entry.w) agree++;
     });
-    const entries = Object.entries(session).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    const pct = counted ? Math.round(100 * agree / counted) : null;
+    const source = statsTab === "all" ? allTime : session;
+    const entries = Object.entries(source).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
     const max = entries.length ? entries[0][1] : 1;
     const hit = n => [current.a, current.b].includes(n) ? " hit" : "";
+    const ring = pct === null
+      ? `<div class="ring" style="background:#222c48"><span class="ring-in"><b>?</b><small>no data</small></span></div>`
+      : `<div class="ring" style="background:conic-gradient(var(--go) ${pct * 3.6}deg, #222c48 0)"><span class="ring-in"><b>${pct}%</b><small>with crowd</small></span></div>`;
     body.innerHTML = `
-      <p class="ko-sub">All time in ${CUR.name.toLowerCase()}: <b>${keys.length}</b> matchups. Agreed with the crowd: <b>${counted ? agree + " of " + counted : "not enough picks yet"}</b></p>
-      <p class="ko-sub">This session: <b>${sessionTotal}</b> picks. Winners, most first:</p>`
+      <div class="stat-hero">
+        ${ring}
+        <div class="hero-nums">
+          <div><span>${CUR.name} matchups, all time</span><b>${keys.length}</b></div>
+          <div><span>Picks this session</span><b>${sessionTotal}</b></div>
+          <div><span>Agreed with the crowd</span><b>${counted ? agree + " of " + counted : "not yet"}</b></div>
+        </div>
+      </div>
+      <div class="seg" role="tablist">
+        <button type="button" role="tab" data-tab="session" class="${statsTab === "session" ? "on" : ""}">This session</button>
+        <button type="button" role="tab" data-tab="all" class="${statsTab === "all" ? "on" : ""}">All time</button>
+      </div>`
       + (entries.length
-        ? entries.map(([f, n]) => `<div class="bar-row${hit(f)}"><span class="bar-name">${f}</span><span class="bar-track"><span class="bar-fill" style="width:${Math.round(100 * n / max)}%"></span></span><b>${n}</b></div>`).join("")
-        : `<p class="ko-sub">No picks yet this session.</p>`);
+        ? entries.map(([f, n]) => `<div class="bar-row${hit(f)}"><span class="bar-name">${f}</span><span class="bar-track"><span class="bar-fill" data-w="${Math.round(100 * n / max)}"></span></span><b>${n}</b></div>`).join("")
+        : `<p class="ko-sub">${statsTab === "all" ? "No picks in this category yet." : "No picks yet this session."}</p>`);
   }
+  animateStats();
+}
+/* Bars and progress fills start at zero and grow to their values once they are in the page. */
+function animateStats(){
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    document.querySelectorAll("#statsBody [data-w]").forEach(el => { el.style.width = el.dataset.w + "%"; });
+  }));
+}
+function openStats(){
+  paintStats();
   $("statsPanel").classList.remove("hidden");
 }
 $("statsBtn").addEventListener("click", openStats);
+$("statsBody").addEventListener("click", e => {
+  const tab = e.target.closest("[data-tab]");
+  if(tab){ statsTab = tab.dataset.tab; paintStats(); return; }
+  const card = e.target.closest("[data-cat]");
+  if(card){
+    const c = CATEGORIES.find(x => x.id === card.dataset.cat);
+    if(!c) return;
+    $("statsPanel").classList.add("hidden");
+    setCategory(c);
+    closePicker();
+  }
+});
 $("statsClose").addEventListener("click", () => $("statsPanel").classList.add("hidden"));
 
 /* Crown buttons name the current champion, e.g. "Cherry is the GOAT". */
