@@ -268,6 +268,8 @@ body.home #resetBtn{display:none}
 .h2h-fill-b{width:0; background:linear-gradient(90deg,#ff6a4c,#e8413c); transition:width .6s ease}
 .h2h-rec{display:flex; justify-content:space-between; font-size:12px; color:var(--mute); font-variant-numeric:tabular-nums}
 .h2h-rec b{color:#fff}
+.h2h-thumb{width:34px; height:34px; object-fit:cover; border:2px solid #000; box-shadow:2px 2px 0 #000; vertical-align:middle; margin:0 6px; background:#222c48}
+.h2h-names{align-items:center}
 </style>
 </head>
 <body>
@@ -429,7 +431,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B78";
+const BUILD = "B79";
 document.getElementById("build").textContent = BUILD;
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
@@ -1757,14 +1759,21 @@ function globalBars(c, n){
     .sort((x, y) => (y.aw + y.bw) - (x.aw + x.bw) || x.a.localeCompare(y.a))
     .slice(0, n);
   if(!pairs.length) return `<p class="ko-sub">No head-to-head picks yet.</p>`;
+  const thumb = nm => {
+    const owner = [c, ...CATEGORIES, MASHUP].find(k => k.byName && k.byName[nm]) || c;
+    const item = owner.byName && owner.byName[nm];
+    const src = (item && item.img) || `assets/${owner.id}/${photoSlug(nm)}.jpg`;
+    return `<img class="h2h-thumb" src="${src}" alt="" loading="lazy" onerror="this.remove()">`;
+  };
+  const picks = n => `${n} ${n === 1 ? "pick" : "picks"}`;
   return `<div class="goat-head"><span>Head to head</span><span>Most played pairs</span></div>`
     + pairs.map(q => {
       const total = q.aw + q.bw;
       const pa = Math.round(100 * q.aw / total), pb = 100 - pa;
       return `<div class="h2h">
-        <div class="h2h-names"><span class="h2h-a">${crown(q.a)}${q.a}</span><span class="h2h-b">${q.b}${crown(q.b)}</span></div>
+        <div class="h2h-names"><span class="h2h-a">${thumb(q.a)}${crown(q.a)}${q.a}</span><span class="h2h-b">${q.b}${crown(q.b)}${thumb(q.b)}</span></div>
         <div class="h2h-bar"><span class="h2h-fill-a" data-w="${pa}"></span><span class="h2h-fill-b" data-w="${pb}"></span></div>
-        <div class="h2h-rec"><span><b>${pa}%</b> · ${q.aw} picks</span><span>${q.bw} picks · <b>${pb}%</b></span></div>
+        <div class="h2h-rec"><span><b>${pa}%</b> · ${picks(q.aw)}</span><span>${picks(q.bw)} · <b>${pb}%</b></span></div>
       </div>`;
     }).join("");
 }
