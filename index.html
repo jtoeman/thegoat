@@ -410,7 +410,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B75";
+const BUILD = "B76";
 document.getElementById("build").textContent = BUILD;
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
@@ -1081,19 +1081,24 @@ function renderStats(winner, loser, note){
   const c = countsFor(key, winner, loser);
   const total = c[winner] + c[loser];
   const pct = total ? Math.round(100 * c[winner] / total) : 50;
+  const small = statsReady && total > 0 && total < SAMPLE_MIN;   // too few picks for a split to mean much
   $("overallLabel").textContent = !statsReady ? (statsError ? "Stats unavailable right now" : "Counting picks…")
+    : small ? `Too early to call: ${total} ${total === 1 ? "pick" : "picks"} so far`
     : total ? `${winner} ${pct}% of picks` : "No picks counted yet";
-  requestAnimationFrame(() => requestAnimationFrame(() => { fill.style.width = (statsReady && total ? pct : 0) + "%"; }));
+  requestAnimationFrame(() => requestAnimationFrame(() => { fill.style.width = (statsReady && total && !small ? pct : 0) + "%"; }));
   $("tally").textContent = statsReady ? `${winner} ${c[winner]} · ${loser} ${c[loser]} · ${total} total` : "";
   let facts;
   if(note) facts = note;
   else if(!uid) facts = "Picks are not saved until sign-in finishes.";
   else if(!statsReady) facts = statsError ? "Couldn't reach the pilot database. It will retry automatically." : "Loading the pilot count…";
   else if(total <= 1) facts = "First pick on this matchup. The count fills in as people play.";
+  else if(small) facts = `Small sample. The split shows once this matchup has ${SAMPLE_MIN} picks.`;
   else facts = `Popular across ${total} picks on this matchup.`;
   $("facts").textContent = facts;
 }
 
+/* Minimum picks on a matchup before its crowd split is shown as a percentage. */
+const SAMPLE_MIN = 20;
 function showResult(winner, loser){
   $("resGlobal").innerHTML = globalBlockHTML(CUR, 3);
   animateStats();
