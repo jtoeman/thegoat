@@ -432,7 +432,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B80";
+const BUILD = "B81";
 document.getElementById("build").textContent = BUILD;
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
@@ -602,7 +602,7 @@ MASHUP.items.forEach(f => { MASHUP.byName[f.n] = f; MASHUP.bySlug[f.s] = f; });
    the Categories tab lists each category and its tab id, and each category tab holds its words.
    The built-in lists above are the fallback if the workbook can't be reached or has no usable categories. */
 const WORDS_FILE = "1FbM320qaloYDHZHRAvLfDiK-IeKeM4TUaQo_hve_KsU";
-const INDEX_GID = 0;                                                    // the Categories tab must be the first tab
+const INDEX_GID = 1558846279;                                           // the "Categories" tab (its gid)
 function sheetCSVUrl(gid){ return "https://docs.google.com/spreadsheets/d/" + WORDS_FILE + "/export?format=csv&gid=" + gid; }
 /* Minimal CSV reader: quoted fields, doubled quotes, CRLF or LF. Returns one object per row, keyed by lowercase header. */
 function parseCSV(text){
@@ -659,10 +659,7 @@ function applyWords(indexText, tabTexts){
     cat.items.forEach(f => { f.s = f.n.toLowerCase().replace(/[^a-z]/g, ""); f.art = cat.art; cat.byName[f.n] = f; cat.bySlug[f.s] = f; });
     CATEGORIES.push(cat);
   });
-  MASHUP.items = [];
-  CATEGORIES.forEach(cat => cat.items.forEach(f => MASHUP.items.push(f)));
-  MASHUP.byName = {}; MASHUP.bySlug = {};
-  MASHUP.items.forEach(f => { MASHUP.byName[f.n] = f; MASHUP.bySlug[f.s] = f; });
+  refreshMashup();
 }
 async function loadWords(){
   try{
@@ -717,6 +714,7 @@ let oopsTimer = null;
 const OOPS_MS = 5000;
 
 function recomputeWins(){
+  refreshMashup();
   const w = {};
   const add = picks => Object.keys(picks || {}).forEach(k => {
     const v = picks[k];
@@ -1219,9 +1217,13 @@ function castVote(side){
   const key = keyFor(winner, loser);
   const entry = Object.assign({ w: winner }, DEVICE, { t: Date.now() });
   const previous = myPicks[key];
+  const readyBefore = readyCats().map(c => c.id);
   const wasUnlocked = mashupUnlocked();
   myPicks[key] = entry;
+  refreshMashup();
+  const joined = readyCats().filter(c => !readyBefore.includes(c.id));
   if(!wasUnlocked && mashupUnlocked()) setTimeout(celebrateUnlock, 300);
+  else if(joined.length && mashupUnlocked()) setTimeout(() => toast(`${joined.map(c => c.name).join(" and ")} joined Mashups`), 300);
   lastPick = { key, previous, snapshotS, time: Date.now() };
   showOops();
   savePick(key, entry).then(ok => {
@@ -1375,7 +1377,15 @@ function categoryVotedItems(c){
   Object.keys(myPicks).forEach(k => { const p = parseKey(k); if(p.cat === c.id){ seen.add(p.x); seen.add(p.y); } });
   return seen.size;
 }
-function mashupUnlocked(){ return CATEGORIES.every(c => categoryVotedItems(c) >= 10); }
+const MASHUP_MIN_CATS = 4;   // Mashups opens once a player has 10 voted items in this many categories
+function readyCats(){ return CATEGORIES.filter(c => categoryVotedItems(c) >= 10); }
+function mashupUnlocked(){ return readyCats().length >= Math.min(MASHUP_MIN_CATS, CATEGORIES.length); }
+/* Mashups mixes only the categories this player has finished, so it grows as they unlock more. */
+function refreshMashup(){
+  MASHUP.items = readyCats().flatMap(c => c.items);
+  MASHUP.byName = {}; MASHUP.bySlug = {};
+  MASHUP.items.forEach(f => { MASHUP.byName[f.n] = f; MASHUP.bySlug[f.s] = f; });
+}
 function mashupTileHTML(){
   if(mashupUnlocked()){
     const top = categoryTop(MASHUP);
@@ -1392,7 +1402,7 @@ function mashupTileHTML(){
     <button class="tile mashup locked" data-id="mashup" aria-disabled="true" style="background:#3a3f4d">
       <span class="tile-e" aria-hidden="true">🔒</span>
       <span class="tile-name display">Mashups</span>
-      <span class="tile-n">Locked. Vote on 10 items in every category to open it.</span>
+      <span class="tile-n">Locked. Vote on 10 items in any ${MASHUP_MIN_CATS} categories to open it.</span>
       <span class="tile-n">${prog}</span>
     </button>`;
 }
@@ -1437,7 +1447,7 @@ $("tiles").addEventListener("click", e => {
   const b = e.target.closest(".tile");
   if(!b) return;
   if(b.dataset.id === "mashup"){
-    if(!mashupUnlocked()){ toast("Mashups unlock after 10 voted items in each category."); return; }
+    if(!mashupUnlocked()){ toast("Mashups open after 10 voted items in any 4 categories."); return; }
     setCategory(MASHUP);
     closePicker();
     return;
@@ -1624,10 +1634,10 @@ function matchupCount(c){
 function yoursHTML(){
   let html;
   if(document.body.classList.contains("home")){
-    const done = CATEGORIES.filter(c => categoryVotedItems(c) >= 10).length;
+    const done = readyCats().length;
     const note = mashupUnlocked()
       ? "Mashups are open. Tap a category to play it."
-      : `Mashups open when every category has 10 voted items: ${done} of ${CATEGORIES.length} ready.`;
+      : `Mashups open with 10 voted items in any ${MASHUP_MIN_CATS} categories: ${done} of ${MASHUP_MIN_CATS} ready.`;
     const cards = CATEGORIES.map(c => {
       const n = Math.min(categoryVotedItems(c), 10);
       const top = categoryTop(c);
@@ -1641,7 +1651,7 @@ function yoursHTML(){
         </span>
       </button>`;
     }).join("");
-    const readyCats = CATEGORIES.filter(c => categoryVotedItems(c) >= 10).length;
+    const readyN = readyCats().length;
     const mTop = categoryTop(MASHUP);
     const mCount = matchupCount(MASHUP);
     const unlocked = mashupUnlocked();
@@ -1652,7 +1662,7 @@ function yoursHTML(){
             <b class="display">Mashups</b>
             <span class="cc-meta">${matchupWord(mCount)}${mTop ? " · 👑 " + mTop : ""}</span>
             <span class="prog"><span class="prog-fill" data-w="100"></span></span>
-            <span class="cc-meta">Open. Every category shuffled together. Tap to play.</span>
+            <span class="cc-meta">Open. Mixes the ${readyCats().length} categories you've finished. Tap to play.</span>
           </span>
         </button>`
       : `<div class="cat-card mash-card locked" aria-disabled="true">
@@ -1660,8 +1670,8 @@ function yoursHTML(){
           <span class="cc-body">
             <b class="display">Mashups</b>
             <span class="cc-meta">${matchupWord(mCount)} so far</span>
-            <span class="prog"><span class="prog-fill" data-w="${Math.round(100 * readyCats / CATEGORIES.length)}"></span></span>
-            <span class="cc-meta">${readyCats} of ${CATEGORIES.length} categories at 10 items</span>
+            <span class="prog"><span class="prog-fill" data-w="${Math.min(100, Math.round(100 * readyN / MASHUP_MIN_CATS))}"></span></span>
+            <span class="cc-meta">${readyN} of ${MASHUP_MIN_CATS} categories at 10 items</span>
           </span>
         </div>`;
     html = `<p class="ko-sub">${note}</p>` + cards + mashCard;
