@@ -7,6 +7,17 @@ Each push to `main` is the build that goes live.
 
 Votes are stored in Supabase (project `goat`, table `votes`).
 
+## Image ingest
+
+Add a photo by committing it to `ingest/inbox/<category>/<name>.<ext>` and pushing to `main`.
+The `ingest-images` workflow (`.github/workflows/ingest-images.yml`) then:
+
+1. Resizes it with `scripts/ingest-image.py`. If the long edge is over 1200 px or the file is over 500 KB, it becomes a 1080 px wide JPEG at quality 80. Otherwise the original is kept.
+2. Uploads the image and a sidecar JSON to the `goat-images` R2 bucket, served at `https://images.froobaloo.com/<category>/<name>.<ext>`.
+3. Removes the inbox copy in a follow-up commit.
+
+Needs repo secrets `CLOUDFLARE_API_TOKEN` (R2 edit permission) and `CLOUDFLARE_ACCOUNT_ID`. `ingest/`, `scripts/` and `.github/` are excluded from the Worker's static assets in `.assetsignore`.
+
 ## Word workbook
 
 The game reads its categories and words from the Google Sheets workbook "GOAT words" when the page loads
