@@ -536,9 +536,8 @@ const FRUITS = [
 /* Dog breeds: common breeds, plus Labradoodle and Goldendoodle. No photos yet, so each gets a letter portrait. */
 const DOG_NAMES = ["Labrador Retriever", "French Bulldog", "Golden Retriever", "German Shepherd", "Poodle", "Bulldog", "Rottweiler", "Beagle", "Dachshund", "German Shorthaired Pointer", "Pembroke Welsh Corgi", "Australian Shepherd", "Yorkshire Terrier", "Boxer", "Cavalier King Charles Spaniel", "Doberman Pinscher", "Great Dane", "Miniature Schnauzer", "Siberian Husky", "Bernese Mountain Dog", "Shih Tzu", "Boston Terrier", "Pomeranian", "Havanese", "Shetland Sheepdog", "Brittany", "English Springer Spaniel", "Cocker Spaniel", "Maltese", "Chihuahua", "Border Collie", "Vizsla", "Weimaraner", "Collie", "Bichon Frise", "Basset Hound", "Pug", "Mastiff", "Saint Bernard", "Greyhound", "Dalmatian", "Australian Cattle Dog", "Newfoundland", "Rhodesian Ridgeback", "Shiba Inu", "Labradoodle", "Goldendoodle", "Akita", "Alaskan Malamute", "Chow Chow", "Jack Russell Terrier", "Lhasa Apso", "Papillon", "Pekingese", "Shar-Pei", "Whippet", "Bloodhound", "Samoyed", "Scottish Terrier", "Irish Setter", "Great Pyrenees", "Miniature Pinscher", "Cane Corso", "Bull Terrier"];
 const DOG_PAL = ["#9a6a3a","#3a3a40","#c9a27a","#d9b77a","#d08a3a","#7a4a2a","#5a6070","#6b4a2a","#d8a040","#7d8a96","#5a6e8a","#c8b070","#b08ac0","#8a7a5a","#3e2a20","#a8322a"];
-/* Dog photos live in assets/dogs/<slug>.jpg. These eight breeds keep their letter portrait until a correct photo is added
-   (their photos were duplicates of each other in the upload). */
-const DOG_NO_PHOTO = ["French Bulldog","Bulldog","Basset Hound","Mastiff","Labradoodle","Goldendoodle","Bloodhound","Cane Corso"];
+/* Dog photos live in assets/dogs/<slug>.jpg. Add a breed here to keep its letter portrait instead of a photo. */
+const DOG_NO_PHOTO = [];
 const DOGS = DOG_NAMES.map((n, i) => {
   const d = { n, c: DOG_PAL[i % DOG_PAL.length] };
   if(!DOG_NO_PHOTO.includes(n)) d.img = "assets/dogs/" + n.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + ".jpg";

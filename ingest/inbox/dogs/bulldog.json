@@ -1,0 +1,13 @@
+{
+  "key": "dogs/bulldog.jpg",
+  "source_url": null,
+  "original_width": 1717,
+  "original_height": 2576,
+  "original_bytes": 645959,
+  "width": 1080,
+  "height": 1620,
+  "bytes": 254823,
+  "resized": true,
+  "rule": "long edge over 1200 px or file over 500 KB -> 1080 px wide JPEG, quality 80",
+  "ingested_at": "2026-11-06T22:30:47+00:00"
+}
