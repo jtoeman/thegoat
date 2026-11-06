@@ -478,7 +478,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B87";
+const BUILD = "B88";
 document.getElementById("build").textContent = BUILD;
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
@@ -1100,7 +1100,8 @@ function renderMatchInner(){
   voted = false;
   lastResult = null;
   $("result").classList.add("hidden");
-  $("winFlash").classList.add("hidden");
+  // keep the Winner screen up while its stats finish fading (hideFlashTimer removes it at 780ms)
+  if(!$("winFlash").classList.contains("out")) $("winFlash").classList.add("hidden");
   $("ladderEnd").classList.add("hidden");
   $("checkpoint").classList.add("hidden");
   resetFighterVisuals();
