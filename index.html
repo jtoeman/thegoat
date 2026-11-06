@@ -169,7 +169,7 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .win-flash::before{content:""; position:absolute; inset:0; z-index:-1; transition:opacity .28s ease; background:radial-gradient(circle at center, rgba(5,7,14,.82) 0, rgba(5,7,14,.55) 55%, rgba(5,7,14,0) 80%)}
 .win-flash > *{transition:opacity .28s ease}
 /* Stats fade 0.5s slower than the rest of the Winner screen, so they linger over the next matchup. */
-.win-flash .wf-stats{transition:opacity .78s ease}
+.win-flash .wf-stats{transition:opacity .78s linear}
 .win-flash.out{pointer-events:none}
 .win-flash.out::before, .win-flash.out > *:not(.wf-stats){opacity:0 !important}
 .win-flash.out .wf-stats{opacity:0 !important}
@@ -478,7 +478,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B88";
+const BUILD = "B89";
 document.getElementById("build").textContent = BUILD;
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
