@@ -478,7 +478,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B89";
+const BUILD = "B90";
 document.getElementById("build").textContent = BUILD;
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
@@ -1464,8 +1464,11 @@ const MASHUP_MIN_CATS = 4;   // Mashups opens once a player has 10 voted items i
 function readyCats(){ return CATEGORIES.filter(c => categoryVotedItems(c) >= 10); }
 function mashupUnlocked(){ return readyCats().length >= Math.min(MASHUP_MIN_CATS, CATEGORIES.length); }
 /* Mashups mixes only the categories this player has finished, so it grows as they unlock more. */
+/* A mashup challenge link can name items from categories the player has not finished. Those two stay in the pool for this visit. */
+let challengeItems = [];
 function refreshMashup(){
-  MASHUP.items = readyCats().flatMap(c => c.items);
+  const pool = readyCats().flatMap(c => c.items);
+  MASHUP.items = pool.concat(challengeItems.filter(f => !pool.includes(f)));
   MASHUP.byName = {}; MASHUP.bySlug = {};
   MASHUP.items.forEach(f => { MASHUP.byName[f.n] = f; MASHUP.bySlug[f.s] = f; });
 }
@@ -1634,9 +1637,14 @@ document.querySelectorAll(".pick").forEach(btn => {
 
 function advanceMatch(){
   if(mode === "challenge" || mode === "oneoff"){
+    // After a challenge, the player is taken into the category of the item they picked.
+    const picked = mode === "challenge" && lastWinner ? lastWinner.name : null;
+    const home = picked ? CATEGORIES.find(c => c.byName[picked]) : null;
     mode = "ladder";
     challengePair = null;
+    challengeItems = [];
     history.replaceState(null, "", location.href.split("#")[0]);
+    if(home && home !== CUR){ setCategory(home); return; }
   }
   renderMatch();
 }
@@ -2175,10 +2183,16 @@ function init(){
   let challenge = null;
   if(raw){
     const t = raw.toLowerCase().split("-").filter(Boolean);
-    const cat = t.length === 3 ? (t[0] === "mashup" ? MASHUP : CATEGORIES.find(c => c.id === t[0])) : (t.length === 2 ? CATEGORIES[0] : null);
-    const x = cat && t.length >= 2 ? cat.bySlug[t[t.length - 2]] : null;
-    const y = cat && t.length >= 2 ? cat.bySlug[t[t.length - 1]] : null;
-    if(cat && x && y && x !== y) challenge = { cat, x: x.n, y: y.n };
+    const isMashup = t.length === 3 && t[0] === "mashup";
+    const cat = isMashup ? MASHUP : (t.length === 3 ? CATEGORIES.find(c => c.id === t[0]) : (t.length === 2 ? CATEGORIES[0] : null));
+    // Mashup links look items up in every category, so a link works whether or not the player has unlocked them.
+    const find = s => isMashup ? CATEGORIES.map(c => c.bySlug[s]).find(Boolean) : (cat && cat.bySlug[s]);
+    const x = cat && t.length >= 2 ? find(t[t.length - 2]) : null;
+    const y = cat && t.length >= 2 ? find(t[t.length - 1]) : null;
+    if(cat && x && y && x !== y){
+      challenge = { cat, x: x.n, y: y.n };
+      if(isMashup) challengeItems = [x, y];
+    }
   }
   CUR = challenge ? challenge.cat : (CATEGORIES.find(c => c.id === readStore("goat_cat")) || (readStore("goat_cat") === "mashup" ? MASHUP : CATEGORIES[0]));
   $("catLabel").textContent = CUR.name;
