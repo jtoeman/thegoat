@@ -1,0 +1,75 @@
+name: ingest-images
+
+# Drop an image at ingest/inbox/<category>/<name>.<ext> and push to main.
+# The workflow resizes it by the mobile rule, uploads it and its sidecar JSON
+# to the goat-images R2 bucket (served at images.froobaloo.com), then removes
+# the inbox copy in a follow-up commit.
+
+on:
+  push:
+    branches: [main]
+    paths: ["ingest/inbox/**"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ingest-images
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Pillow
+        run: pip install pillow
+
+      - name: Find newly added inbox files
+        run: |
+          git diff --name-only --diff-filter=A "${{ github.event.before }}" HEAD -- ingest/inbox > new.txt
+          cat new.txt
+
+      - name: Resize and upload to R2
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            key="${f#ingest/inbox/}"
+            out="out/$key"
+            mkdir -p "$(dirname "$out")"
+            python3 scripts/ingest-image.py "$f" "$out" "$out.json" "$key"
+            ct="$(file --mime-type -b "$out")"
+            npx --yes wrangler@4 r2 object put "goat-images/$key" --file "$out" --content-type "$ct" --remote
+            npx --yes wrangler@4 r2 object put "goat-images/$key.json" --file "$out.json" --content-type application/json --remote
+          done < new.txt
+
+      - name: Remove processed inbox files
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          removed=0
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            git rm -q -- "$f"
+            removed=1
+          done < new.txt
+          if [ "$removed" = "1" ]; then
+            git commit -m "ingest: move processed images out of inbox [skip ci]"
+            git push
+          fi
