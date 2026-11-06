@@ -36,9 +36,11 @@ jobs:
       - name: Install Pillow
         run: pip install pillow
 
-      - name: Find newly added inbox files
+      - name: Find pending inbox images
         run: |
-          git diff --name-only --diff-filter=A "${{ github.event.before }}" HEAD -- ingest/inbox > new.txt
+          # Every image still in the inbox, not just this push's additions, so a
+          # failed run is retried on the next push. Sidecar JSON is never an input.
+          git ls-files ingest/inbox | grep -iE '\.(jpe?g|png|webp|gif)$' > new.txt || true
           cat new.txt
 
       - name: Resize and upload to R2
