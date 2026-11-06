@@ -164,6 +164,12 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .wf-share{margin-top:18px; pointer-events:auto; background:var(--yellow); color:#111; border:3px solid #000; box-shadow:3px 3px 0 #000; width:52px; height:52px; display:grid; place-items:center; cursor:pointer; transform:skewX(-8deg)}
 .wf-share svg{transform:skewX(8deg)}
 .wf-share:active{transform:translate(2px,2px) skewX(-8deg); box-shadow:1px 1px 0 #000}
+/* B83: share and undo sit side by side on the Winner screen */
+.wf-actions{display:flex; align-items:center; gap:12px; margin-top:18px; pointer-events:auto}
+.wf-actions .wf-share{margin-top:0}
+.wf-undo{width:auto; height:52px; padding:0 14px; font-family:Impact,"Haettenschweiler",sans-serif; text-transform:uppercase; letter-spacing:.06em; font-size:16px; color:#fff; background:#e8303a}
+.wf-undo span{display:inline-block; transform:skewX(8deg)}
+.wf-undo:active{transform:translate(2px,2px) skewX(-8deg); box-shadow:1px 1px 0 #000}
 .hint-stats{display:flex; justify-content:center; margin:2px 0 0; font-size:12px}
 .wf-title{margin:0; font-size:clamp(56px,17vw,96px); line-height:.95; color:var(--yellow); text-shadow:4px 4px 0 #000, 0 0 24px rgba(255,210,63,.5); animation:wfPop .5s cubic-bezier(.2,1.6,.4,1) both, wfWobble 1s ease-in-out .5s infinite}
 .wf-name{margin:10px 0 0; font-size:clamp(18px,6vw,26px); color:#fff; text-shadow:2px 2px 0 #000; animation:wfPop .5s .15s cubic-bezier(.2,1.6,.4,1) both}
@@ -271,6 +277,12 @@ body.home #resetBtn{display:none}
 .h2h-rec b{color:#fff}
 .h2h-thumb{width:34px; height:34px; object-fit:cover; border:2px solid #000; box-shadow:2px 2px 0 #000; vertical-align:middle; margin:0 6px; background:#222c48}
 .h2h-names{align-items:center}
+
+/* B82: one-time stats explainer, shown the first time Stats is opened */
+#statsIntro{z-index:12}
+.stats-intro-list{margin:0; padding:0; list-style:none; font-size:14px; line-height:1.4; color:#cfd6ea}
+.stats-intro-list li{padding:6px 0; border-bottom:1px solid #222c48}
+.stats-intro-list b{color:var(--yellow)}
 </style>
 </head>
 <body>
@@ -313,7 +325,10 @@ body.home #resetBtn{display:none}
       <div class="win-flash hidden" id="winFlash" aria-live="polite">
         <p class="display wf-title">Winner!</p>
         <p class="wf-name" id="wfName"></p>
-        <button type="button" class="wf-share" id="wfShare" aria-label="Share this matchup"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 14v5h14v-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <div class="wf-actions">
+          <button type="button" class="wf-share" id="wfShare" aria-label="Share this matchup"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 14v5h14v-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <button type="button" class="wf-share wf-undo hidden" id="wfUndo" aria-label="Undo last pick"><span>Undo</span></button>
+        </div>
       </div>
 
       <section class="overlay hidden" id="result" aria-live="polite">
@@ -367,7 +382,19 @@ body.home #resetBtn{display:none}
         <label class="skip-picker"><input type="checkbox" id="statsShow"> <span>Show stats between rounds</span></label>
       </section>
 
-      <section class="overlay hidden" id="resetPanel" aria-live="polite">
+      <section class="overlay dialog hidden" id="statsIntro" role="dialog" aria-modal="true" aria-label="About your stats">
+        <p class="ko display">Your stats</p>
+        <ul class="stats-intro-list">
+          <li><b>Yours:</b> every matchup you have picked, by item, this session or all time.</li>
+          <li><b>Everyone:</b> the crowd's picks across all players, head to head. 👑 counts the players who crowned an item the GOAT.</li>
+          <li><b>Agreed with the crowd:</b> how often your pick matched the majority on the same matchup.</li>
+        </ul>
+        <p class="dlg-body">You can hide stats between rounds at any time. Change it with the checkbox below, or the one in the Stats panel.</p>
+        <label class="skip-picker"><input type="checkbox" id="statsIntroHide"> <span>Hide stats between rounds</span></label>
+        <div class="actions"><button class="btn primary" id="statsIntroOk"><span>Got it</span></button></div>
+      </section>
+
+      <section class="overlay dialog hidden" id="resetPanel" aria-live="polite">
         <p class="ko display">Reset stats</p>
         <p class="ko-sub">Remove accidental picks. Removed picks also stop counting in the shared stats.</p>
         <div class="actions-col">
@@ -395,7 +422,7 @@ body.home #resetBtn{display:none}
         <div class="intro-card">
           <div class="intro-band" aria-hidden="true"></div>
           <p class="display intro-title">Welcome to<br>The GOAT!</p>
-          <p class="dlg-body">Two items face off. Pick the one you like better. The winner stays on and faces the next, until one is left standing. That is your GOAT.</p>
+          <p class="dlg-body">Two items face off. Pick the one you like better. The winner stays on and faces the next, until one is left standing. That is your GOAT 👑.</p>
           <p class="display intro-q">What's <span>your</span> greatest of all time?</p>
           <p class="dlg-body intro-cta">Click to find out!</p>
           <div class="actions"><button class="btn primary intro-go" id="introGo"><span>Let's go</span></button></div>
@@ -432,7 +459,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B81";
+const BUILD = "B84";
 document.getElementById("build").textContent = BUILD;
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
@@ -1152,7 +1179,7 @@ function showLadderEnd(){
   if(S.champ && !S.ranked.includes(S.champ)){ S.ranked.push(S.champ); saveLadder(); }
   const n = S.ranked.length;
   const done = n >= CUR.items.length;
-  const heading = done ? "Fully sorted" : (n === 1 ? `Your GOAT of ${CUR.name.toLowerCase()}` : `Rank #${n}`);
+  const heading = done ? "Fully sorted" : (n === 1 ? `Your GOAT of ${CUR.name.toLowerCase()} 👑` : `Rank #${n}`);
   rankEdit = false;
   $("ladderEnd").innerHTML = `
     <p class="ko-sub">${heading}</p>
@@ -1245,7 +1272,7 @@ function castVote(side){
 
 /* Skip-the-result mode: "Winner!" pops, holds, fades, then the next matchup loads. `voted` stays true
    until then, so extra taps or keys cannot pick again during the flash. */
-let flashTimer = null, flashHover = false, shareOpen = false;
+let flashTimer = null, fadeOutTimer = null, flashHover = false, shareOpen = false;
 function showWinnerFlash(winner){
   const el = $("winFlash");
   $("wfName").textContent = winner;
@@ -1265,10 +1292,20 @@ function startFadeOut(){
   if(flashHover || shareOpen) return;
   const el = $("winFlash");
   el.classList.add("out");
-  setTimeout(() => { el.classList.add("hidden"); el.classList.remove("out"); advanceMatch(); }, 280);
+  fadeOutTimer = setTimeout(() => { el.classList.add("hidden"); el.classList.remove("out"); advanceMatch(); }, 280);
 }
 $("winFlash").addEventListener("pointerenter", () => { flashHover = true; clearTimeout(flashTimer); });
 $("winFlash").addEventListener("pointerleave", () => { flashHover = false; scheduleFade(); });
+/* B83: undo from the Winner screen. Cancels the pending fade so the next matchup does not load over the undo. */
+$("wfUndo").addEventListener("click", e => {
+  e.stopPropagation();
+  clearTimeout(flashTimer); clearTimeout(fadeOutTimer);
+  flashHover = false; shareOpen = false;
+  const el = $("winFlash");
+  el.classList.add("hidden"); el.classList.remove("out");
+  if(lastPick && Date.now() - lastPick.time <= OOPS_MS) undoLastPick();
+  else advanceMatch();
+});
 $("wfShare").addEventListener("click", e => {
   e.stopPropagation();
   shareOpen = true; clearTimeout(flashTimer);
@@ -1566,12 +1603,14 @@ $("resetBtn").addEventListener("click", handleReset);
    (or restores the earlier pick on the same matchup) and puts the matchup back with the ladder as it was. */
 function showOops(){
   $("oopsBtn").classList.remove("hidden");
+  $("wfUndo").classList.remove("hidden");
   clearTimeout(oopsTimer);
   oopsTimer = setTimeout(hideOops, OOPS_MS);
 }
 function hideOops(){
   clearTimeout(oopsTimer);
   $("oopsBtn").classList.add("hidden");
+  $("wfUndo").classList.add("hidden");
   lastPick = null;
 }
 function undoLastPick(){
@@ -1814,8 +1853,14 @@ function animateStats(){
 function openStats(){
   paintStats();
   $("statsPanel").classList.remove("hidden");
+  // B82: the first time anyone opens Stats on this browser, explain it once. "Got it" saves the flag.
+  if(!readStore("goat_stats_intro_seen")) $("statsIntro").classList.remove("hidden");
 }
 $("statsBtn").addEventListener("click", openStats);
+$("statsIntroOk").addEventListener("click", () => {
+  writeStore("goat_stats_intro_seen", true);
+  $("statsIntro").classList.add("hidden");
+});
 $("statsBody").addEventListener("click", e => {
   const scope = e.target.closest("[data-scope]");
   if(scope){ statsScope = scope.dataset.scope; paintStats(); return; }
@@ -1834,7 +1879,7 @@ $("statsClose").addEventListener("click", () => $("statsPanel").classList.add("h
 
 /* Crown buttons name the current champion, e.g. "Cherry is the GOAT". */
 function setCrownLabels(){
-  const label = S && S.champ ? `👑 ${S.champ} is the GOAT` : "👑 This is the GOAT";
+  const label = S && S.champ ? `${S.champ} is the GOAT 👑` : "This is the GOAT 👑";
   $("resultCrown").querySelector("span").textContent = label;
   $("cpCrown").querySelector("span").textContent = label;
 }
@@ -1845,7 +1890,7 @@ function setCrownLabels(){
 async function crownGoat(){
   if(mode !== "ladder" || !S || !S.queue.length) return;
   const champ = S.champ, rest = S.queue.slice();
-  if(!await confirmBox(`Crown ${champ} the GOAT?`,
+  if(!await confirmBox(`Crown ${champ} the GOAT 👑?`,
       `Records ${champ} over the ${rest.length} remaining ${CUR.name.toLowerCase()}, then ends this run with ${champ} ranked #${S.ranked.length + 1}.`,
       "Crown")) return;
   rest.forEach(n => { myPicks[keyFor(champ, n)] = Object.assign({ w: champ, g: 1 }, DEVICE, { t: Date.now() }); });
@@ -1867,6 +1912,7 @@ $("cpCrown").addEventListener("click", crownGoat);
 function showCheckpoint(){
   $("cpGlobal").innerHTML = globalBlockHTML(CUR, 3);
   animateStats();
+  $("cpGo").querySelector("span").textContent = `Keep going (${S.queue.length})`;
   $("cpTitle").textContent = `${S.round} picks in`;
   $("cpBody").textContent = `${CUR.name}: champion ${S.champ}, ${S.queue.length} left in this run.`;
   setCrownLabels();
@@ -1999,7 +2045,7 @@ document.addEventListener("keydown", e => {
     }
     return;
   }
-  const open = ["picker", "statsPanel", "resetPanel", "dialog", "shareSheet", "checkpoint", "ladderEnd", "intro"]
+  const open = ["picker", "statsPanel", "statsIntro", "resetPanel", "dialog", "shareSheet", "checkpoint", "ladderEnd", "intro"]
     .some(id => !$(id).classList.contains("hidden"));
   if(open) return;
   const resultOpen = !$("result").classList.contains("hidden");
@@ -2020,7 +2066,7 @@ document.addEventListener("keydown", e => {
 (function(){
   const stage = $("stage");
   const SWIPE = 80;
-  const OPEN_PANELS = ["picker", "statsPanel", "resetPanel", "dialog", "shareSheet", "checkpoint", "ladderEnd", "intro"];
+  const OPEN_PANELS = ["picker", "statsPanel", "statsIntro", "resetPanel", "dialog", "shareSheet", "checkpoint", "ladderEnd", "intro"];
   let g = null;
   const resultEl = () => $("result");
   const modalOpen = () => OPEN_PANELS.some(id => !$(id).classList.contains("hidden"));
@@ -2062,15 +2108,18 @@ function setSkipResult(on){
   $("resultSkip").checked = on;
   $("cpShowStats").checked = !on;
   $("statsShow").checked = !on;
+  $("statsIntroHide").checked = on;
   $("matchShowStats").checked = !on;
 }
 $("resultSkip").checked = skipResult;
 $("cpShowStats").checked = !skipResult;
 $("statsShow").checked = !skipResult;
+$("statsIntroHide").checked = skipResult;
 $("matchShowStats").checked = !skipResult;
 $("resultSkip").addEventListener("change", e => setSkipResult(e.target.checked));
 $("cpShowStats").addEventListener("change", e => setSkipResult(!e.target.checked));
 $("statsShow").addEventListener("change", e => setSkipResult(!e.target.checked));
+$("statsIntroHide").addEventListener("change", e => setSkipResult(e.target.checked));
 $("matchShowStats").addEventListener("change", e => setSkipResult(!e.target.checked));
 
 function init(){
