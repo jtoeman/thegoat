@@ -180,6 +180,10 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .hint-stats{display:flex; justify-content:center; margin:2px 0 0; font-size:12px}
 .wf-title{margin:0; font-size:clamp(56px,17vw,96px); line-height:.95; color:var(--yellow); text-shadow:4px 4px 0 #000, 0 0 24px rgba(255,210,63,.5); animation:wfPop .5s cubic-bezier(.2,1.6,.4,1) both, wfWobble 1s ease-in-out .5s infinite}
 .wf-name{margin:10px 0 0; font-size:clamp(18px,6vw,26px); color:#fff; text-shadow:2px 2px 0 #000; animation:wfPop .5s .15s cubic-bezier(.2,1.6,.4,1) both}
+.wf-pair{margin:0 0 6px; font-size:clamp(13px,4vw,16px); font-weight:700; color:var(--yellow); text-shadow:2px 2px 0 #000; letter-spacing:.02em}
+.wf-stats{margin-top:16px; width:min(94%,440px); display:grid; grid-template-columns:1fr 1fr; gap:4px 14px; pointer-events:none; font-size:clamp(12px,3.6vw,14px); color:#fff; text-shadow:1px 1px 0 #000}
+.wf-stats div{display:flex; flex-direction:column; gap:2px}
+.wf-stats .wf-goat{color:var(--yellow); font-weight:700}
 @keyframes wfPop{from{transform:scale(.3) rotate(-12deg); opacity:0} to{transform:none; opacity:1}}
 @keyframes wfWobble{0%,100%{transform:rotate(-3deg)} 50%{transform:rotate(3deg)}}
 @media (prefers-reduced-motion: reduce){ .wf-title,.wf-name{animation:none} }
@@ -330,12 +334,14 @@ body.home #resetBtn{display:none}
       </section>
 
       <div class="win-flash hidden" id="winFlash" aria-live="polite">
+        <p class="wf-pair" id="wfPair"></p>
         <p class="display wf-title">Winner!</p>
         <p class="wf-name" id="wfName"></p>
         <div class="wf-actions">
           <button type="button" class="wf-share" id="wfShare" aria-label="Share this matchup"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 14v5h14v-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
           <button type="button" class="wf-share wf-undo hidden" id="wfUndo" aria-label="Undo last pick"><span>Undo</span></button>
         </div>
+        <div class="wf-stats" id="wfStats"></div>
       </div>
 
       <section class="overlay hidden" id="result" aria-live="polite">
@@ -466,7 +472,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B85";
+const BUILD = "B86";
 document.getElementById("build").textContent = BUILD;
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
@@ -1114,8 +1120,8 @@ function renderMatchInner(){
   setFighter("b", current.b);
   document.querySelectorAll(".pick").forEach(b => b.disabled = false);
   setHint("Press and drag a fighter toward the rival, or tap to pick.", false);
-  // countdown under VS: items still in this run, champion included (50, 49, 48...)
-  const left = mode === "ladder" && S ? S.queue.length + 1 : 0;
+  // countdown under VS: battles still to fight in this run, this one included (49, 48, 47...)
+  const left = mode === "ladder" && S ? S.queue.length : 0;
   const vsCount = $("vsStreak");
   vsCount.textContent = left ? `(${left})` : "";
   // heat: 0.1 at 10 items left, rising to 1 at the last item (the end of the run)
@@ -1280,15 +1286,32 @@ function castVote(side){
     c.classList.add(c.dataset.side === side ? "won" : "lost");
   });
   document.querySelectorAll(".pick").forEach(b => b.disabled = true);
-  if(skipResult) showWinnerFlash(winner); else showResult(winner, loser);
+  if(skipResult) showWinnerFlash(winner, loser); else showResult(winner, loser);
 }
 
 /* Skip-the-result mode: "Winner!" pops, holds, fades, then the next matchup loads. `voted` stays true
    until then, so extra taps or keys cannot pick again during the flash. */
 let flashTimer = null, fadeOutTimer = null, flashHover = false, shareOpen = false;
-function showWinnerFlash(winner){
+/* Winner screen stats: this pairing's record above the winner, then each fighter's selections and GOAT count. */
+function flashStats(winner, loser){
+  const b = globalBoards()[CUR.id] || { wins: {}, crowns: {}, pairs: {} };
+  const pr = b.pairs[[winner, loser].sort().join("|")];
+  const wv = pr ? (pr.a === winner ? pr.aw : pr.bw) : 0;
+  const total = pr ? pr.aw + pr.bw : 0;
+  const pct = total ? Math.round(100 * wv / total) : 0;
+  const pair = total ? `${wv}/${total} · ${pct}% of picks` : "No picks on this pair yet";
+  const cell = f => {
+    const sel = b.wins[f] || 0, g = b.crowns[f] ? b.crowns[f].size : 0;
+    return `<div><span>${sel} ${sel === 1 ? "selection" : "selections"}</span><span class="wf-goat">👑 ${g} GOAT${g === 1 ? "" : "s"}</span></div>`;
+  };
+  return { pair, cells: cell(current.a) + cell(current.b) };
+}
+function showWinnerFlash(winner, loser){
   const el = $("winFlash");
   $("wfName").textContent = winner;
+  const st = flashStats(winner, loser);
+  $("wfPair").textContent = st.pair;
+  $("wfStats").innerHTML = st.cells;
   el.classList.remove("out", "hidden");
   void el.offsetWidth;   // restart the pop animation on repeat picks
   flashHover = false; shareOpen = false;
