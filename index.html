@@ -165,8 +165,14 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .skip-picker{display:flex; align-items:center; justify-content:center; gap:8px; margin:-4px 0 0; font-size:15px; color:#fff; cursor:pointer}
 .skip-picker input{width:18px; height:18px; margin:0; accent-color:var(--yellow)}
 /* Skip-the-result mode: a short "Winner!" between matchups, then it fades and the next matchup loads. */
-.win-flash{position:absolute; inset:0; z-index:7; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; text-align:center; transition:opacity .28s ease; background:radial-gradient(circle at center, rgba(5,7,14,.82) 0, rgba(5,7,14,.55) 55%, rgba(5,7,14,0) 80%)}
-.win-flash.out{opacity:0}
+.win-flash{position:absolute; inset:0; z-index:7; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; text-align:center; isolation:isolate}
+.win-flash::before{content:""; position:absolute; inset:0; z-index:-1; transition:opacity .28s ease; background:radial-gradient(circle at center, rgba(5,7,14,.82) 0, rgba(5,7,14,.55) 55%, rgba(5,7,14,0) 80%)}
+.win-flash > *{transition:opacity .28s ease}
+/* Stats fade 0.5s slower than the rest of the Winner screen, so they linger over the next matchup. */
+.win-flash .wf-stats{transition:opacity .78s ease}
+.win-flash.out{pointer-events:none}
+.win-flash.out::before, .win-flash.out > *:not(.wf-stats){opacity:0 !important}
+.win-flash.out .wf-stats{opacity:0 !important}
 .win-flash{pointer-events:auto}
 .wf-share{margin-top:18px; pointer-events:auto; background:var(--yellow); color:#111; border:3px solid #000; box-shadow:3px 3px 0 #000; width:52px; height:52px; display:grid; place-items:center; cursor:pointer; transform:skewX(-8deg)}
 .wf-share svg{transform:skewX(8deg)}
@@ -182,7 +188,7 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .wf-name{margin:10px 0 0; font-size:clamp(18px,6vw,26px); color:#fff; text-shadow:2px 2px 0 #000; animation:wfPop .5s .15s cubic-bezier(.2,1.6,.4,1) both}
 .wf-pair{margin:0 0 6px; font-size:clamp(13px,4vw,16px); font-weight:700; color:var(--yellow); text-shadow:2px 2px 0 #000; letter-spacing:.02em}
 .wf-stats{margin-top:16px; width:min(94%,440px); display:grid; grid-template-columns:1fr 1fr; gap:4px 14px; pointer-events:none; font-size:clamp(12px,3.6vw,14px); color:#fff; text-shadow:1px 1px 0 #000}
-.wf-stats div{display:flex; flex-direction:column; gap:2px}
+.wf-stats div{display:flex; flex-direction:column; align-items:center; text-align:center; gap:2px}
 .wf-stats .wf-goat{color:var(--yellow); font-weight:700}
 @keyframes wfPop{from{transform:scale(.3) rotate(-12deg); opacity:0} to{transform:none; opacity:1}}
 @keyframes wfWobble{0%,100%{transform:rotate(-3deg)} 50%{transform:rotate(3deg)}}
@@ -472,7 +478,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B86";
+const BUILD = "B87";
 document.getElementById("build").textContent = BUILD;
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
@@ -1291,7 +1297,7 @@ function castVote(side){
 
 /* Skip-the-result mode: "Winner!" pops, holds, fades, then the next matchup loads. `voted` stays true
    until then, so extra taps or keys cannot pick again during the flash. */
-let flashTimer = null, fadeOutTimer = null, flashHover = false, shareOpen = false;
+let flashTimer = null, fadeOutTimer = null, hideFlashTimer = null, flashHover = false, shareOpen = false;
 /* Winner screen stats: this pairing's record above the winner, then each fighter's selections and GOAT count. */
 function flashStats(winner, loser){
   const b = globalBoards()[CUR.id] || { wins: {}, crowns: {}, pairs: {} };
@@ -1302,12 +1308,13 @@ function flashStats(winner, loser){
   const pair = total ? `${wv}/${total} · ${pct}% of picks` : "No picks on this pair yet";
   const cell = f => {
     const sel = b.wins[f] || 0, g = b.crowns[f] ? b.crowns[f].size : 0;
-    return `<div><span>${sel} ${sel === 1 ? "selection" : "selections"}</span><span class="wf-goat">👑 ${g} GOAT${g === 1 ? "" : "s"}</span></div>`;
+    return `<div><span>${sel} ${sel === 1 ? "win" : "wins"}</span><span class="wf-goat">👑 ${g} GOAT${g === 1 ? "" : "s"}</span></div>`;
   };
   return { pair, cells: cell(current.a) + cell(current.b) };
 }
 function showWinnerFlash(winner, loser){
   const el = $("winFlash");
+  clearTimeout(hideFlashTimer); el.classList.remove("out");
   $("wfName").textContent = winner;
   const st = flashStats(winner, loser);
   $("wfPair").textContent = st.pair;
@@ -1328,14 +1335,16 @@ function startFadeOut(){
   if(flashHover || shareOpen) return;
   const el = $("winFlash");
   el.classList.add("out");
-  fadeOutTimer = setTimeout(() => { el.classList.add("hidden"); el.classList.remove("out"); advanceMatch(); }, 280);
+  // next matchup loads at 280ms while the stats keep fading; the flash is removed once they finish (780ms)
+  fadeOutTimer = setTimeout(advanceMatch, 280);
+  hideFlashTimer = setTimeout(() => { el.classList.add("hidden"); el.classList.remove("out"); }, 780);
 }
 $("winFlash").addEventListener("pointerenter", () => { flashHover = true; clearTimeout(flashTimer); });
 $("winFlash").addEventListener("pointerleave", () => { flashHover = false; scheduleFade(); });
 /* B83: undo from the Winner screen. Cancels the pending fade so the next matchup does not load over the undo. */
 $("wfUndo").addEventListener("click", e => {
   e.stopPropagation();
-  clearTimeout(flashTimer); clearTimeout(fadeOutTimer);
+  clearTimeout(flashTimer); clearTimeout(fadeOutTimer); clearTimeout(hideFlashTimer);
   flashHover = false; shareOpen = false;
   const el = $("winFlash");
   el.classList.add("hidden"); el.classList.remove("out");
