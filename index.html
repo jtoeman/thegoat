@@ -404,6 +404,7 @@ body.home #resetBtn{display:none}
 .tile.is-hidden{opacity:.45; filter:grayscale(.7)}
 .hide-tag{position:absolute; right:10px; bottom:10px; z-index:2; font-family:Impact,"Haettenschweiler",sans-serif; text-transform:uppercase; letter-spacing:.05em; font-size:12px; line-height:1; padding:4px 8px; background:#000; color:#fff; border:2px solid #fff; transform:skewX(-8deg); pointer-events:none}
 </style>
+<script src="https://froobaloo.com/kit/froobaloo.js" defer></script>
 </head>
 <body>
 
@@ -610,7 +611,7 @@ body.home #resetBtn{display:none}
 
     <p class="hint" id="hint"></p>
     <label class="skip-picker hint-stats"><input type="checkbox" id="matchShowStats"> <span>Show stats between rounds</span></label>
-    <p class="foot"><button type="button" class="foot-link" id="aboutBtn">About</button> · <span class="build" id="build"></span></p>
+    <p class="foot"><froobaloo-badge></froobaloo-badge><button type="button" class="foot-link" id="aboutBtn">About</button> · <span class="build" id="build"></span></p>
   </div>
 </div>
 
@@ -618,7 +619,27 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B112";
+const BUILD = "B113";
+/* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
+const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
+function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
+(function loadAmplitude(){
+  const s = document.createElement("script");
+  s.src = "https://cdn.jsdelivr.net/npm/@amplitude/analytics-browser@2.47.4/lib/scripts/amplitude-min.js";
+  s.async = true;
+  s.onload = () => {
+    if(!window.amplitude) return;
+    window.amplitude.init(AMP_KEY, {
+      autocapture: { pageViews: true, sessions: true, attribution: true, elementInteractions: false, formInteractions: false, fileDownloads: false },
+      trackingOptions: { ipAddress: false },
+      remoteConfig: { fetchRemoteConfig: false },
+      transport: "beacon",
+      flushQueueSize: 1
+    });
+    track("Game Loaded");
+  };
+  document.head.appendChild(s);
+})();
 document.getElementById("build").textContent = BUILD;
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
@@ -1351,6 +1372,7 @@ function showLadderEnd(){
   if(S.champ && !S.ranked.includes(S.champ)){ S.ranked.push(S.champ); saveLadder(); }
   const n = S.ranked.length;
   const done = n >= CUR.items.length;
+  track("Game Completed", { category: CUR.id, items_ranked: n, items_total: CUR.items.length, fully_sorted: done });
   const heading = done ? "Fully sorted" : (n === 1 ? `Your GOAT of ${CUR.name.toLowerCase()} 👑` : `Rank #${n}`);
   rankEdit = false;
   // Header: the category's overall GOAT. Background: the same, full-bleed and dimmed.
@@ -1396,7 +1418,8 @@ function showLadderEnd(){
     <div class="actions">
       <button class="btn" id="rankEdit"><span>Edit</span></button>
       <button class="btn primary" id="nextRank"><span>${done ? "Start over" : "Find #" + (n + 1)}</span></button>
-    </div>`;
+    </div>
+    <froobaloo-next current="goat"></froobaloo-next>`;
   renderRankList();
   $("ladderEnd").classList.remove("hidden");
   $("nextRank").onclick = () => {
@@ -1559,9 +1582,11 @@ function openShare(text, url){
   setTimeout(() => { $("shareUrl").focus(); $("shareUrl").select(); }, 50);
 }
 function shareMatch(x, y){
+  track("Share Clicked", { result: "matchup", category: CUR.id });
   openShare(`Blind vote: ${x} or ${y}? Pick first, then see how the crowd voted.`, challengeUrl(x, y));
 }
 function shareRanking(){
+  track("Share Clicked", { result: "ranking", category: CUR.id, items_ranked: S.ranked.length });
   const list = S.ranked.slice(0, 10).map((f, i) => `${i + 1}. ${f}`).join("\n")
     + (S.ranked.length > 10 ? `\n…and ${S.ranked.length - 10} more` : "");
   openShare(`My ${CUR.name} ranking on The GOAT:\n${list}`, SITE_URL);
