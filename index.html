@@ -294,6 +294,9 @@ body.home #resetBtn{display:none}
 .stats-intro-list{margin:0; padding:0; list-style:none; font-size:14px; line-height:1.4; color:#cfd6ea}
 .stats-intro-list li{padding:6px 0; border-bottom:1px solid #222c48}
 .stats-intro-list b{color:var(--yellow)}
+/* B92: hide categories. Edit mode on the picker shows Hide and Show. Hidden boxes are dimmed. */
+.tile.is-hidden{opacity:.45; filter:grayscale(.7)}
+.hide-tag{position:absolute; right:10px; bottom:10px; z-index:2; font-family:Impact,"Haettenschweiler",sans-serif; text-transform:uppercase; letter-spacing:.05em; font-size:12px; line-height:1; padding:4px 8px; background:#000; color:#fff; border:2px solid #fff; transform:skewX(-8deg); pointer-events:none}
 </style>
 </head>
 <body>
@@ -456,9 +459,10 @@ body.home #resetBtn{display:none}
         <p class="ko display picker-title">Choose a category</p>
         <div class="tiles" id="tiles"></div>
         <div class="actions">
+          <button class="btn" id="pickerEdit"><span>Edit</span></button>
           <button class="btn" id="pickerBack"><span>Back</span></button>
         </div>
-        <p class="ko-sub picker-note">Tap a box to play.</p>
+        <p class="ko-sub picker-note" id="pickerNote">Tap a box to play.</p>
       </section>
     </main>
 
@@ -472,7 +476,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B91";
+const BUILD = "B92";
 document.getElementById("build").textContent = BUILD;
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
@@ -1435,8 +1439,12 @@ function openPicker(){
   $("picker").classList.remove("hidden");
 }
 function closePicker(){
+  editing = false;
+  $("pickerEdit").querySelector("span").textContent = "Edit";
   $("picker").classList.add("hidden");
   document.body.classList.remove("home");
+  // If the category being played was hidden in edit mode, move to the first one still shown.
+  if(isHidden(CUR) && visibleCats()[0]) setCategory(visibleCats()[0]);
 }
 /* The current #1 of a category is the first item in its ranking, if any run has finished. */
 function categoryTop(c){
@@ -1450,8 +1458,18 @@ function categoryVotedItems(c){
   return seen.size;
 }
 const MASHUP_MIN_CATS = 4;   // Mashups opens once a player has 10 voted items in this many categories
-function readyCats(){ return CATEGORIES.filter(c => categoryVotedItems(c) >= 10); }
-function mashupUnlocked(){ return readyCats().length >= Math.min(MASHUP_MIN_CATS, CATEGORIES.length); }
+/* B92: categories a player has hidden. Hidden ones leave the picker, Mashups and the stats home list. Saved per browser. */
+function hiddenIds(){ const v = readStore("goat_hidden_cats"); return new Set(Array.isArray(v) ? v : []); }
+function isHidden(c){ return hiddenIds().has(c.id); }
+function setHidden(c, on){
+  const ids = hiddenIds();
+  if(on) ids.add(c.id); else ids.delete(c.id);
+  writeStore("goat_hidden_cats", [...ids]);
+  refreshMashup();
+}
+function visibleCats(){ const h = hiddenIds(); return CATEGORIES.filter(c => !h.has(c.id)); }
+function readyCats(){ return visibleCats().filter(c => categoryVotedItems(c) >= 10); }
+function mashupUnlocked(){ return readyCats().length > 0 && readyCats().length >= Math.min(MASHUP_MIN_CATS, visibleCats().length); }
 /* Mashups mixes only the categories this player has finished, so it grows as they unlock more. */
 /* A mashup challenge link can name items from categories the player has not finished. Those two stay in the pool for this visit. */
 let challengeItems = [];
@@ -1472,7 +1490,7 @@ function mashupTileHTML(){
       ${top ? `<span class="tile-goat">👑 ${top}</span>` : ""}
     </button>`;
   }
-  const prog = CATEGORIES.map(c => `${c.name} ${Math.min(categoryVotedItems(c), 10)}/10`).join(" · ");
+  const prog = visibleCats().map(c => `${c.name} ${Math.min(categoryVotedItems(c), 10)}/10`).join(" · ");
   return `
     <button class="tile mashup locked" data-id="mashup" aria-disabled="true" style="background:#3a3f4d">
       <span class="tile-e" aria-hidden="true">🔒</span>
@@ -1481,16 +1499,23 @@ function mashupTileHTML(){
       <span class="tile-n">${prog}</span>
     </button>`;
 }
+/* B92: edit mode (Edit on the picker) shows Hide and Show on each box. Tapping a box in edit mode toggles it. */
+let editing = false;
 function renderPicker(){
-  $("tiles").innerHTML = CATEGORIES.map(c => {
+  const hid = hiddenIds();
+  const shown = CATEGORIES.filter(c => editing || !hid.has(c.id));
+  $("tiles").innerHTML = shown.map(c => {
     const top = categoryTop(c);
+    const off = hid.has(c.id);
     return `
-    <button class="tile${c === CUR ? " current" : ""}" data-id="${c.id}" style="background:${c.bg}">
+    <button class="tile${c === CUR ? " current" : ""}${off ? " is-hidden" : ""}" data-id="${c.id}" style="background:${c.bg}">
       <span class="tile-e" aria-hidden="true">${c.e}</span>
       <span class="tile-name display">${c.name} (${c.items.length})</span>
       ${top ? `<span class="tile-goat">👑 ${top}</span>` : ""}
+      ${editing ? `<span class="hide-tag">${off ? "Show" : "Hide"}</span>` : ""}
     </button>`;
   }).join("") + mashupTileHTML();
+  $("pickerNote").textContent = editing ? "Hidden categories leave the picker and Mashups. Tap a box to hide or show it." : "Tap a box to play.";
 }
 function setCategory(cat){
   if(cat === CUR) return;
@@ -1518,9 +1543,19 @@ $("introGo").addEventListener("click", () => {
 $("brand").addEventListener("click", () => { if(!document.body.classList.contains("home")) openPicker(); });   // logo returns to home
 $("catBtn").addEventListener("click", openPicker);
 $("pickerBack").addEventListener("click", closePicker);
+$("pickerEdit").addEventListener("click", () => {
+  editing = !editing;
+  $("pickerEdit").querySelector("span").textContent = editing ? "Done" : "Edit";
+  renderPicker();
+});
 $("tiles").addEventListener("click", e => {
   const b = e.target.closest(".tile");
   if(!b) return;
+  if(editing){
+    const c = CATEGORIES.find(x => x.id === b.dataset.id);
+    if(c){ setHidden(c, !isHidden(c)); renderPicker(); }
+    return;
+  }
   if(b.dataset.id === "mashup"){
     if(!mashupUnlocked()){ toast("Mashups open after 10 voted items in any 4 categories."); return; }
     setCategory(MASHUP);
@@ -1720,7 +1755,7 @@ function yoursHTML(){
     const note = mashupUnlocked()
       ? "Mashups are open. Tap a category to play it."
       : `Mashups open with 10 voted items in any ${MASHUP_MIN_CATS} categories: ${done} of ${MASHUP_MIN_CATS} ready.`;
-    const cards = CATEGORIES.map(c => {
+    const cards = visibleCats().map(c => {
       const n = Math.min(categoryVotedItems(c), 10);
       const top = categoryTop(c);
       return `<button class="cat-card" data-cat="${c.id}" type="button">
@@ -1881,7 +1916,7 @@ function everyoneHTML(){
   if(!statsReady) return db ? `<p class="ko-sub">Loading everyone's picks…</p>` : `<p class="ko-sub">Connecting to see everyone's picks.</p>`;
   if(document.body.classList.contains("home")){
     const boards = globalBoards();
-    const cats = CATEGORIES.concat([MASHUP]).filter(c => boards[c.id]);
+    const cats = visibleCats().concat([MASHUP]).filter(c => boards[c.id]);
     if(!cats.length) return `<p class="ko-sub">No picks from other players yet.</p>`;
     return cats.map(c => `<p class="ko-sub global-head"><span>${c.e} ${c.name}</span></p>` + globalBars(c, 3)).join("");
   }
@@ -2184,6 +2219,7 @@ function init(){
     }
   }
   CUR = challenge ? challenge.cat : (CATEGORIES.find(c => c.id === readStore("goat_cat")) || (readStore("goat_cat") === "mashup" ? MASHUP : CATEGORIES[0]));
+  if(!challenge && isHidden(CUR) && visibleCats()[0]) CUR = visibleCats()[0];
   $("catLabel").textContent = CUR.name;
   recomputeWins();
   S = loadLadder(CUR) || newRunState([]);
