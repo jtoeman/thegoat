@@ -165,10 +165,7 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .skip-picker{display:flex; align-items:center; justify-content:center; gap:8px; margin:-4px 0 0; font-size:15px; color:#fff; cursor:pointer}
 .skip-picker input{width:18px; height:18px; margin:0; accent-color:var(--yellow)}
 /* Skip-the-result mode: a short "Winner!" between matchups, then it fades and the next matchup loads. */
-.win-flash{position:absolute; inset:0; z-index:7; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; text-align:center; will-change:opacity; background:radial-gradient(circle at center, rgba(5,7,14,.82) 0, rgba(5,7,14,.55) 55%, rgba(5,7,14,0) 80%)}
-/* Fade out with a keyframe animation rather than a transition: Safari does not reliably run an opacity transition on this overlay. */
-.win-flash.out{animation:wfFadeOut .28s ease forwards}
-@keyframes wfFadeOut{from{opacity:1} to{opacity:0}}
+.win-flash{position:absolute; inset:0; z-index:7; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; text-align:center; background:radial-gradient(circle at center, rgba(5,7,14,.82) 0, rgba(5,7,14,.55) 55%, rgba(5,7,14,0) 80%)}
 .win-flash{pointer-events:auto}
 .wf-share{margin-top:18px; pointer-events:auto; background:var(--yellow); color:#111; border:3px solid #000; box-shadow:3px 3px 0 #000; width:52px; height:52px; display:grid; place-items:center; cursor:pointer; transform:skewX(-8deg)}
 .wf-share svg{transform:skewX(8deg)}
@@ -535,7 +532,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B97";
+const BUILD = "B98";
 document.getElementById("build").textContent = BUILD;
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
@@ -1389,9 +1386,9 @@ function scheduleFade(){
 }
 function startFadeOut(){
   if(flashHover || shareOpen) return;
-  const el = $("winFlash");
-  el.classList.add("out");
-  fadeOutTimer = setTimeout(() => { el.classList.add("hidden"); el.classList.remove("out"); advanceMatch(); }, 280);
+  // No fade: the winner panel hides at once and the next matchup shows. A fade depended on CSS timing that varied by browser.
+  $("winFlash").classList.add("hidden");
+  advanceMatch();
 }
 $("winFlash").addEventListener("pointerenter", () => { flashHover = true; clearTimeout(flashTimer); });
 $("winFlash").addEventListener("pointerleave", () => { flashHover = false; scheduleFade(); });
