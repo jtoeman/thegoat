@@ -165,15 +165,14 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .skip-picker{display:flex; align-items:center; justify-content:center; gap:8px; margin:-4px 0 0; font-size:15px; color:#fff; cursor:pointer}
 .skip-picker input{width:18px; height:18px; margin:0; accent-color:var(--yellow)}
 /* Skip-the-result mode: a short "Winner!" between matchups, then it fades and the next matchup loads. */
-.win-flash{position:absolute; inset:0; z-index:7; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; text-align:center; background:radial-gradient(circle at center, rgba(5,7,14,.82) 0, rgba(5,7,14,.55) 55%, rgba(5,7,14,0) 80%)}
+.win-flash{position:absolute; inset:0; z-index:7; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding-top:30%; pointer-events:none; text-align:center; background:radial-gradient(circle at center, rgba(5,7,14,.82) 0, rgba(5,7,14,.55) 55%, rgba(5,7,14,0) 80%)}
 .win-flash{pointer-events:auto}
 .wf-share{margin-top:18px; pointer-events:auto; background:var(--yellow); color:#111; border:3px solid #000; box-shadow:3px 3px 0 #000; width:52px; height:52px; display:grid; place-items:center; cursor:pointer; transform:skewX(-8deg)}
 .wf-share svg{transform:skewX(8deg)}
 .wf-share:active{transform:translate(2px,2px) skewX(-8deg); box-shadow:1px 1px 0 #000}
 /* B83: share and undo sit side by side on the Winner screen */
-.wf-actions{display:flex; align-items:center; gap:12px; margin-top:18px; pointer-events:auto}
-.wf-actions .wf-share{margin-top:0}
-.wf-undo{width:auto; height:52px; padding:0 14px; font-family:Impact,"Haettenschweiler",sans-serif; text-transform:uppercase; letter-spacing:.06em; font-size:16px; color:#fff; background:#e8303a}
+.wf-badge .wf-share{pointer-events:auto; margin:12px 0 0}
+.wf-undo{margin-top:16px; pointer-events:auto; width:auto; height:52px; padding:0 14px; font-family:Impact,"Haettenschweiler",sans-serif; text-transform:uppercase; letter-spacing:.06em; font-size:16px; color:#fff; background:#e8303a}
 .wf-undo span{display:inline-block; transform:skewX(8deg)}
 .wf-undo:active{transform:translate(2px,2px) skewX(-8deg); box-shadow:1px 1px 0 #000}
 .hint-stats{display:flex; justify-content:center; margin:2px 0 0; font-size:12px}
@@ -186,8 +185,9 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 @keyframes wfPop{from{transform:scale(.3) rotate(-12deg); opacity:0} to{transform:none; opacity:1}}
 @keyframes wfWobble{0%,100%{transform:rotate(-3deg)} 50%{transform:rotate(3deg)}}
 /* The Winner badge sits inside the winning fighter's half of the stage. */
-.wf-badge{position:absolute; top:30%; left:0; width:50%; display:flex; flex-direction:column; align-items:center; text-align:center; pointer-events:none}
-.win-flash[data-side="right"] .wf-badge{left:50%}
+/* The winner badge sits in the winner's half at 30% down. It is in normal flow so the stats and Undo stack below it without overlap. */
+.wf-badge{position:relative; width:50%; align-self:flex-start; display:flex; flex-direction:column; align-items:center; text-align:center; pointer-events:none}
+.win-flash[data-side="right"] .wf-badge{align-self:flex-end}
 @media (prefers-reduced-motion: reduce){ .wf-title,.wf-name{animation:none} }
 .tiles{flex:1; min-height:0; overflow-y:auto; display:grid; grid-template-columns:1fr 1fr; gap:12px; align-content:start; padding:10px 10px 12px}
 .tile{position:relative; min-height:150px; padding:14px 12px; display:flex; flex-direction:column; justify-content:space-between; text-align:left; color:#fff; border:3px solid #000; border-radius:16px; box-shadow:4px 4px 0 #000; cursor:pointer; font-family:system-ui,-apple-system,Arial,sans-serif}
@@ -371,16 +371,14 @@ body.home #resetBtn{display:none}
       </section>
 
       <div class="win-flash hidden" id="winFlash" aria-live="polite">
-        <p class="wf-pair" id="wfPair"></p>
         <div class="wf-badge">
+          <p class="wf-pair" id="wfPair"></p>
           <p class="display wf-title">Winner!</p>
           <p class="wf-name" id="wfName"></p>
-        </div>
-        <div class="wf-actions">
           <button type="button" class="wf-share" id="wfShare" aria-label="Share this matchup"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 14v5h14v-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-          <button type="button" class="wf-share wf-undo hidden" id="wfUndo" aria-label="Undo last pick"><span>Undo</span></button>
         </div>
         <div class="wf-stats" id="wfStats"></div>
+        <button type="button" class="wf-share wf-undo hidden" id="wfUndo" aria-label="Undo last pick"><span>Undo</span></button>
       </div>
 
       <section class="overlay hidden" id="result" aria-live="polite">
@@ -532,7 +530,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B100";
+const BUILD = "B101";
 document.getElementById("build").textContent = BUILD;
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
