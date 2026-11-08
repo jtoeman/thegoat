@@ -532,7 +532,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B99";
+const BUILD = "B100";
 document.getElementById("build").textContent = BUILD;
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
@@ -1381,16 +1381,17 @@ function showWinnerFlash(winner, loser){
    or the share sheet is open. Leaving the flash or closing the sheet starts the timer again. */
 function scheduleFade(){
   clearTimeout(flashTimer);
-  if(flashHover || shareOpen) return;
+  if(shareOpen) return;
   flashTimer = setTimeout(startFadeOut, 760);
 }
 function startFadeOut(){
-  if(flashHover || shareOpen) return;
+  if(shareOpen) return;
   // No fade: the winner panel hides at once and the next matchup shows. A fade depended on CSS timing that varied by browser.
   $("winFlash").classList.add("hidden");
   advanceMatch();
 }
-$("winFlash").addEventListener("pointerenter", () => { flashHover = true; clearTimeout(flashTimer); });
+// Resting the pointer on the winner panel gives a short extra read, then it moves on. It no longer holds forever.
+$("winFlash").addEventListener("pointerenter", () => { flashHover = true; clearTimeout(flashTimer); flashTimer = setTimeout(startFadeOut, 2500); });
 $("winFlash").addEventListener("pointerleave", () => { flashHover = false; scheduleFade(); });
 /* B83: undo from the Winner screen. Cancels the pending fade so the next matchup does not load over the undo. */
 $("wfUndo").addEventListener("click", e => {
