@@ -233,6 +233,38 @@ body.home #resetBtn{display:none}
   max-height:90%; overflow-y:auto; background:#0c1224; border:3px solid #000; border-radius:14px;
   box-shadow:6px 6px 0 #000; padding:14px; z-index:6;
 }
+/* New GOAT celebration: full image, crown count across players, a little confetti */
+.goat-crown{
+  align-items:center; justify-content:center; text-align:center; gap:10px; overflow:hidden;
+  background:radial-gradient(ellipse at 50% 35%, #3a300f 0%, #0b1024 55%, #05070f 100%);
+}
+.gc-rays{position:absolute; left:-50%; right:-50%; top:-50%; bottom:-50%; pointer-events:none; opacity:.9;
+  background:repeating-conic-gradient(from 0deg, rgba(255,210,63,.16) 0deg 9deg, rgba(255,210,63,0) 9deg 30deg);
+  animation:gcSpin 26s linear infinite}
+@keyframes gcSpin{to{transform:rotate(360deg)}}
+.gc-confetti{position:absolute; inset:0; pointer-events:none; overflow:hidden}
+.gc-confetti i{position:absolute; top:-12px; width:9px; height:14px; border:1.5px solid #000; transform:skewX(-12deg); animation:gcFall 2.8s linear infinite}
+@keyframes gcFall{0%{transform:translateY(0) rotate(0)} 100%{transform:translateY(115vh) rotate(540deg)}}
+.gc-kicker{position:relative; margin:0; font-family:Impact,"Arial Narrow",sans-serif; text-transform:uppercase; letter-spacing:.08em; font-size:18px; color:#111; background:var(--yellow); border:3px solid #000; box-shadow:3px 3px 0 #000; padding:4px 14px; transform:skewX(-10deg); animation:gcPop .5s .1s cubic-bezier(.2,1.4,.4,1) both}
+.gc-frame{position:relative; width:min(72vw,280px); aspect-ratio:1/1; border:4px solid #000; border-radius:14px; overflow:hidden; background:radial-gradient(circle at 50% 35%, var(--c,#444) 0%, #111 92%); box-shadow:6px 6px 0 #000, 0 0 0 4px var(--yellow), 0 0 40px rgba(255,210,63,.35); animation:gcPop .6s .2s cubic-bezier(.2,1.4,.4,1) both; display:flex; align-items:center; justify-content:center}
+.gc-frame img{width:100%; height:100%; object-fit:contain; display:block}
+.gc-frame .fruit-svg{width:78%; height:78%; max-width:none; max-height:none}
+.gc-frame .glyph{font-size:110px}
+.gc-frame .letter{font-size:130px; padding-bottom:0}
+.gc-frame .letter.two{font-size:100px}
+.gc-crown{position:relative; font-size:40px; margin-top:-30px; filter:drop-shadow(0 4px 0 #000); animation:gcBob 1.1s ease-in-out infinite}
+@keyframes gcBob{0%,100%{transform:translateY(0) rotate(-6deg)} 50%{transform:translateY(-6px) rotate(6deg)}}
+@keyframes gcPop{0%{transform:scale(.3) rotate(-8deg); opacity:0} 100%{transform:scale(1) rotate(0); opacity:1}}
+.gc-name{position:relative; font-size:clamp(34px,11vw,54px); margin:0; animation:gcPop .5s .35s cubic-bezier(.2,1.4,.4,1) both}
+.gc-badge{position:relative; display:flex; align-items:center; gap:10px; background:#1b2440; border:3px solid #000; box-shadow:3px 3px 0 #000; padding:6px 16px 6px 8px; transform:skewX(-8deg); animation:gcPop .5s .5s cubic-bezier(.2,1.4,.4,1) both}
+.gc-num{font-family:Impact,sans-serif; font-size:44px; line-height:1; color:var(--yellow); text-shadow:2px 2px 0 #000; min-width:52px; text-align:center}
+.gc-badge > span:last-child{font-family:Impact,sans-serif; text-transform:uppercase; letter-spacing:.06em; font-size:16px; color:#fff}
+.gc-line{position:relative; margin:0; max-width:320px; color:#e8ecf8; font-size:15px; line-height:1.35; animation:gcPop .5s .6s both}
+.goat-crown .actions{position:relative; width:100%; max-width:340px; margin-top:4px}
+@media (prefers-reduced-motion: reduce){ .goat-crown *{animation:none !important} }
+/* My page */
+.pg-name{font-size:clamp(28px,9vw,40px); margin:0; color:var(--yellow); text-shadow:2px 2px 0 #000}
+.pg-err{color:#ff8a8a; font-size:14px; min-height:18px; margin:4px 0 0}
 .btn .ico{vertical-align:-2px; margin-right:5px}
 #shareText{white-space:pre-line}
 .share-url{width:100%; font:inherit; font-size:13px; padding:10px; color:#fff; background:#0c1224; border:2px solid #2b3556; border-radius:6px; user-select:all; -webkit-user-select:all}
@@ -376,6 +408,7 @@ body.home #resetBtn{display:none}
       </section>
 
       <section class="overlay hidden" id="ladderEnd"></section>
+      <section class="overlay hidden goat-crown" id="goatCrown" aria-live="polite"></section>
 
       <section class="overlay hidden" id="checkpoint" aria-live="polite">
         <p class="ko-sub">Checkpoint</p>
@@ -398,9 +431,28 @@ body.home #resetBtn{display:none}
         <div class="actions">
           <button class="btn" id="resetBtn"><span>New ladder</span></button>
           <button class="btn" id="statsReset"><span>Reset stats…</span></button>
+          <button class="btn" id="myPageBtn"><span>My page</span></button>
           <button class="btn primary" id="statsClose"><span>Close</span></button>
         </div>
         <label class="skip-picker"><input type="checkbox" id="statsShow"> <span>Show stats between rounds</span></label>
+      </section>
+
+      <section class="overlay dialog hidden" id="profilePanel" role="dialog" aria-modal="true" aria-label="My page">
+        <p class="ko display">My page</p>
+        <label class="skip-picker"><input type="checkbox" id="pgPrivate" checked> <span>My page is private</span></label>
+        <div id="pgPublic" class="hidden">
+          <p class="ko-sub">Your name</p>
+          <p class="pg-name display" id="pgName"></p>
+          <p class="ko-sub" id="pgLink"></p>
+          <div class="actions"><button class="btn primary" id="pgShare"><span>Share my page</span></button></div>
+        </div>
+        <div id="pgAsk" class="hidden">
+          <p class="ko-sub">Pick a display name, like J Toman or movie fan 1. 3 to 24 letters, numbers, spaces or hyphens.</p>
+          <input class="share-url" id="pgInput" maxlength="24" autocomplete="off" placeholder="Your name">
+          <p class="pg-err" id="pgErr" role="alert"></p>
+          <div class="actions"><button class="btn" id="pgCancel"><span>Cancel</span></button><button class="btn primary" id="pgSave"><span>Save</span></button></div>
+        </div>
+        <div class="actions" id="pgClose-row"><button class="btn" id="pgClose"><span>Close</span></button></div>
       </section>
 
       <section class="overlay dialog hidden" id="statsIntro" role="dialog" aria-modal="true" aria-label="About your stats">
@@ -481,7 +533,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B93";
+const BUILD = "B96";
 document.getElementById("build").textContent = BUILD;
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
@@ -1968,6 +2020,87 @@ function setCrownLabels(){
   $("cpCrown").querySelector("span").textContent = label;
 }
 
+/* New GOAT celebration: the full image, how many players have crowned it (you included), then on to the ranking. */
+function showGoatCrown(champ){
+  const f = CUR.byName[champ];
+  const b = globalBoards()[CUR.id];
+  const n = b && b.crowns[champ] ? b.crowns[champ].size : 1;
+  const line = n <= 1
+    ? "Only you have crowned this one so far. Bold call."
+    : n <= 5
+      ? `${n} players have crowned ${champ} the GOAT, you included.`
+      : `${n} players now call ${champ} the GOAT. Crowd favorite.`;
+  const colors = ["#ffd23f", "#e8303a", "#2d6fd6", "#5cff8a", "#ff9a3c"];
+  const confetti = Array.from({ length: 26 }, (_, i) =>
+    `<i style="left:${(i * 37) % 100}%;animation-delay:${((i * 0.27) % 2.6).toFixed(2)}s;background:${colors[i % colors.length]}"></i>`).join("");
+  $("goatCrown").innerHTML = `
+    <div class="gc-rays" aria-hidden="true"></div>
+    <div class="gc-confetti" aria-hidden="true">${confetti}</div>
+    <p class="gc-kicker">New GOAT</p>
+    <div class="gc-frame" style="--c:${f.c || "#333"}">${portraitHTML(f)}</div>
+    <div class="gc-crown" aria-hidden="true">👑</div>
+    <p class="ko gc-name">${champ}</p>
+    <div class="gc-badge"><span class="gc-num">${n}</span><span>${n === 1 ? "GOAT crown" : "GOAT crowns"}</span></div>
+    <p class="gc-line">${line}</p>
+    <div class="actions"><button class="btn primary" id="gcContinue"><span>See my ranking</span></button></div>`;
+  $("goatCrown").classList.remove("hidden");
+  $("gcContinue").onclick = () => { $("goatCrown").classList.add("hidden"); renderMatch(); };
+}
+
+
+/* ---------- My page (step 1) ----------
+   Private by default. Unchecking "My page is private" asks for a display name and makes a share link at
+   /goat/u/<name>. Stand-in until login: the profile lives in this browser only, so the name is checked for
+   format, reserved words and blocked words here, but uniqueness can only be checked once there is shared storage. */
+const PROFILE_RESERVED = ["admin", "moderator", "mod", "official", "froobaloo", "thegoat", "team", "support", "staff"];
+const PROFILE_BLOCKED = [];   // filled in from the agreed word list
+function profileSlug(n){ return n.trim().toLowerCase().replace(/\s+/g, "-"); }
+function checkProfileName(raw){
+  const n = raw.trim().replace(/\s+/g, " ");
+  if(n.length < 3 || n.length > 24) return { err: "Use 3 to 24 characters." };
+  if(!/^[A-Za-z0-9 -]+$/.test(n)) return { err: "Letters, numbers, spaces and hyphens only." };
+  const lc = n.toLowerCase().replace(/[^a-z0-9]/g, "");
+  if(PROFILE_RESERVED.includes(lc)) return { err: "That name is reserved." };
+  if(PROFILE_BLOCKED.some(w => lc.includes(w))) return { err: "That name isn't allowed." };
+  return { name: n };
+}
+function getProfile(){ return Object.assign({ private: true, name: null }, readStore("goat_profile") || {}); }
+function profileLink(name){ return SITE_URL.replace(/\/?$/, "/") + "u/" + profileSlug(name); }
+function renderProfile(){
+  const p = getProfile();
+  $("pgPrivate").checked = p.private;
+  $("pgAsk").classList.add("hidden");
+  $("pgPublic").classList.toggle("hidden", p.private || !p.name);
+  $("pgName").textContent = p.name || "";
+  $("pgLink").textContent = p.name ? profileLink(p.name) : "";
+}
+function openProfile(){ renderProfile(); $("profilePanel").classList.remove("hidden"); }
+$("myPageBtn").addEventListener("click", openProfile);
+$("pgClose").addEventListener("click", () => $("profilePanel").classList.add("hidden"));
+$("pgPrivate").addEventListener("change", e => {
+  if(e.target.checked){
+    writeStore("goat_profile", Object.assign(getProfile(), { private: true }));
+    renderProfile();
+  } else {
+    $("pgAsk").classList.remove("hidden");
+    $("pgPublic").classList.add("hidden");
+    $("pgInput").value = getProfile().name || "";
+    $("pgErr").textContent = "";
+    $("pgInput").focus();
+  }
+});
+$("pgCancel").addEventListener("click", () => { $("pgPrivate").checked = true; renderProfile(); });
+$("pgSave").addEventListener("click", () => {
+  const r = checkProfileName($("pgInput").value);
+  if(r.err){ $("pgErr").textContent = r.err; return; }
+  writeStore("goat_profile", { private: false, name: r.name });
+  renderProfile();
+});
+$("pgShare").addEventListener("click", () => {
+  const p = getProfile();
+  if(p.name) openShare(`${p.name} on The GOAT`, profileLink(p.name));
+});
+
 /* ---------- this is the GOAT ----------
    Declares the current champion the GOAT. Records a win for the champion over every item still left in
    the run (marked g:1 so it can be told apart from a normal pick), then ends the run with the champion ranked. */
@@ -1984,8 +2117,8 @@ async function crownGoat(){
   if(!S.ranked.includes(champ)) S.ranked.push(champ);
   S.queue = [];
   saveLadder();
-  ["statsPanel", "checkpoint", "resetPanel", "resetItems"].forEach(id => $(id).classList.add("hidden"));
-  renderMatch();
+  ["statsPanel", "checkpoint", "resetPanel", "resetItems", "result"].forEach(id => $(id).classList.add("hidden"));
+  showGoatCrown(champ);
 }
 $("resultCrown").addEventListener("click", crownGoat);
 $("cpCrown").addEventListener("click", crownGoat);
@@ -2207,6 +2340,11 @@ $("statsIntroHide").addEventListener("change", e => setSkipResult(e.target.check
 $("matchShowStats").addEventListener("change", e => setSkipResult(!e.target.checked));
 
 function init(){
+  const pm = location.pathname.match(/\/u\/([^/]+)\/?$/);
+  if(pm){
+    const who = decodeURIComponent(pm[1]).replace(/-/g, " ");
+    setTimeout(() => toast(`${who}'s page: public profiles are coming soon.`), 600);
+  }
   $("build").textContent = BUILD;
   // challenge links: #vs-apple-banana (fruit) or #vs-dogs-beagle-pug. Tolerant of stray characters after the link.
   const raw = (location.hash.match(/#vs-([a-z-]+)/i) || [])[1];
