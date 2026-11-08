@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "GOAT Image Capture",
+  "version": "0.1.0",
+  "description": "Right-click an image and add it to a GOAT category with its license and credit.",
+  "permissions": ["contextMenus", "storage"],
+  "host_permissions": ["https://goat-image-ingest.jeremy-86d.workers.dev/*"],
+  "background": { "service_worker": "background.js" },
+  "options_page": "options.html"
+}
