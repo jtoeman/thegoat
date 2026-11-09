@@ -1,4 +1,4 @@
-// EXT1: adds "Add to GOAT" to the right-click menu on images and opens the form for that image.
+// EXT2: adds "Add to GOAT" to the right-click menu on images and opens the form for that image.
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({ id: "goat-add-image", title: "Add to GOAT", contexts: ["image"] });
 });

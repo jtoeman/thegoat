@@ -1,13 +1,21 @@
-# GOAT Image Capture (EXT1)
+# GOAT Image Capture (EXT2)
 
-Right-click an image on any page, choose **Add to GOAT**, fill in the category, name, license and credit, then **Add to GOAT**. The Worker fetches the image and stores it with its license file, the same way the ingest pipeline does.
+Right-click an image on any page, choose **Add to GOAT**, then pick a category and submit. Categories come from the **Categories** tab of the GOAT words sheet. Anything left blank still goes through:
+
+- blank category → **Uncategorized**
+- blank name → the page title
+- blank license → recorded as "Own asset (assumed)"
+- blank credit → no credit recorded
+
+The Worker fetches the image and stores it under `<category>/<slug>.jpg` in the goat-images bucket, with a sidecar JSON.
 
 ## Install (once, Chrome on Mac)
 1. Open `chrome://extensions`, turn on **Developer mode**.
-2. Click **Load unpacked** and choose this `chrome-extension` folder.
+2. Click **Load unpacked** and choose this folder.
 3. Open the extension's **Details → Extension options**, paste the ingest token, and save.
 
 ## Notes
-- Only https images can be added. Images that need a signed or expiring link may fail. The message will say so.
-- Adding a name that already exists in that category overwrites the image and its license file. Check before you submit.
-- The token is stored in Chrome's local extension storage on this laptop only.
+- The sheet must stay shared as "Anyone with the link".
+- The game reads each image from the `photo` column of its category tab. After adding an image, put its URL (`https://images.froobaloo.com/<category>/<slug>.jpg`) in that column.
+- Adding a name that already exists in a category overwrites its image and sidecar. Check before you submit.
+- Only https images can be added. Signed or expiring links may fail.

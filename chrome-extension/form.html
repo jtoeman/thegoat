@@ -6,32 +6,30 @@ body{font:14px system-ui,sans-serif;margin:16px;color:#111;background:#fff}
 img#preview{max-width:100%;max-height:200px;display:block;margin:0 auto 10px;border:1px solid #ddd}
 label{display:block;margin:10px 0 3px;font-weight:600}
 input,select{width:100%;padding:7px;font:inherit;box-sizing:border-box}
-.row{display:flex;gap:8px}.row>div{flex:1}
 button{margin-top:14px;padding:9px 16px;font:inherit;font-weight:600;cursor:pointer}
-#submit{background:#ffd23f;border:2px solid #000}
+#submit{background:#ffd23f;border:2px solid #000;width:100%}
 #msg{margin-top:10px;min-height:20px;white-space:pre-wrap}
 .ok{color:#17703a}.err{color:#b3121c}
+.hint{font-size:12px;color:#666;margin-top:3px}
 .foot{margin-top:14px;font-size:11px;color:#888}
 </style></head><body>
 <img id="preview" alt="">
 <label for="category">Category</label>
-<input id="category" list="cats" placeholder="e.g. dogs" autocomplete="off">
-<datalist id="cats"><option value="fruit"><option value="dogs"><option value="states"><option value="cars"></datalist>
+<select id="category"></select>
 <label for="name">Name</label>
 <input id="name" placeholder="e.g. Golden Retriever" autocomplete="off">
 <label for="license">License</label>
 <select id="license">
-  <option value="">Choose…</option>
+  <option value="">Own asset (default)</option>
   <option>CC0</option><option>CC BY 4.0</option><option>CC BY-SA 4.0</option>
   <option>Public domain</option><option>Licensed (stock)</option><option>Own work</option>
 </select>
-<div class="row">
-  <div><label for="author">Author / credit</label><input id="author" autocomplete="off"></div>
-</div>
+<label for="author">Author / credit</label>
+<input id="author" placeholder="Leave blank if it's your own" autocomplete="off">
 <label for="source_page">Source page</label>
 <input id="source_page" autocomplete="off">
 <button id="submit">Add to GOAT</button>
 <div id="msg"></div>
-<div class="foot" id="foot">EXT1</div>
+<div class="foot" id="foot">EXT2</div>
 <script src="form.js"></script>
 </body></html>

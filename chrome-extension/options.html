@@ -1,10 +1,11 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>GOAT Image Capture settings</title>
-<style>body{font:15px system-ui,sans-serif;margin:24px;max-width:520px;color:#111}label{display:block;margin:12px 0 4px}input{width:100%;padding:8px;font:inherit;box-sizing:border-box}button{margin-top:14px;padding:8px 14px;font:inherit}#msg{margin-top:10px;color:#2a6}</style>
+<style>body{font:15px system-ui,sans-serif;margin:24px;max-width:520px;color:#111}label{display:block;margin:12px 0 4px;font-weight:600}input{width:100%;padding:8px;font:inherit;box-sizing:border-box}button{margin-top:14px;padding:8px 14px;font:inherit}#msg{margin-top:10px;color:#17703a}.hint{font-size:13px;color:#555}</style>
 </head><body>
 <h2>GOAT Image Capture</h2>
 <label for="token">Ingest token</label>
 <input id="token" type="password" autocomplete="off">
+<p class="hint">This is the value of the INGEST_TOKEN secret on the goat-image-ingest Worker. It's stored only in this browser.</p>
 <button id="save">Save</button>
 <div id="msg"></div>
 <script src="options.js"></script>
