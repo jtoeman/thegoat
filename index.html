@@ -264,6 +264,15 @@ body.home #resetBtn{display:none}
 /* My page */
 .pg-name{font-size:clamp(28px,9vw,40px); margin:0; color:var(--yellow); text-shadow:2px 2px 0 #000}
 .pg-err{color:#ff8a8a; font-size:14px; min-height:18px; margin:4px 0 0}
+/* Ranking page background (community GOAT) and inlay (your #1) */
+#ladderEnd{overflow:hidden}
+#ladderEnd > *:not(.le-bg){position:relative; z-index:1}
+.le-bg{position:absolute; inset:0; z-index:0; opacity:.22; filter:blur(2px) saturate(1.1); pointer-events:none}
+.le-bg img{width:100%; height:100%; object-fit:cover; display:block}
+.le-bg .fruit-svg{width:100%; height:100%}
+.le-caption{margin:6px 0 0; font-size:14px; color:#e8ecf8; text-shadow:1px 1px 0 #000}
+.le-caption b{color:var(--yellow)}
+.le-label{font-family:Impact,sans-serif; text-transform:uppercase; letter-spacing:.06em; color:#111; background:var(--yellow); border:2px solid #000; padding:2px 8px; width:fit-content; transform:skewX(-8deg)}
 /* Ranking page hero */
 .le-hero{display:flex; align-items:center; gap:14px; margin:8px 0 10px}
 .le-frame{width:140px; height:140px; flex:0 0 auto; box-shadow:4px 4px 0 #000, 0 0 0 3px var(--yellow)}
@@ -535,7 +544,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B103";
+const BUILD = "B104";
 document.getElementById("build").textContent = BUILD;
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
@@ -1262,24 +1271,34 @@ function showLadderEnd(){
   const done = n >= CUR.items.length;
   const heading = done ? "Fully sorted" : (n === 1 ? `Your GOAT of ${CUR.name.toLowerCase()} 👑` : `Rank #${n}`);
   rankEdit = false;
-  // Hero: the top-ranked item's full image, with its win and GOAT counts across players.
-  const topName = S.ranked[0];
-  const topItem = topName && CUR.byName[topName];
-  const topBoard = globalBoards()[CUR.id] || { wins: {}, crowns: {} };
-  const topGoats = topName && topBoard.crowns[topName] ? topBoard.crowns[topName].size : 0;
-  const topWins = topName ? (topBoard.wins[topName] || 0) : 0;
-  const hero = topItem ? `
+  // Background: the category's community #1 (most GOAT crowns, ties by wins).
+  // Inlay: the player's own #1, shown only when it differs from the community #1.
+  const board = globalBoards()[CUR.id] || { wins: {}, crowns: {} };
+  const goatsOf = n => board.crowns[n] ? board.crowns[n].size : 0;
+  const winsOf = n => board.wins[n] || 0;
+  const communityTop = CUR.items.map(i => i.n)
+    .filter(n => goatsOf(n) > 0 || winsOf(n) > 0)
+    .sort((a, b) => (goatsOf(b) - goatsOf(a)) || (winsOf(b) - winsOf(a)))[0];
+  const bgItem = communityTop && CUR.byName[communityTop];
+  const bg = bgItem ? `<div class="le-bg" aria-hidden="true">${portraitHTML(bgItem)}</div>` : "";
+  const myTop = S.ranked[0];
+  const inlayItem = myTop && myTop !== communityTop && CUR.byName[myTop];
+  const inlay = inlayItem ? `
     <div class="le-hero">
-      <div class="gc-frame le-frame" style="--c:${topItem.c || "#333"}">${portraitHTML(topItem)}</div>
+      <div class="gc-frame le-frame" style="--c:${inlayItem.c || "#333"}">${portraitHTML(inlayItem)}</div>
       <div class="le-stats">
-        <span>${topWins} ${topWins === 1 ? "win" : "wins"}</span>
-        <span class="wf-goat">👑 ${topGoats} GOAT${topGoats === 1 ? "" : "s"}</span>
+        <span class="le-label">Your #1</span>
+        <span>${winsOf(myTop)} ${winsOf(myTop) === 1 ? "win" : "wins"}</span>
+        <span class="wf-goat">👑 ${goatsOf(myTop)} GOAT${goatsOf(myTop) === 1 ? "" : "s"}</span>
       </div>
     </div>` : "";
+  const bgCaption = bgItem ? `<p class="le-caption">Community GOAT: <b>${communityTop}</b> · 👑 ${goatsOf(communityTop)}</p>` : "";
   $("ladderEnd").innerHTML = `
+    ${bg}
     <p class="ko-sub">${heading}</p>
     <p class="ko display">${S.champ}</p>
-    ${hero}
+    ${bgCaption}
+    ${inlay}
     <div id="rankList" class="rows"></div>
     <div class="actions">
       <button class="btn" id="rankEdit"><span>Edit</span></button>
