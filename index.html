@@ -200,6 +200,17 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .tile.current:hover::after{content:"Now playing"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; border-radius:13px; background:rgba(7,10,20,.72); color:#fff; font:22px/1 Impact,"Arial Narrow",system-ui,sans-serif; text-transform:uppercase; text-shadow:2px 2px 0 #000}
 .tile-goat{position:absolute; right:10px; top:10px; max-width:60%; font-size:12px; line-height:1.2; text-align:right; text-shadow:1px 1px 0 #000; overflow-wrap:anywhere}
 /* Welcome modal: a card centered over the category screen */
+.boot{position:absolute; inset:0; z-index:12; display:flex; align-items:center; justify-content:center; background:radial-gradient(circle at 50% 35%,#1d2650,#070a14 70%); padding:18px}
+.boot.hidden{display:none}
+.boot-card{display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center}
+.boot-crown{font-size:clamp(56px,18vw,84px); line-height:1; filter:drop-shadow(3px 3px 0 #000); animation:bootPulse 1.2s ease-in-out infinite}
+.boot-title{margin:0; font-size:clamp(44px,15vw,72px); line-height:.95; color:var(--yellow); text-shadow:4px 4px 0 #000; animation:introWobble 2.6s ease-in-out infinite}
+.boot-sub{margin:4px 0 14px; color:#e8ecf8; font-size:16px; text-shadow:1px 1px 0 #000}
+.boot-bar{position:relative; width:min(240px,60vw); height:14px; overflow:hidden; background:#0b1024; border:3px solid #000; transform:skewX(-10deg)}
+.boot-bar span{position:absolute; top:0; bottom:0; left:0; width:40%; background:linear-gradient(90deg,#e8303a,#2d6fd6); animation:bootSlide 1.1s linear infinite}
+@keyframes bootPulse{0%,100%{transform:scale(1) rotate(-6deg)} 50%{transform:scale(1.15) rotate(6deg)}}
+@keyframes bootSlide{from{transform:translateX(-100%)} to{transform:translateX(260%)}}
+@media (prefers-reduced-motion: reduce){ .boot-crown,.boot-title,.boot-bar span{animation:none} }
 #intro{position:absolute; inset:0; z-index:10; background:rgba(5,7,14,.8); display:flex; align-items:center; justify-content:center; padding:18px}
 .intro-card{position:relative; width:100%; max-width:360px; padding:26px 20px 20px; text-align:center; overflow:hidden; background:linear-gradient(165deg,#1d2650,#0b1024 70%); border:3px solid #000; border-radius:18px; box-shadow:6px 6px 0 #000, 0 0 0 3px var(--yellow); animation:introPop .5s cubic-bezier(.2,1.35,.4,1) both}
 .intro-band{position:absolute; left:-10%; right:-10%; top:0; height:14px; transform:skewY(-4deg); background:linear-gradient(90deg,#e8303a 0 50%,#2d6fd6 50% 100%); border-bottom:3px solid #000}
@@ -419,6 +430,14 @@ body.home #resetBtn{display:none}
     </div>
 
     <main class="stage" id="stage">
+      <section class="boot" id="boot" role="status" aria-label="Loading The GOAT">
+        <div class="boot-card">
+          <div class="boot-crown" aria-hidden="true">👑</div>
+          <p class="display boot-title">The GOAT</p>
+          <p class="boot-sub">Finding your greatest of all time…</p>
+          <div class="boot-bar" aria-hidden="true"><span></span></div>
+        </div>
+      </section>
       <section class="fighter" data-side="a">
         <div class="portrait" id="pa"></div>
         <div class="label">
@@ -619,7 +638,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B114";
+const BUILD = "B115";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -2513,6 +2532,7 @@ $("statsIntroHide").addEventListener("change", e => setSkipResult(e.target.check
 $("matchShowStats").addEventListener("change", e => setSkipResult(!e.target.checked));
 
 function init(){
+  $("boot").classList.add("hidden");   // the game is ready: drop the loading card
   const pm = location.pathname.match(/\/u\/([^/]+)\/?$/);
   if(pm){
     const who = decodeURIComponent(pm[1]).replace(/-/g, " ");
@@ -2554,7 +2574,7 @@ function init(){
   }
   connectPilot();   // game works without it; stats appear when Supabase connects
 }
-loadWords().then(init);   // the word sheet loads first (5 second limit), then the game starts
+loadWords().then(init, init);   // the word sheet loads first (5 second limit), then the game starts
 </script>
 </body>
 </html>
