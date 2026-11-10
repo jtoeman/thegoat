@@ -644,7 +644,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B118";
+const BUILD = "B119";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1737,8 +1737,11 @@ let pickerOrder = null;
 function renderPicker(){
   const hid = hiddenIds();
   if(!pickerOrder) pickerOrder = shuffleList(CATEGORIES.map(c => c.id));
-  const shown = pickerOrder.map(id => CATEGORIES.find(c => c.id === id)).filter(c => editing || !hid.has(c.id));
-  $("tiles").innerHTML = shown.map(c => {
+  // The category you last played sits upper left; the rest keep the random order.
+  const ordered = pickerOrder.map(id => CATEGORIES.find(c => c.id === id));
+  const first = CUR && CATEGORIES.includes(CUR) ? CUR : null;
+  const shown = (first ? [first, ...ordered.filter(c => c !== first)] : ordered).filter(c => editing || !hid.has(c.id));
+  const tiles = shown.map(c => {
     const top = categoryTop(c);
     const off = hid.has(c.id);
     return `
@@ -1748,7 +1751,10 @@ function renderPicker(){
       ${top ? `<span class="tile-goat">👑 ${top}</span>` : ""}
       ${editing ? `<span class="hide-tag">${off ? "Show" : "Hide"}</span>` : ""}
     </button>`;
-  }).join("") + mashupTileHTML();
+  });
+  // Mashups is always the 5th entry (or last, if there are fewer than 5 categories showing).
+  tiles.splice(Math.min(4, tiles.length), 0, mashupTileHTML());
+  $("tiles").innerHTML = tiles.join("");
   $("pickerNote").textContent = editing ? "Hidden categories leave the picker and Mashups. Tap a box to hide or show it." : "Tap a box to play.";
 }
 function setCategory(cat){
