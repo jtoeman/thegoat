@@ -262,9 +262,9 @@ body.home #resetBtn{display:none}
 .goat-crown .actions{position:relative; width:100%; max-width:340px; margin-top:4px}
 @media (prefers-reduced-motion: reduce){ .goat-crown *{animation:none !important} }
 /* Crown confirmation: the GOAT's full-brightness image with a pulsing crown over it */
-.dlg-art{position:relative; width:min(62vw,240px); aspect-ratio:1/1; flex:0 0 auto; margin:4px auto 0; align-self:center}
+.dlg-art{position:relative; width:100%; height:min(56vh,420px); flex:0 0 auto; margin:4px 0 0; align-self:stretch}
 .dlg-frame{position:absolute; inset:0; border:4px solid #000; border-radius:14px; overflow:hidden; background:radial-gradient(circle at 50% 35%, var(--c,#444) 0%, #111 92%); box-shadow:6px 6px 0 #000, 0 0 0 4px var(--yellow), 0 0 40px rgba(255,210,63,.35); display:flex; align-items:center; justify-content:center}
-.dlg-frame img{width:100%; height:100%; object-fit:contain; display:block; filter:none; opacity:1}
+.dlg-frame img{width:100%; height:100%; object-fit:cover; display:block; filter:none; opacity:1}
 .dlg-frame .fruit-svg{width:78%; height:78%}
 .dlg-frame .glyph{font-size:100px}
 .dlg-frame .letter{font-size:120px}
@@ -575,7 +575,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B106";
+const BUILD = "B107";
 document.getElementById("build").textContent = BUILD;
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
