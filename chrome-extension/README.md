@@ -1,4 +1,4 @@
-# GOAT Image Capture (EXT3)
+# GOAT Image Capture (EXT4, v0.4.0)
 
 Right-click an image on any page, choose **Add to GOAT**, then pick a category and submit. Categories come from the **Categories** tab of the GOAT words sheet. Anything left blank still goes through:
 
@@ -19,3 +19,8 @@ The Worker fetches the image and stores it under `<category>/<slug>.jpg` in the 
 - The game reads each image from the `photo` column of its category tab. After adding an image, put its URL (`https://images.froobaloo.com/<category>/<slug>.jpg`) in that column.
 - Adding a name that already exists in a category overwrites its image and sidecar. Check before you submit.
 - Only https images can be added. Signed or expiring links may fail.
+
+## Overwrite policy (EXT4)
+- Before sending, the form checks for an existing image at the same category and name.
+- If one exists, it shows the current image beside the new one with its license, credit and date, and asks you to **Replace**, **Save as a new name** (adds -2, -3…), or **Keep current**.
+- Nothing is replaced without a choice.

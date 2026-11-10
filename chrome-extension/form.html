@@ -11,6 +11,7 @@ button{margin-top:14px;padding:9px 16px;font:inherit;font-weight:600;cursor:poin
 #msg{margin-top:10px;min-height:20px;white-space:pre-wrap}
 .ok{color:#17703a}.err{color:#b3121c}
 .hint{font-size:12px;color:#666;margin-top:3px}
+.pair{display:flex; gap:10px}.pair figure{flex:1; margin:0; text-align:center}.pair img{width:100%; max-height:180px; object-fit:contain; border:1px solid #ddd}.pair figcaption{font-size:12px; color:#666}#conflict button{width:100%}#conflict button+button{margin-top:8px}#conflict[hidden]{display:none}
 .foot{margin-top:14px;font-size:11px;color:#888}
 </style></head><body>
 <img id="preview" alt="">
@@ -28,8 +29,19 @@ button{margin-top:14px;padding:9px 16px;font:inherit;font-weight:600;cursor:poin
 <input id="author" placeholder="Leave blank if it's your own" autocomplete="off">
 <label for="source_page">Source page</label>
 <input id="source_page" autocomplete="off">
+<section id="conflict" hidden>
+  <p id="conflictText"></p>
+  <div class="pair">
+    <figure><img id="cur" alt=""><figcaption>Current</figcaption></figure>
+    <figure><img id="incoming" alt=""><figcaption>New</figcaption></figure>
+  </div>
+  <p class="hint" id="conflictInfo"></p>
+  <button id="replace" type="button">Replace current</button>
+  <button id="newName" type="button">Save as a new name</button>
+  <button id="keep" type="button">Keep current, cancel</button>
+</section>
 <button id="submit">Add to GOAT</button>
 <div id="msg"></div>
-<div class="foot" id="foot">EXT3</div>
+<div class="foot" id="foot">EXT4 · v0.4.0</div>
 <script src="form.js"></script>
 </body></html>

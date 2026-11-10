@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "GOAT Image Capture",
-  "version": "0.2.0",
+  "version": "0.4.0",
   "description": "Right-click an image and add it to a GOAT category. Categories come from the GOAT words sheet.",
   "permissions": [
     "contextMenus",
@@ -9,7 +9,8 @@
   ],
   "host_permissions": [
     "https://goat-image-ingest.jeremy-86d.workers.dev/*",
-    "https://docs.google.com/*"
+    "https://docs.google.com/*",
+    "https://images.froobaloo.com/*"
   ],
   "background": {
     "service_worker": "background.js"
