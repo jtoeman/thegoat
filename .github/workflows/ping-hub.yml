@@ -1,0 +1,21 @@
+name: Ping hub
+
+# Tells the hub to rebuild when the game changes, so /goat/ on froobaloo.com stays current.
+# Needs the HUB_TOKEN secret: a token that can dispatch workflows on jtoeman/froobaloo.
+
+on:
+  push:
+    branches: [main]
+    paths: [index.html, assets/**]
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch game-updated to the hub
+        env:
+          GH_TOKEN: ${{ secrets.HUB_TOKEN }}
+        run: gh api repos/jtoeman/froobaloo/dispatches -f event_type=game-updated
