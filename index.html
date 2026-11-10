@@ -509,9 +509,9 @@ body.home #resetBtn{display:none}
         <p class="ko-sub">Checkpoint</p>
         <p class="ko display" id="cpTitle"></p>
         <p class="ko-sub" id="cpBody"></p>
-        <div id="cpBars" class="rows"></div>
-        <div id="cpGlobal" class="global-block"></div>
-        <div class="actions-col">
+        <p class="ko-sub" id="cpGoats"></p>
+        <p class="ko-sub" id="cpAgree"></p>
+        <div class="actions-col res-foot">
           <button class="btn primary" id="cpGo"><span>Keep going</span></button>
           <button class="btn" id="cpFresh"><span>Start fresh in this category</span></button>
           <button class="btn" id="cpCrown"><span>This is the GOAT</span></button>
@@ -644,7 +644,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B119";
+const BUILD = "B120";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -2319,15 +2319,21 @@ $("cpCrown").addEventListener("click", crownGoat);
    Every 10 picks in a run, pause and ask: keep going, start fresh in this category, or change category.
    Picks are saved either way. Start fresh keeps this category's rankings and begins a new run. */
 function showCheckpoint(){
-  $("cpGlobal").innerHTML = globalBlockHTML(CUR, 3);
-  animateStats();
+  // Only what matters for the champion: its GOAT count, and how the latest matchup split.
+  const board = globalBoards()[CUR.id];
+  const g = board && board.crowns[S.champ] ? board.crowns[S.champ].size : 0;
+  $("cpGoats").textContent = `👑 ${g} ${g === 1 ? "GOAT" : "GOATs"} for ${S.champ}`;
+  let agree = "";
+  if(db && statsReady && lastResult && lastResult.winner === S.champ){
+    const c = countsFor(keyFor(lastResult.winner, lastResult.loser), lastResult.winner, lastResult.loser);
+    const total = c[lastResult.winner] + c[lastResult.loser];
+    agree = total ? `${Math.round(100 * c[lastResult.winner] / total)}% agree with you on the latest matchup (${total} ${total === 1 ? "pick" : "picks"})` : "No picks counted yet on the latest matchup.";
+  }
+  $("cpAgree").textContent = agree;
   $("cpGo").querySelector("span").textContent = `Keep going (${S.queue.length})`;
   $("cpTitle").textContent = `${S.round} picks in`;
   $("cpBody").textContent = `${CUR.name}: champion ${S.champ}, ${S.queue.length} left in this run.`;
   setCrownLabels();
-  const bars = recentWinnerBars(10);
-  $("cpBars").innerHTML = `<p class="ko-sub">Last <b>${bars.total}</b> picks. Winners, most first:</p>`
-    + (bars.rows || `<p class="ko-sub">No picks yet.</p>`);
   $("checkpoint").classList.remove("hidden");
   setHint("Choose how to continue.", false);
   updateStatus();
