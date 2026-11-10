@@ -66,7 +66,7 @@ function init(){
   $("preview").src = src;
   $("source_page").value = params.get("page") || "";
   $("name").value = pageTitle.replace(/\s[-|–].*$/, "").trim();
-  $("foot").textContent = "EXT2 · " + (src.startsWith("https://") ? "ready" : "not an https image: cannot add");
+  $("foot").textContent = "EXT3 · " + (src.startsWith("https://") ? "ready" : "not an https image: cannot add");
   fillCategories();
 }
 
@@ -106,6 +106,15 @@ $("submit").addEventListener("click", async () => {
   }finally{
     $("submit").disabled = false;
   }
+});
+
+/* EXT3: Enter submits from any text box, as long as the Name field has something in it. */
+document.addEventListener("keydown", e => {
+  if(e.key !== "Enter" || e.isComposing) return;
+  if(!(e.target instanceof HTMLInputElement)) return;
+  if(!$("name").value.trim()) return;
+  e.preventDefault();
+  $("submit").click();
 });
 
 init();

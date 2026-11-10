@@ -1,4 +1,4 @@
-# GOAT Image Capture (EXT2)
+# GOAT Image Capture (EXT3)
 
 Right-click an image on any page, choose **Add to GOAT**, then pick a category and submit. Categories come from the **Categories** tab of the GOAT words sheet. Anything left blank still goes through:
 
