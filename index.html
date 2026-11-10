@@ -220,6 +220,7 @@ body.home #statsBtn{margin-left:auto}
 body.home #resetBtn{display:none}
 #statsPanel{z-index:8}
 .overlay.dialog{z-index:9; background:rgba(7,10,20,.97); justify-content:center; gap:14px}
+#profilePanel{background:#070a14; justify-content:flex-start}
 .dlg-body{margin:0; font-size:15px; line-height:1.4; color:#cfd6ea}
 .btn.danger{background:#e8303a; color:#fff}
 .actions-col{display:flex; flex-direction:column; gap:10px}
@@ -289,7 +290,9 @@ body.home #resetBtn{display:none}
 .le-left{position:absolute; left:0; top:0; bottom:0; width:50%; overflow:hidden}
 .le-cols.split .le-left{width:100%; clip-path:polygon(0 0,56% 0,44% 100%,0 100%)}
 .le-div{position:absolute; inset:0; width:100%; height:100%; overflow:visible}
-.le-logo{text-transform:uppercase; color:#fff; font-size:clamp(28px,10vw,44px); margin:0; text-shadow:3px 3px 0 #000}
+.le-hrow{display:flex; align-items:flex-end; justify-content:space-between; gap:10px}
+.le-share{flex:none; margin-bottom:6px; padding:6px 12px; font-size:14px}
+.le-logo{text-transform:uppercase; color:#fff; font-size:clamp(26px,8.5vw,40px); margin:0; min-width:0; text-shadow:3px 3px 0 #000}
 .le-nm,.le-cap b,.le-rname{font-family:Impact,sans-serif; font-weight:normal; letter-spacing:.01em; color:#fff; text-shadow:2px 2px 0 #000}
 .le-nm{display:block; font-size:19px; line-height:1.1; overflow-wrap:anywhere}
 .le-cap b{display:block; font-size:clamp(20px,6vw,26px); line-height:1.05}
@@ -500,7 +503,6 @@ body.home #resetBtn{display:none}
           <button class="btn" id="myPageBtn"><span>My page</span></button>
           <button class="btn primary" id="statsClose"><span>Close</span></button>
         </div>
-        <label class="skip-picker"><input type="checkbox" id="statsShow"> <span>Show stats between rounds</span></label>
       </section>
 
       <section class="overlay dialog hidden" id="aboutPanel" role="dialog" aria-modal="true" aria-label="About The GOAT">
@@ -518,6 +520,7 @@ body.home #resetBtn{display:none}
       <section class="overlay dialog hidden" id="profilePanel" role="dialog" aria-modal="true" aria-label="My page">
         <p class="ko display">My page</p>
         <label class="skip-picker"><input type="checkbox" id="pgPrivate" checked> <span>My page is private</span></label>
+        <p class="about-p" id="pgHint">Your page is private, so no one can see your picks. Untick the box to pick a display name and get a link you can share.</p>
         <div id="pgPublic" class="hidden">
           <p class="ko-sub">Your name</p>
           <p class="pg-name display" id="pgName"></p>
@@ -615,7 +618,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B111";
+const BUILD = "B112";
 document.getElementById("build").textContent = BUILD;
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
@@ -1384,12 +1387,14 @@ function showLadderEnd(){
     <div class="le-cols${split ? " split" : ""}" aria-hidden="true">${leftImg}${divider}</div>
     <div class="le-headers">
       <p class="ko-sub">${heading}</p>
-      <p class="ko display le-logo">The GOAT: ${CUR.name}</p>
+      <div class="le-hrow">
+        <p class="ko display le-logo">The GOAT: ${CUR.name}</p>
+        <button class="btn le-share" id="rankShare"><span>Share</span></button>
+      </div>
     </div>
     <div class="le-grid${split ? "" : " single"}">${body}</div>
     <div class="actions">
       <button class="btn" id="rankEdit"><span>Edit</span></button>
-      <button class="btn" id="rankShare"><span>Share</span></button>
       <button class="btn primary" id="nextRank"><span>${done ? "Start over" : "Find #" + (n + 1)}</span></button>
     </div>`;
   renderRankList();
@@ -2202,6 +2207,7 @@ function renderProfile(){
   const p = getProfile();
   $("pgPrivate").checked = p.private;
   $("pgAsk").classList.add("hidden");
+  $("pgHint").classList.toggle("hidden", !p.private);
   $("pgPublic").classList.toggle("hidden", p.private || !p.name);
   $("pgName").textContent = p.name || "";
   $("pgLink").textContent = p.name ? profileLink(p.name) : "";
@@ -2214,6 +2220,7 @@ $("pgPrivate").addEventListener("change", e => {
     writeStore("goat_profile", Object.assign(getProfile(), { private: true }));
     renderProfile();
   } else {
+    $("pgHint").classList.add("hidden");
     $("pgAsk").classList.remove("hidden");
     $("pgPublic").classList.add("hidden");
     $("pgInput").value = getProfile().name || "";
@@ -2465,18 +2472,15 @@ function setSkipResult(on){
   skipResult = on; writeStore("goat_result_skip", on);
   $("resultSkip").checked = on;
   $("cpShowStats").checked = !on;
-  $("statsShow").checked = !on;
   $("statsIntroHide").checked = on;
   $("matchShowStats").checked = !on;
 }
 $("resultSkip").checked = skipResult;
 $("cpShowStats").checked = !skipResult;
-$("statsShow").checked = !skipResult;
 $("statsIntroHide").checked = skipResult;
 $("matchShowStats").checked = !skipResult;
 $("resultSkip").addEventListener("change", e => setSkipResult(e.target.checked));
 $("cpShowStats").addEventListener("change", e => setSkipResult(!e.target.checked));
-$("statsShow").addEventListener("change", e => setSkipResult(!e.target.checked));
 $("statsIntroHide").addEventListener("change", e => setSkipResult(e.target.checked));
 $("matchShowStats").addEventListener("change", e => setSkipResult(!e.target.checked));
 
