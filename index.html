@@ -283,7 +283,7 @@ body.home #resetBtn{display:none}
 /* Ranking page angle split */
 #ladderEnd{overflow:hidden}
 #ladderEnd > *:not(.le-bg){position:relative; z-index:1}
-.le-split{position:relative; height:260px; margin:10px 0 12px}
+.le-split{position:relative; height:340px; margin:10px -18px 12px}
 .le-bg{position:absolute; inset:0; z-index:0; pointer-events:none; overflow:hidden}
 .le-bg img{width:100%; height:100%; object-fit:cover; display:block}
 .le-bg .fruit-svg{width:100%; height:100%}
@@ -295,13 +295,16 @@ body.home #resetBtn{display:none}
 .le-half img{width:100%; height:100%; object-fit:cover; display:block}
 .le-half .fruit-svg{width:100%; height:100%}
 .le-half .glyph,.le-half .letter{font-size:96px}
-.le-divider{position:absolute; top:0; bottom:0; left:50%; width:6px; transform:translateX(-50%) skewX(-8deg); background:linear-gradient(#2d6fd6,#e8303a); box-shadow:0 0 0 2px #000}
-.le-lbl{position:absolute; bottom:10px; max-width:44%; background:rgba(5,7,15,.72); border:2px solid #000; padding:5px 8px; text-shadow:1px 1px 0 #000; display:flex; flex-direction:column; gap:1px}
+.le-divider{position:absolute; top:0; bottom:0; left:50%; z-index:2; width:6px; transform:translateX(-50%) skewX(-8deg); background:linear-gradient(#2d6fd6,#e8303a); box-shadow:0 0 0 2px #000}
+.le-lbl{position:absolute; bottom:10px; max-width:42%; z-index:3; background:rgba(5,7,15,.72); border:2px solid #000; padding:5px 8px; text-shadow:1px 1px 0 #000; display:flex; flex-direction:column; gap:1px}
 .le-lbl-l{left:10px; text-align:left}
 .le-lbl-r{right:10px; text-align:right}
 .le-lbl span{font-family:Impact,sans-serif; text-transform:uppercase; letter-spacing:.06em; font-size:11px; color:var(--yellow)}
 .le-lbl b{font-size:15px; color:#fff; line-height:1.15}
 .le-lbl small{font-size:12px; color:#e8ecf8}
+.le-others{margin-top:6px; display:flex; flex-direction:column; gap:1px}
+.le-others span{font-size:10px; color:#8a94b0; text-transform:uppercase; letter-spacing:.06em}
+.le-others b{font-size:12px; color:#e8ecf8}
 .le-split.single .le-half{position:absolute; inset:0}
 .btn .ico{vertical-align:-2px; margin-right:5px}
 #shareText{white-space:pre-line}
@@ -582,7 +585,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B108";
+const BUILD = "B109";
 document.getElementById("build").textContent = BUILD;
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
@@ -1309,8 +1312,9 @@ function showLadderEnd(){
   const done = n >= CUR.items.length;
   const heading = done ? "Fully sorted" : (n === 1 ? `Your GOAT of ${CUR.name.toLowerCase()} 👑` : `Rank #${n}`);
   rankEdit = false;
-  // Background: the category's overall GOAT (community top; the player's #1 if nobody has crowned yet).
-  // Foreground: the new entry on the left half of an angle split.
+  // Header: the category's overall GOAT. Background: the same, full-bleed and dimmed.
+  // Split: left = the new entry with its stats; right = the player's own #1 with its stats,
+  // and below that the other GOATs this player has crowned in this category.
   const board = globalBoards()[CUR.id] || { wins: {}, crowns: {} };
   const goatsOf = n => board.crowns[n] ? board.crowns[n].size : 0;
   const winsOf = n => board.wins[n] || 0;
@@ -1319,31 +1323,40 @@ function showLadderEnd(){
     .sort((a, b) => (goatsOf(b) - goatsOf(a)) || (winsOf(b) - winsOf(a)))[0];
   const newName = S.champ;
   const newItem = newName && CUR.byName[newName];
-  const bgName = communityTop || (S.ranked[0] && S.ranked[0] !== newName ? S.ranked[0] : null);
+  const bgName = communityTop || (S.ranked[0] && S.ranked[0] !== newName ? S.ranked[0] : null) || newName;
   const bgItem = bgName && CUR.byName[bgName];
-  const stat = n => `${winsOf(n)} ${winsOf(n) === 1 ? "win" : "wins"} · 👑 ${goatsOf(n)}`;
+  const myTop = S.ranked[0];
+  const topItem = myTop && CUR.byName[myTop];
+  const myCrowns = [...new Set(Object.keys(myPicks)
+    .filter(k => myPicks[k].g && parseKey(k).cat === CUR.id)
+    .map(k => myPicks[k].w))].filter(n => n !== myTop);
+  const stat = n => `${winsOf(n)} ${winsOf(n) === 1 ? "win" : "wins"}`;
+  const goatLine = n => `👑 ${goatsOf(n)} GOAT${goatsOf(n) === 1 ? "" : "s"}`;
+  const rank = S.ranked.indexOf(newName) + 1;
   const bg = bgItem ? `<div class="le-bg" aria-hidden="true">${portraitHTML(bgItem)}</div>` : "";
-  const overall = bgItem ? `<p class="le-caption">Overall GOAT: <b>${bgName}</b> · ${stat(bgName)}</p>` : "";
   let split = "";
-  if(newItem && bgItem && bgName !== newName){
+  if(newItem && topItem && myTop !== newName){
+    const others = myCrowns.length
+      ? `<div class="le-others"><span>Your other GOATs</span>${myCrowns.map(n => `<b>${n}</b>`).join("")}</div>`
+      : "";
     split = `
     <div class="le-split">
       <div class="le-half" style="clip-path:polygon(0 0,60% 0,40% 100%,0 100%)">${portraitHTML(newItem)}</div>
       <div class="le-divider" aria-hidden="true"></div>
-      <div class="le-lbl le-lbl-l"><span>New entry</span><b>${newName}</b><small>${stat(newName)}</small></div>
+      <div class="le-lbl le-lbl-l"><span>New entry</span><b>${newName}</b><small>Ranked #${rank}</small><small>${stat(newName)}</small><small>${goatLine(newName)}</small></div>
+      <div class="le-lbl le-lbl-r"><span>Your #1</span><b>${myTop}</b><small>${stat(myTop)}</small><small>${goatLine(myTop)}</small>${others}</div>
     </div>`;
   } else if(newItem){
     split = `
     <div class="le-split single">
       <div class="le-half">${portraitHTML(newItem)}</div>
-      <div class="le-lbl le-lbl-l"><span>New entry</span><b>${newName}</b><small>${stat(newName)}</small></div>
+      <div class="le-lbl le-lbl-l"><span>New entry</span><b>${newName}</b><small>Ranked #${rank}</small><small>${stat(newName)}</small><small>${goatLine(newName)}</small></div>
     </div>`;
   }
   $("ladderEnd").innerHTML = `
     ${bg}
     <p class="ko-sub">${heading}</p>
-    <p class="ko display">${S.champ}</p>
-    ${overall}
+    <p class="ko display">${bgName}</p>
     ${split}
     <div id="rankList" class="rows"></div>
     <div class="actions">
