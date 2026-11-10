@@ -300,6 +300,10 @@ body.home #resetBtn{display:none}
 #ladderEnd > .le-grid.single{grid-template-columns:1fr}
 .le-left{position:absolute; left:0; top:0; bottom:0; width:50%; overflow:hidden}
 .le-cols.split .le-left{width:100%; clip-path:polygon(0 0,56% 0,44% 100%,0 100%)}
+.le-right-img{position:absolute; left:0; top:0; bottom:0; right:0; overflow:hidden; clip-path:polygon(56% 0,100% 0,100% 100%,44% 100%)}
+.le-right-img img{width:100%; height:100%; object-fit:cover; display:block}
+.le-right-img .fruit-svg{width:100%; height:100%}
+.le-right-img .glyph,.le-right-img .letter{font-size:96px}
 .le-div{position:absolute; inset:0; width:100%; height:100%; overflow:visible}
 .le-hrow{display:flex; align-items:flex-end; justify-content:space-between; gap:10px}
 .le-share{flex:none; margin-bottom:6px; padding:6px 12px; font-size:14px}
@@ -638,7 +642,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B116";
+const BUILD = "B117";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1420,25 +1424,25 @@ function showLadderEnd(){
   const divider = split ? `<svg class="le-div" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="leG" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="100"><stop offset="0" stop-color="#2d6fd6"/><stop offset="1" stop-color="#e8303a"/></linearGradient></defs><line x1="56" y1="0" x2="44" y2="100" stroke="#000" stroke-width="10" vector-effect="non-scaling-stroke"/><line x1="56" y1="0" x2="44" y2="100" stroke="url(#leG)" stroke-width="5" vector-effect="non-scaling-stroke"/></svg>` : "";
   const capL = newItem ? `<div class="le-cap"><span>Your #${rank}</span><b>${newName}</b><small>Ranked #${rank}</small><small>${stat(newName)}</small><small>${goatLine(newName)}</small></div>` : "";
   const rightHead = split ? `<div class="le-rhead"><span class="le-rh">Your #1</span><b class="le-rname">${myTop}</b><small>${stat(myTop)} · ${goatLine(myTop)}</small></div>` : "";
+  const rightImg = split ? `<div class="le-right-img">${portraitHTML(topItem)}</div>` : "";
   const body = split
     ? `<div class="le-col-l">${capL}</div><div class="le-col-r">${rightHead}<div id="rankList" class="rows le-rows"></div></div>`
     : `${capL}<div id="rankList" class="rows le-rows"></div>`;
   $("ladderEnd").innerHTML = `
     ${bg}
-    <div class="le-cols${split ? " split" : ""}" aria-hidden="true">${leftImg}${divider}</div>
+    <div class="le-cols${split ? " split" : ""}" aria-hidden="true">${leftImg}${rightImg}${divider}</div>
     <div class="le-headers">
       <p class="ko-sub">${heading}</p>
       <div class="le-hrow">
         <p class="ko display le-logo">The GOAT: ${CUR.name}</p>
-        <button class="btn le-share" id="rankShare"><span>Share</span></button>
+        <button class="btn le-share" id="rankShare" aria-label="Share"><span><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
       </div>
     </div>
     <div class="le-grid${split ? "" : " single"}">${body}</div>
     <div class="actions">
       <button class="btn" id="rankEdit"><span>Edit</span></button>
       <button class="btn primary" id="nextRank"><span>${done ? "Start over" : "Find #" + (n + 1)}</span></button>
-    </div>
-    <froobaloo-next current="goat"></froobaloo-next>`;
+    </div>`;
   renderRankList();
   $("ladderEnd").classList.remove("hidden");
   $("nextRank").onclick = () => {
