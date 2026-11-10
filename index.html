@@ -239,6 +239,7 @@ body.home #resetBtn{display:none}
 .reset-row{width:100%; background:none; border:0; border-bottom:1px solid #222c48; color:#fff; font:inherit; text-align:left; cursor:pointer; padding:8px 2px}
 .reset-row b{color:var(--yellow)}
 /* Result is a centred modal, so the stage stays visible around it. Swipe left or right for the next round. */
+.res-foot{position:sticky; bottom:0; z-index:2; background:#0c1224; padding:8px 0 0}
 #result{
   inset:auto; left:12px; right:12px; top:50%; bottom:auto; transform:translateY(-50%);
   max-height:90%; overflow-y:auto; background:#0c1224; border:3px solid #000; border-radius:14px;
@@ -485,7 +486,7 @@ body.home #resetBtn{display:none}
         <p class="tally" id="tally"></p>
         <p class="seed-note hidden" id="seedNote">Sample data: 10 placeholder players fill the counts until 10 real players join. Not real picks.</p>
         <p class="facts" id="facts"></p>
-        <div id="resGlobal" class="global-block"></div>
+        <div class="res-foot">
         <div class="actions">
           <button class="btn" id="shareBtn"><span><svg class="ico" viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 14v5h14v-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Challenge a friend</span></button>
           <button class="btn primary" id="nextBtn"><span>Next matchup</span></button>
@@ -496,6 +497,7 @@ body.home #resetBtn{display:none}
         </div>
         <div class="actions" style="margin-top:0">
           <button class="btn primary hidden" id="resultCrown"><span>This is the GOAT</span></button>
+        </div>
         </div>
         <label class="skip-picker"><input type="checkbox" id="resultSkip"> <span>Don't show this every time</span></label>
       </section>
@@ -642,7 +644,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B117";
+const BUILD = "B118";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1326,36 +1328,30 @@ function renderStats(winner, loser, note){
   $("koText").textContent = `${winner} wins`;
   $("koSub").textContent = `You picked ${winner} over ${loser}.`;
   const fill = $("overallFill");
+  // GOATs for the winner: players who have crowned this item in this category.
+  const board = globalBoards()[CUR.id];
+  const g = board && board.crowns[winner] ? board.crowns[winner].size : 0;
+  $("facts").textContent = note || `👑 ${g} ${g === 1 ? "GOAT" : "GOATs"} for ${winner}`;
   if(!db){
     $("overallLabel").textContent = "Pilot stats not available here";
     fill.style.width = "0%";
     $("tally").textContent = "";
-    $("facts").textContent = "This view cannot reach the pilot database, so picks are not being counted.";
     return;
   }
+  // Percent agreement: the share of picks on this matchup that chose the same winner as you.
   const c = countsFor(key, winner, loser);
   const total = c[winner] + c[loser];
-  const pct = total ? Math.round(100 * c[winner] / total) : 50;
-  const small = statsReady && total > 0 && total < SAMPLE_MIN;   // too few picks for a split to mean much
+  const pct = total ? Math.round(100 * c[winner] / total) : 0;
+  const ready = statsReady && total > 0;
   $("overallLabel").textContent = !statsReady ? (statsError ? "Stats unavailable right now" : "Counting picks…")
-    : small ? `Too early to call: ${total} ${total === 1 ? "pick" : "picks"} so far`
-    : total ? `${winner} ${pct}% of picks` : "No picks counted yet";
-  requestAnimationFrame(() => requestAnimationFrame(() => { fill.style.width = (statsReady && total && !small ? pct : 0) + "%"; }));
-  $("tally").textContent = statsReady ? `${winner} ${c[winner]} · ${loser} ${c[loser]} · ${total} total` : "";
-  let facts;
-  if(note) facts = note;
-  else if(!uid) facts = "Picks are not saved until sign-in finishes.";
-  else if(!statsReady) facts = statsError ? "Couldn't reach the pilot database. It will retry automatically." : "Loading the pilot count…";
-  else if(total <= 1) facts = "First pick on this matchup. The count fills in as people play.";
-  else if(small) facts = `Small sample. The split shows once this matchup has ${SAMPLE_MIN} picks.`;
-  else facts = `Popular across ${total} picks on this matchup.`;
-  $("facts").textContent = facts;
+    : total ? `${pct}% agree with you` : "No picks counted yet";
+  requestAnimationFrame(() => requestAnimationFrame(() => { fill.style.width = (ready ? pct : 0) + "%"; }));
+  $("tally").textContent = ready ? `${total} ${total === 1 ? "pick" : "picks"} on this matchup${total < SAMPLE_MIN ? ", small sample" : ""}` : "";
 }
 
 /* Minimum picks on a matchup before its crowd split is shown as a percentage. */
 const SAMPLE_MIN = 20;
 function showResult(winner, loser){
-  $("resGlobal").innerHTML = globalBlockHTML(CUR, 2);
   animateStats();
   lastResult = { winner, loser };
   $("result").style.transition = "";
