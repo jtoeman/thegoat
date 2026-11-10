@@ -11,7 +11,22 @@ button{margin-top:14px;padding:9px 16px;font:inherit;font-weight:600;cursor:poin
 #msg{margin-top:10px;min-height:20px;white-space:pre-wrap}
 .ok{color:#17703a}.err{color:#b3121c}
 .hint{font-size:12px;color:#666;margin-top:3px}
-.pair{display:flex; gap:10px}.pair figure{flex:1; margin:0; text-align:center}.pair img{width:100%; max-height:180px; object-fit:contain; border:1px solid #ddd}.pair figcaption{font-size:12px; color:#666}#conflict button{width:100%}#conflict button+button{margin-top:8px}#conflict[hidden]{display:none}
+#versus{position:relative; height:220px; margin:10px 0; border:3px solid #000; border-radius:10px; overflow:hidden; background:radial-gradient(ellipse at 50% 35%, #1d2752 0%, #0b1024 55%, #05070f 100%)}
+#versus .fighter{position:absolute; top:0; bottom:0; width:60%; overflow:hidden}
+#versus .fighter[data-side="a"]{left:0}
+#versus .fighter[data-side="b"]{right:0}
+#versus .portrait{position:absolute; inset:0; overflow:hidden; background:#111}
+#versus .fighter[data-side="a"] .portrait{clip-path:polygon(0 0, 95% 0, 71.7% 100%, 0 100%)}
+#versus .fighter[data-side="b"] .portrait{clip-path:polygon(31.7% 0, 100% 0, 100% 100%, 8.3% 100%)}
+#versus .portrait img{width:100%; height:100%; object-fit:cover; display:block}
+#versus .portrait::after{content:""; position:absolute; left:0; right:0; bottom:0; height:45%; background:linear-gradient(180deg, rgba(7,10,20,0), rgba(7,10,20,.88) 60%)}
+#versus .label{position:absolute; left:0; right:0; bottom:0; padding:28px 6px 12px; display:flex; flex-direction:column; align-items:center; z-index:2}
+#versus .fighter[data-side="a"] .label{padding-right:16.67%}
+#versus .fighter[data-side="b"] .label{padding-left:16.67%}
+#versus .plate{transform:skewX(-12deg); background:#fff; color:#0b0b0b; border:3px solid #000; box-shadow:3px 3px 0 #000; padding:3px 9px; font-family:Impact,"Haettenschweiler","Arial Narrow Bold",sans-serif; text-transform:uppercase; font-size:15px; letter-spacing:.03em; line-height:1.15; text-align:center; max-width:100%; min-height:26px}
+#versus .plate span{display:block; transform:skewX(12deg); overflow-wrap:anywhere}
+#versus .caps{position:absolute; top:6px; left:8px; right:8px; display:flex; justify-content:space-between; font:700 11px system-ui,sans-serif; color:#fff; text-shadow:0 1px 2px #000; z-index:3; pointer-events:none}
+#conflict button{width:100%}#conflict button+button{margin-top:8px}#conflict[hidden]{display:none}
 .foot{margin-top:14px;font-size:11px;color:#888}
 </style></head><body>
 <img id="preview" alt="">
@@ -31,9 +46,10 @@ button{margin-top:14px;padding:9px 16px;font:inherit;font-weight:600;cursor:poin
 <input id="source_page" autocomplete="off">
 <section id="conflict" hidden>
   <p id="conflictText"></p>
-  <div class="pair">
-    <figure><img id="cur" alt=""><figcaption>Current</figcaption></figure>
-    <figure><img id="incoming" alt=""><figcaption>New</figcaption></figure>
+  <div id="versus">
+    <div class="caps"><span>Current</span><span>New</span></div>
+    <section class="fighter" data-side="a"><div class="portrait"><img id="cur" alt=""></div><div class="label"><div class="plate"><span id="curPlate"></span></div></div></section>
+    <section class="fighter" data-side="b"><div class="portrait"><img id="incoming" alt=""></div><div class="label"><div class="plate"><span id="newPlate"></span></div></div></section>
   </div>
   <p class="hint" id="conflictInfo"></p>
   <button id="replace" type="button">Replace current</button>
@@ -42,6 +58,6 @@ button{margin-top:14px;padding:9px 16px;font:inherit;font-weight:600;cursor:poin
 </section>
 <button id="submit">Add to GOAT</button>
 <div id="msg"></div>
-<div class="foot" id="foot">EXT4 · v0.4.0</div>
+<div class="foot" id="foot">EXT5 · v0.5.0</div>
 <script src="form.js"></script>
 </body></html>

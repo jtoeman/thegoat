@@ -22,5 +22,5 @@ The Worker fetches the image and stores it under `<category>/<slug>.jpg` in the 
 
 ## Overwrite policy (EXT4)
 - Before sending, the form checks for an existing image at the same category and name.
-- If one exists, it shows the current image beside the new one with its license, credit and date, and asks you to **Replace**, **Save as a new name** (adds -2, -3…), or **Keep current**.
+- If one exists, it shows both images as game cards (current on the left, new on the right) with their names, plus the license, credit and date of the current one, and asks you to **Replace**, **Save as a new name** (adds -2, -3…), or **Keep current**.
 - Nothing is replaced without a choice.

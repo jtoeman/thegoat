@@ -1,4 +1,4 @@
-// EXT4: form for one image. Before sending, checks whether category/name already exists in the bucket and
+// EXT5: form for one image (EXT4 overwrite check, EXT5 game-style preview of both sides). Before sending, checks whether category/name already exists in the bucket and
 // asks: replace, save under a new name, or cancel. Categories come from the GOAT words sheet.
 const WORKER = "https://goat-image-ingest.jeremy-86d.workers.dev/ingest";
 const IMAGE_BASE = "https://images.froobaloo.com/";
@@ -88,6 +88,9 @@ async function freeSlug(category, base){
 function showConflict(category, slug, current){
   $("cur").src = current.url + "?v=" + Date.now();
   $("incoming").src = src;
+  // EXT5: name plates as the game shows them: the current name from the saved details, the new one from the form.
+  $("curPlate").textContent = (current.info && current.info.title) || slug.replace(/-/g, " ");
+  $("newPlate").textContent = current.name || slug.replace(/-/g, " ");
   const side = current.info;
   const who = side ? `${side.license || "no license"}${side.author ? " · " + side.author : ""}${side.ingested_at ? " · added " + side.ingested_at.slice(0, 10) : ""}` : "no details saved";
   $("conflictText").textContent = `${category}/${slug} already has an image. Which should the game use?`;
@@ -135,7 +138,7 @@ function init(){
   $("preview").src = src;
   $("source_page").value = params.get("page") || "";
   $("name").value = pageTitle.replace(/\s[-|–].*$/, "").trim();
-  $("foot").textContent = "EXT4 · v0.4.0 · " + (src.startsWith("https://") ? "ready" : "not an https image: cannot add");
+  $("foot").textContent = "EXT5 · v0.5.0 · " + (src.startsWith("https://") ? "ready" : "not an https image: cannot add");
   fillCategories();
 }
 
@@ -152,7 +155,7 @@ $("submit").addEventListener("click", async () => {
   if(await exists(category, base)){
     const info = await sidecarOf(category, base);
     pending = { category, slug: base, name, license, author, sourcePage };
-    return showConflict(category, base, { url: urlFor(category, base), info });
+    return showConflict(category, base, { url: urlFor(category, base), info, name });
   }
   send(category, base, name, license, author, sourcePage);
 });
@@ -173,7 +176,7 @@ $("keep").addEventListener("click", () => {
   setMsg("Not added. The current image was kept.");
 });
 
-/* EXT4: Enter submits from any text box, as long as the Name field has something in it. */
+/* Enter submits from any text box, as long as the Name field has something in it. */
 document.addEventListener("keydown", e => {
   if(e.key !== "Enter" || e.isComposing) return;
   if(!(e.target instanceof HTMLInputElement)) return;
