@@ -638,7 +638,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B115";
+const BUILD = "B116";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1415,7 +1415,7 @@ function showLadderEnd(){
   const bg = bgItem ? `<div class="le-bg" aria-hidden="true">${portraitHTML(bgItem)}</div>` : "";
   const split = !!(newItem && topItem && myTop !== newName);
   // Full-height layer behind everything: new entry image on the left, divider down the middle.
-  const leftImg = newItem ? `<div class="le-left">${portraitHTML(newItem)}</div>` : "";
+  const leftImg = split ? `<div class="le-left">${portraitHTML(newItem)}</div>` : "";
   // The divider and the image edge are the same line: x 56% at the top, 44% at the bottom.
   const divider = split ? `<svg class="le-div" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="leG" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="100"><stop offset="0" stop-color="#2d6fd6"/><stop offset="1" stop-color="#e8303a"/></linearGradient></defs><line x1="56" y1="0" x2="44" y2="100" stroke="#000" stroke-width="10" vector-effect="non-scaling-stroke"/><line x1="56" y1="0" x2="44" y2="100" stroke="url(#leG)" stroke-width="5" vector-effect="non-scaling-stroke"/></svg>` : "";
   const capL = newItem ? `<div class="le-cap"><span>Your #${rank}</span><b>${newName}</b><small>Ranked #${rank}</small><small>${stat(newName)}</small><small>${goatLine(newName)}</small></div>` : "";
