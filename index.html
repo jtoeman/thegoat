@@ -194,7 +194,7 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .wf-badge{position:relative; width:50%; align-self:flex-start; display:flex; flex-direction:column; align-items:center; text-align:center; pointer-events:none}
 .win-flash[data-side="right"] .wf-badge{align-self:flex-end}
 @media (prefers-reduced-motion: reduce){ .wf-title,.wf-name{animation:none} }
-.tiles{flex:1 1 auto; min-height:0; overflow-y:auto; display:grid; grid-template-columns:1fr 1fr; grid-auto-rows:minmax(0,1fr); gap:12px; align-content:stretch; padding:10px 10px 12px}
+.tiles{flex:1 1 auto; min-height:0; overflow-y:auto; display:grid; grid-template-columns:1fr 1fr; grid-auto-rows:minmax(150px,1fr); gap:12px; align-content:stretch; padding:10px 10px 12px}
 .tile{position:relative; min-height:150px; padding:14px 12px; display:flex; flex-direction:column; justify-content:space-between; text-align:left; color:#fff; border:3px solid #000; border-radius:16px; box-shadow:4px 4px 0 #000; cursor:pointer; font-family:system-ui,-apple-system,Arial,sans-serif}
 .tile-e{font-size:44px; line-height:1; filter:drop-shadow(0 3px 2px rgba(0,0,0,.4))}
 .tile-name{font-size:22px; line-height:1.05; text-shadow:2px 2px 0 #000; overflow-wrap:anywhere}
@@ -662,7 +662,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B129";
+const BUILD = "B130";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1128,7 +1128,7 @@ function onVotes(rows){
   recomputeWins();
   if(lastResult) renderStats(lastResult.winner, lastResult.loser);
   // The ranking page may have opened before the votes arrived: redraw its wins and GOAT counts.
-  if(mode === "ladder" && S && !$("ladderEnd").classList.contains("hidden")) showLadderEnd();
+  if(mode === "ladder" && S && !$("ladderEnd").classList.contains("hidden")) (justFinished ? showLadderEnd() : showGoatView());
   refreshMashup();
   renderPicker();
 }
@@ -1345,7 +1345,7 @@ function renderMatchInner(){
   if(mode === "challenge" || mode === "oneoff"){
     [x, y] = challengePair;
   } else {
-    if(!S.queue.length) return showLadderEnd();
+    if(!S.queue.length) return justFinished ? showLadderEnd() : showGoatView();
     x = S.champ;
     y = pickChallenger();
   }
@@ -1434,7 +1434,41 @@ function renderRankList(){
       </span>` : ""}
     </div>`; }).join("");
 }
+/* justFinished: the run was completed in this visit (shows the full ranking). Otherwise a revisit shows only the overall GOAT. */
+let justFinished = false;
+let ladderView = "full";
+function showGoatView(){
+  ladderView = "goat";
+  const board = globalBoards()[CUR.id] || { wins: {}, crowns: {} };
+  const goatsOf = n => board.crowns[n] ? board.crowns[n].size : 0;
+  const winsOf = n => board.wins[n] || 0;
+  const top = CUR.items.map(i => i.n)
+    .filter(n => goatsOf(n) > 0 || winsOf(n) > 0)
+    .sort((a, b) => (goatsOf(b) - goatsOf(a)) || (winsOf(b) - winsOf(a)))[0] || null;
+  const item = top && CUR.byName[top];
+  rankEdit = false;
+  $("ladderEnd").innerHTML = `
+    ${item ? `<div class="le-bg" aria-hidden="true">${portraitHTML(item)}</div>` : ""}
+    <div class="le-headers">
+      <p class="ko display le-logo">The GOAT: ${CUR.name}</p>
+    </div>
+    <div class="le-grid single">${item
+      ? `<div class="le-cap"><span>Overall GOAT</span><b>${top}</b><small>${winsOf(top)} ${winsOf(top) === 1 ? "win" : "wins"}</small><small>👑 ${goatsOf(top)} GOAT${goatsOf(top) === 1 ? "" : "s"}</small></div>`
+      : `<p class="ko-sub">No GOAT yet. Be the first.</p>`}</div>
+    <div class="actions"><button class="btn primary" id="goatFresh"><span>Start fresh</span></button></div>`;
+  $("ladderEnd").classList.remove("hidden");
+  $("goatFresh").onclick = () => openPicker();
+  updateStatus();
+}
+function startFreshHere(){
+  mode = "ladder"; challengePair = null; lastResult = null; justFinished = false;
+  $("ladderEnd").classList.add("hidden");
+  S = freshRun();
+  saveLadder();
+  renderMatch();
+}
 function showLadderEnd(){
+  ladderView = "full";
   if(S.champ && !S.ranked.includes(S.champ)){ S.ranked.push(S.champ); saveLadder(); }
   const n = S.ranked.length;
   const done = n >= CUR.items.length;
@@ -1484,14 +1518,15 @@ function showLadderEnd(){
     <div class="le-grid${split ? "" : " single"}">${body}</div>
     <div class="actions">
       <button class="btn" id="rankEdit"><span>Edit</span></button>
-      <button class="btn primary" id="nextRank"><span>${done ? "Start over" : "Find #" + (n + 1)}</span></button>
+      <button class="btn primary" id="nextRank"><span>${done ? "Start fresh" : "Find #" + (n + 1)}</span></button>
     </div>`;
   renderRankList();
   $("ladderEnd").classList.remove("hidden");
   $("nextRank").onclick = () => {
+    if(done){ openPicker(); return; }
     mode = "ladder";
     challengePair = null;
-    S = newRunState(done ? [] : S.ranked);
+    S = newRunState(S.ranked);
     saveLadder();
     renderMatch();
   };
@@ -1530,6 +1565,7 @@ function castVote(side){
   if(!S.ranked.includes(winner)){
     const old = S.champ;
     S.queue = S.queue.filter(n => n !== winner && n !== loser);
+    if(!S.queue.length) justFinished = true;
     if(old !== winner && old !== loser) S.queue.push(old);
     S.streak = winner === old ? (S.streak || 0) + 1 : 1;   // wins in a row for the current champion
     S.champ = winner;
@@ -1852,12 +1888,14 @@ $("tiles").addEventListener("click", e => {
   }
   if(b.dataset.id === "mashup"){
     if(!mashupUnlocked()){ toast("Mashups open after 10 voted items in any 4 categories."); return; }
-    setCategory(MASHUP);
     closePicker();
+    if(CUR === MASHUP && S && !S.queue.length) startFreshHere(); else setCategory(MASHUP);
     return;
   }
-  setCategory(CATEGORIES.find(c => c.id === b.dataset.id));
+  const c = CATEGORIES.find(x => x.id === b.dataset.id);
   closePicker();
+  if(c === CUR && S && !S.queue.length){ startFreshHere(); return; }
+  setCategory(c);
 });
 
 /* While a fighter is dragged toward the rival, it brightens and the rival grays. p runs 0 to 1. */
