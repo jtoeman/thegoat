@@ -167,6 +167,7 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .picker{position:absolute; inset:0; z-index:7; background:var(--ink); padding:2px 14px 12px; display:flex; flex-direction:column; gap:12px; min-height:0; overflow:hidden}
 .picker-title{font-size:clamp(26px,9vw,40px); margin:0; text-align:center}
 .picker-note{margin:0; text-align:center}
+.picker .actions{margin-top:0}
 .skip-picker{display:flex; align-items:center; justify-content:center; gap:8px; margin:-4px 0 0; font-size:15px; color:#fff; cursor:pointer}
 .skip-picker input{width:18px; height:18px; margin:0; accent-color:var(--yellow)}
 /* Skip-the-result mode: a short "Winner!" between matchups, then it fades and the next matchup loads. */
@@ -193,7 +194,7 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .wf-badge{position:relative; width:50%; align-self:flex-start; display:flex; flex-direction:column; align-items:center; text-align:center; pointer-events:none}
 .win-flash[data-side="right"] .wf-badge{align-self:flex-end}
 @media (prefers-reduced-motion: reduce){ .wf-title,.wf-name{animation:none} }
-.tiles{flex:1; min-height:0; overflow-y:auto; display:grid; grid-template-columns:1fr 1fr; gap:12px; align-content:start; padding:10px 10px 12px}
+.tiles{flex:1 1 auto; min-height:0; overflow-y:auto; display:grid; grid-template-columns:1fr 1fr; grid-auto-rows:minmax(0,1fr); gap:12px; align-content:stretch; padding:10px 10px 12px}
 .tile{position:relative; min-height:150px; padding:14px 12px; display:flex; flex-direction:column; justify-content:space-between; text-align:left; color:#fff; border:3px solid #000; border-radius:16px; box-shadow:4px 4px 0 #000; cursor:pointer; font-family:system-ui,-apple-system,Arial,sans-serif}
 .tile-e{font-size:44px; line-height:1; filter:drop-shadow(0 3px 2px rgba(0,0,0,.4))}
 .tile-name{font-size:22px; line-height:1.05; text-shadow:2px 2px 0 #000; overflow-wrap:anywhere}
@@ -651,7 +652,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B127";
+const BUILD = "B128";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1412,7 +1413,7 @@ function showLadderEnd(){
   const n = S.ranked.length;
   const done = n >= CUR.items.length;
   track("Game Completed", { category: CUR.id, items_ranked: n, items_total: CUR.items.length, fully_sorted: done });
-  const heading = done ? "Fully sorted" : (n === 1 ? `Your GOAT of ${CUR.name.toLowerCase()} 👑` : `Rank #${n}`);
+  const heading = done ? "Fully sorted" : (n === 0 ? "" : n === 1 ? `Your GOAT of ${CUR.name.toLowerCase()} 👑` : `Rank #${n}`);
   rankEdit = false;
   // Header: the category's overall GOAT. Background: the same, full-bleed and dimmed.
   // Split runs the full panel height: left = the new entry with its stats; right = the player's #1 with its
