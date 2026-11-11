@@ -644,7 +644,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B121";
+const BUILD = "B122";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1094,6 +1094,8 @@ function onVotes(rows){
   myPicks = Object.assign({}, mine, myPicks);
   recomputeWins();
   if(lastResult) renderStats(lastResult.winner, lastResult.loser);
+  // The ranking page may have opened before the votes arrived: redraw its wins and GOAT counts.
+  if(mode === "ladder" && S && !$("ladderEnd").classList.contains("hidden")) showLadderEnd();
 }
 
 /* Reads every vote, a page at a time (Supabase returns at most 1000 rows per request). */
