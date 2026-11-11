@@ -161,7 +161,8 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .foot{flex:none; display:flex; align-items:center; gap:10px; margin:0; min-height:24px; line-height:1; font-size:12px; color:#cfd6ea}
 .foot-stats{display:flex; align-items:center; gap:6px; cursor:pointer; white-space:nowrap}
 .foot-stats input{width:16px; height:16px; margin:0; accent-color:var(--yellow)}
-.foot-help{flex:none; width:24px; height:24px; padding:0; border:2px solid #000; box-shadow:2px 2px 0 #000; background:var(--yellow); color:#111; font:700 15px/1 Impact,sans-serif; cursor:pointer; display:grid; place-items:center}
+.foot-help{flex:none; width:28px; height:28px; padding:0; border:2px solid #000; box-shadow:2px 2px 0 #000; background:var(--yellow); color:#111; font-size:16px; cursor:pointer; transform:skewX(-8deg); display:grid; place-items:center}
+.foot-help span{display:block; transform:skewX(8deg); font-family:Impact,sans-serif; line-height:1}
 .foot .build{margin-left:auto}
 .picker{position:absolute; inset:0; z-index:7; background:var(--ink); padding:2px 14px 12px; display:flex; flex-direction:column; gap:12px; min-height:0; overflow:hidden}
 .picker-title{font-size:clamp(26px,9vw,40px); margin:0; text-align:center}
@@ -227,10 +228,14 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 @keyframes introPulse{0%{box-shadow:0 0 0 0 rgba(255,210,63,.75)} 70%,100%{box-shadow:0 0 0 12px rgba(255,210,63,0)}}
 @media (prefers-reduced-motion: reduce){ .intro-card,.intro-title,.intro-go{animation:none} }
 .ico{display:inline-block; width:14px; height:14px; fill:currentColor; vertical-align:-2px; margin-right:5px}
-.picker-brand{font-style:italic; font-size:clamp(30px,11vw,48px); line-height:1; margin:0; text-align:center; text-shadow:3px 3px 0 #000}
+.picker-brand{display:none}
 /* Home screen (category picker): top bar shows only the brand and Stats */
 body.home .brand, body.home .round, body.home .streak, body.home .cat-pill{display:none}
 body.home #statsBtn{margin-left:auto}
+/* Home: the big title lives in the top bar, so it lines up with the Stats button. */
+body.home .topbar{height:auto; align-items:flex-start}
+body.home .brand{display:block; flex:1; min-width:0; font-style:italic; font-size:clamp(30px,11vw,48px); line-height:1; text-shadow:3px 3px 0 #000; cursor:default; white-space:nowrap; color:#fff}
+body.home .stats-btn{margin-top:0}
 body.home #resetBtn{display:none}
 #statsPanel{z-index:8}
 .overlay.dialog{z-index:9; background:rgba(7,10,20,.97); justify-content:center; gap:14px}
@@ -638,7 +643,7 @@ body.home #resetBtn{display:none}
     </main>
 
     <p class="hint" id="hint"></p>
-    <p class="foot"><label class="foot-stats"><input type="checkbox" id="matchShowStats"> <span>Show stats between rounds</span></label><button type="button" class="foot-help" id="aboutBtn" aria-label="About The GOAT">?</button><froobaloo-badge></froobaloo-badge><span class="build" id="build"></span></p>
+    <p class="foot"><label class="foot-stats"><input type="checkbox" id="matchShowStats"> <span>Stats</span></label><froobaloo-badge></froobaloo-badge><span class="build" id="build"></span><button type="button" class="foot-help" id="aboutBtn" aria-label="About The GOAT"><span>?</span></button></p>
   </div>
 </div>
 
@@ -646,7 +651,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B126";
+const BUILD = "B127";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
