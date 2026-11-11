@@ -1,0 +1,11 @@
+name = "goat-image-ingest"
+main = "src/index.js"
+compatibility_date = "2026-11-01"
+
+# R2 bucket. Create it in the Cloudflare dashboard first: R2 > Create bucket > goat-images
+[[r2_buckets]]
+binding = "IMAGES"
+bucket_name = "goat-images"
+
+# Set the token with: npx wrangler secret put INGEST_TOKEN
+# (the value is a long random string you keep, for example from a password manager)
