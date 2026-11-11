@@ -644,7 +644,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B124";
+const BUILD = "B125";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1270,6 +1270,16 @@ function setHint(text, go){
   h.classList.toggle("go", !!go);
 }
 
+/* In Mashups, the challenger is never from the same category as the champion. The first queued item
+   from another category moves to the front; if none is left, the queue order stands. Other categories are unchanged. */
+function categoryOfName(n){ const c = CATEGORIES.find(k => k.byName[n]); return c ? c.id : null; }
+function pickChallenger(){
+  if(CUR !== MASHUP || !S.queue.length) return S.queue[0];
+  const champCat = categoryOfName(S.champ);
+  const i = S.queue.findIndex(n => categoryOfName(n) !== champCat);
+  if(i > 0){ const [n] = S.queue.splice(i, 1); S.queue.unshift(n); }
+  return S.queue[0];
+}
 function renderMatch(){
   try{
     if(mode === "ladder" && S){
@@ -1303,7 +1313,7 @@ function renderMatchInner(){
   } else {
     if(!S.queue.length) return showLadderEnd();
     x = S.champ;
-    y = S.queue[0];
+    y = pickChallenger();
   }
 
   // The winner keeps its side until it is unseated. The challenger takes the other side.
