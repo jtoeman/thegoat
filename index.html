@@ -158,8 +158,12 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .toast{position:fixed; left:50%; bottom:calc(20px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%); max-width:calc(100% - 32px); background:var(--yellow); color:#111; font-family:Impact,sans-serif; text-transform:uppercase; letter-spacing:.05em; padding:8px 16px; border:3px solid #000; box-shadow:4px 4px 0 #000; font-size:15px; z-index:20; text-align:center}.cat-pill{flex:1 1 auto; min-width:0; display:flex; align-items:center; gap:6px; min-height:30px; padding:4px 8px; font-size:14px; color:#fff; background:#1b2440; border:2px solid #000; box-shadow:2px 2px 0 #000; cursor:pointer; white-space:nowrap}
 .cat-pill span{overflow:hidden; text-overflow:ellipsis}
 .cat-pill .chev{color:var(--yellow); flex:none}
-.foot{flex:none; height:12px; margin:0; text-align:right; line-height:12px}
-.picker{position:absolute; inset:0; z-index:7; background:var(--ink); padding:14px 14px 12px; display:flex; flex-direction:column; gap:12px; min-height:0; overflow:hidden}
+.foot{flex:none; display:flex; align-items:center; gap:10px; margin:0; min-height:24px; line-height:1; font-size:12px; color:#cfd6ea}
+.foot-stats{display:flex; align-items:center; gap:6px; cursor:pointer; white-space:nowrap}
+.foot-stats input{width:16px; height:16px; margin:0; accent-color:var(--yellow)}
+.foot-help{flex:none; width:24px; height:24px; padding:0; border:2px solid #000; box-shadow:2px 2px 0 #000; background:var(--yellow); color:#111; font:700 15px/1 Impact,sans-serif; cursor:pointer; display:grid; place-items:center}
+.foot .build{margin-left:auto}
+.picker{position:absolute; inset:0; z-index:7; background:var(--ink); padding:2px 14px 12px; display:flex; flex-direction:column; gap:12px; min-height:0; overflow:hidden}
 .picker-title{font-size:clamp(26px,9vw,40px); margin:0; text-align:center}
 .picker-note{margin:0; text-align:center}
 .skip-picker{display:flex; align-items:center; justify-content:center; gap:8px; margin:-4px 0 0; font-size:15px; color:#fff; cursor:pointer}
@@ -175,7 +179,6 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .wf-undo{margin-top:16px; pointer-events:auto; width:auto; height:52px; padding:0 14px; font-family:Impact,"Haettenschweiler",sans-serif; text-transform:uppercase; letter-spacing:.06em; font-size:16px; color:#fff; background:#e8303a}
 .wf-undo span{display:inline-block; transform:skewX(8deg)}
 .wf-undo:active{transform:translate(2px,2px) skewX(-8deg); box-shadow:1px 1px 0 #000}
-.hint-stats{display:flex; justify-content:center; margin:2px 0 0; font-size:12px}
 .wf-title{margin:0; font-size:clamp(26px,9vw,44px); line-height:.95; white-space:nowrap; color:var(--yellow); text-shadow:4px 4px 0 #000, 0 0 24px rgba(255,210,63,.5); animation:wfPop .5s cubic-bezier(.2,1.6,.4,1) both, wfWobble 1s ease-in-out .5s infinite}
 .wf-name{margin:4px 0 0; font-size:clamp(20px,7vw,36px); line-height:1.05; color:#fff; text-shadow:2px 2px 0 #000; animation:wfPop .5s .15s cubic-bezier(.2,1.6,.4,1) both}
 .wf-pair{margin:0 0 6px; font-size:clamp(13px,4vw,16px); font-weight:700; color:var(--yellow); text-shadow:2px 2px 0 #000; letter-spacing:.02em}
@@ -630,13 +633,12 @@ body.home #resetBtn{display:none}
           <button class="btn" id="pickerEdit"><span>Edit</span></button>
           <button class="btn" id="pickerBack"><span>Back</span></button>
         </div>
-        <p class="ko-sub picker-note" id="pickerNote">Tap a box to play.</p>
+        <p class="ko-sub picker-note hidden" id="pickerNote"></p>
       </section>
     </main>
 
     <p class="hint" id="hint"></p>
-    <label class="skip-picker hint-stats"><input type="checkbox" id="matchShowStats"> <span>Show stats between rounds</span></label>
-    <p class="foot"><froobaloo-badge></froobaloo-badge><button type="button" class="foot-link" id="aboutBtn">About</button> · <span class="build" id="build"></span></p>
+    <p class="foot"><label class="foot-stats"><input type="checkbox" id="matchShowStats"> <span>Show stats between rounds</span></label><button type="button" class="foot-help" id="aboutBtn" aria-label="About The GOAT">?</button><froobaloo-badge></froobaloo-badge><span class="build" id="build"></span></p>
   </div>
 </div>
 
@@ -644,7 +646,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B125";
+const BUILD = "B126";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1401,7 +1403,6 @@ function renderRankList(){
     </div>`; }).join("");
 }
 function showLadderEnd(){
-  setHint("Tap Find to continue.", false);
   if(S.champ && !S.ranked.includes(S.champ)){ S.ranked.push(S.champ); saveLadder(); }
   const n = S.ranked.length;
   const done = n >= CUR.items.length;
@@ -1772,7 +1773,8 @@ function renderPicker(){
   // Mashups is always the 5th entry (or last, if there are fewer than 5 categories showing).
   tiles.splice(Math.min(4, tiles.length), 0, mashupTileHTML());
   $("tiles").innerHTML = tiles.join("");
-  $("pickerNote").textContent = editing ? "Hidden categories leave the picker and Mashups. Tap a box to hide or show it." : "Tap a box to play.";
+  $("pickerNote").textContent = editing ? "Hidden categories leave the picker and Mashups. Tap a box to hide or show it." : "";
+  $("pickerNote").classList.toggle("hidden", !editing);
 }
 function setCategory(cat){
   if(cat === CUR) return;
