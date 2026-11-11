@@ -25,8 +25,8 @@ The Worker fetches the image and stores it under `<category>/<slug>.jpg` in the 
 - If one exists, it shows both images as game cards (current on the left, new on the right) with their names, plus the license, credit and date of the current one, and asks you to **Replace**, **Save as a new name** (adds -2, -3…), or **Keep current**.
 - Nothing is replaced without a choice.
 
-## EXT6 (v0.6.0)
-- Category and name are dropdowns from the GOAT sheet (via the Worker's /catalog). Pick "+ New" to type one.
+## EXT6 (v0.6.1)
+- Category and name are dropdowns read from the GOAT sheet. Pick "+ New" to type one.
 - The top of the form shows the image on a game card with its name plate.
 - License, credit and source are hidden under "License, credit and source (optional)".
-- Needs the B19 Worker deployed (see ingest-worker/README.md).
+- Reads the GOAT sheet directly, so it does not need the Worker redeployed. The iPhone Shortcut needs B19 (see ingest-worker/README.md).

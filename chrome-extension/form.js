@@ -1,7 +1,9 @@
-// EXT6 (v0.6.0): category and name are dropdowns from the GOAT sheet (via the ingest Worker's /catalog),
+// EXT6 (v0.6.0): category and name are dropdowns read from the GOAT sheet,
 // with "+ New" for either. The top of the form shows the image as it will appear in game.
 // Before sending, an existing image at the same category and name opens a Replace / Save as new / Keep choice.
 const WORKER = "https://goat-image-ingest.jeremy-86d.workers.dev";
+const SHEET_ID = "1FbM320qaloYDHZHRAvLfDiK-IeKeM4TUaQo_hve_KsU";
+const INDEX_GID = 1558846279; // the "Categories" tab
 const IMAGE_BASE = "https://images.froobaloo.com/";
 const UNCATEGORIZED = "uncategorized";
 const NEW = "__new__";
@@ -17,16 +19,65 @@ const slugify = s => (s || "").toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/
 const urlFor = (category, slug) => IMAGE_BASE + category + "/" + slug + ".jpg";
 const defaultName = () => pageTitle.replace(/\s[-|–].*$/, "").trim();
 
-/* Categories and their words come from the Worker, which reads the GOAT sheet. Last good copy is the fallback. */
+/* Minimal CSV reader: quoted fields, doubled quotes, CRLF or LF. Keys are lowercase headers. */
+function parseCSV(text){
+  const rows = []; let row = [], field = "", q = false;
+  text = text.replace(/^\uFEFF/, "");
+  for(let i = 0; i < text.length; i++){
+    const ch = text[i];
+    if(q){
+      if(ch === '"'){ if(text[i + 1] === '"'){ field += '"'; i++; } else q = false; }
+      else field += ch;
+    } else if(ch === '"') q = true;
+    else if(ch === ","){ row.push(field); field = ""; }
+    else if(ch === "\n" || ch === "\r"){
+      if(ch === "\r" && text[i + 1] === "\n") i++;
+      row.push(field); rows.push(row); row = []; field = "";
+    } else field += ch;
+  }
+  if(field || row.length){ row.push(field); rows.push(row); }
+  const head = (rows.shift() || []).map(h => h.trim().toLowerCase());
+  return rows.filter(r => r.some(c => c.trim())).map(r => Object.fromEntries(head.map((h, i) => [h, (r[i] || "").trim()])));
+}
+const sheetTab = gid => fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`, { cache: "no-store" })
+  .then(r => { if(!r.ok) throw new Error("HTTP " + r.status); return r.text(); });
+const idOf = s => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+const photoSlugOf = name => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+/* A word's slug is the file name in its sheet photo column when that photo is in this category's folder. */
+function slugFor(word, category){
+  const prefix = IMAGE_BASE + category + "/";
+  if(word.photo && word.photo.startsWith(prefix)){
+    const file = word.photo.slice(prefix.length).split("?")[0].replace(/\.jpg$/i, "");
+    if(/^[a-z0-9]+(-[a-z0-9]+)*$/.test(file)) return file;
+  }
+  return photoSlugOf(word.name);
+}
+
+/* Categories and words, read from the GOAT sheet (Categories tab, then each category tab). Last good copy is the fallback. */
 async function loadCatalog(){
   try{
-    const res = await fetch(WORKER + "/catalog", { cache: "no-store" });
-    if(!res.ok) throw new Error("HTTP " + res.status);
-    const data = await res.json();
-    await chrome.storage.local.set({ goatCatalog: data.categories });
-    return data.categories;
+    const index = parseCSV(await sheetTab(INDEX_GID)).filter(r => r.category && r["tab id"]);
+    const cats = [], seen = new Set();
+    for(const r of index){
+      const id = idOf(r.category);
+      if(!id || id === UNCATEGORIZED || seen.has(id)) continue;
+      seen.add(id);
+      let rows = [];
+      try{ rows = parseCSV(await sheetTab(r["tab id"])); }catch(e){ continue; }
+      const names = new Set(), words = [];
+      for(const w of rows){
+        if(!w.name || (w.on || "TRUE").toUpperCase() === "FALSE" || names.has(w.name)) continue;
+        names.add(w.name);
+        words.push({ name: w.name, slug: slugFor(w, id), photo: w.photo || null });
+      }
+      cats.push({ id, name: r["display name"] || r.category, words });
+    }
+    if(!cats.length) throw new Error("no categories in the sheet");
+    await chrome.storage.local.set({ goatCatalog: cats });
+    return cats;
   }catch(e){
-    console.warn("catalog not loaded", e);
+    console.warn("catalog not loaded from sheet", e);
     return (await chrome.storage.local.get("goatCatalog")).goatCatalog || [];
   }
 }
@@ -83,8 +134,15 @@ function choice(){
 
 /* Preview at the top: the image on a game fighter with the name plate. */
 function updateCard(){
-  $("cardPlate").textContent = choice().name;
+  const name = choice().name;
+  $("cardPlateA").textContent = name;
+  $("cardPlateB").textContent = name;
 }
+$("expand").addEventListener("click", () => {
+  const wrap = $("cardWrap");
+  const on = wrap.classList.toggle("expanded");
+  $("expand").textContent = on ? "Close" : "Full height";
+});
 
 /* Is there already an image at this category/name? HEAD only, so nothing is downloaded. */
 async function exists(category, slug){
@@ -156,9 +214,10 @@ async function send(p){
 function init(){
   // Chrome sometimes opens the form with an http link; the Worker needs https.
   if(src.startsWith("http://")) src = "https://" + src.slice(7);
-  $("cardImg").src = src;
+  $("cardImgA").src = src;
+  $("cardImgB").src = src;
   $("source_page").value = params.get("page") || "";
-  $("foot").textContent = "EXT6 · v0.6.0 · " + (src.startsWith("https://") ? "ready" : "not an https image: cannot add");
+  $("foot").textContent = "EXT6 · v0.6.1 · " + (src.startsWith("https://") ? "ready" : "not an https image: cannot add");
   fillCategories();
 }
 
