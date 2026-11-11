@@ -644,7 +644,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B122";
+const BUILD = "B123";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1096,6 +1096,8 @@ function onVotes(rows){
   if(lastResult) renderStats(lastResult.winner, lastResult.loser);
   // The ranking page may have opened before the votes arrived: redraw its wins and GOAT counts.
   if(mode === "ladder" && S && !$("ladderEnd").classList.contains("hidden")) showLadderEnd();
+  refreshMashup();
+  renderPicker();
 }
 
 /* Reads every vote, a page at a time (Supabase returns at most 1000 rows per request). */
@@ -1690,7 +1692,10 @@ function categoryVotedItems(c){
   Object.keys(myPicks).forEach(k => { const p = parseKey(k); if(p.cat === c.id){ seen.add(p.x); seen.add(p.y); } });
   return seen.size;
 }
-const MASHUP_MIN_CATS = 4;   // Mashups opens once a player has 10 voted items in this many categories
+const MASHUP_MIN_CATS = 3;   // Mashups opens once a player is ready in this many categories
+/* A category is ready for you when you have crowned a GOAT in it, or voted on at least 10 of its items. */
+function hasMyGoat(c){ return Object.keys(myPicks).some(k => { const p = parseKey(k); return p.cat === c.id && myPicks[k] && myPicks[k].g; }); }
+function catReady(c){ return hasMyGoat(c) || categoryVotedItems(c) >= 10; }
 /* B92: categories a player has hidden. Hidden ones leave the picker, Mashups and the stats home list. Saved per browser. */
 function hiddenIds(){ const v = readStore("goat_hidden_cats"); return new Set(Array.isArray(v) ? v : []); }
 function isHidden(c){ return hiddenIds().has(c.id); }
@@ -1701,7 +1706,7 @@ function setHidden(c, on){
   refreshMashup();
 }
 function visibleCats(){ const h = hiddenIds(); return CATEGORIES.filter(c => !h.has(c.id)); }
-function readyCats(){ return visibleCats().filter(c => categoryVotedItems(c) >= 10); }
+function readyCats(){ return visibleCats().filter(catReady); }
 function mashupUnlocked(){ return readyCats().length > 0 && readyCats().length >= Math.min(MASHUP_MIN_CATS, visibleCats().length); }
 /* Mashups mixes only the categories this player has finished, so it grows as they unlock more. */
 /* A mashup challenge link can name items from categories the player has not finished. Those two stay in the pool for this visit. */
@@ -1723,12 +1728,12 @@ function mashupTileHTML(){
       ${top ? `<span class="tile-goat">👑 ${top}</span>` : ""}
     </button>`;
   }
-  const prog = visibleCats().map(c => `${c.name} ${Math.min(categoryVotedItems(c), 10)}/10`).join(" · ");
+  const prog = visibleCats().map(c => `${c.name} ${hasMyGoat(c) ? "👑 GOAT" : `${Math.min(categoryVotedItems(c), 10)}/10`}`).join(" · ");
   return `
     <button class="tile mashup locked" data-id="mashup" aria-disabled="true" style="background:#3a3f4d">
       <span class="tile-e" aria-hidden="true">🔒</span>
       <span class="tile-name display">Mashups</span>
-      <span class="tile-n">Locked. Vote on 10 items in any ${MASHUP_MIN_CATS} categories to open it.</span>
+      <span class="tile-n">Locked. Crown a GOAT or vote on 10 items in any ${MASHUP_MIN_CATS} categories to open it.</span>
       <span class="tile-n">${prog}</span>
     </button>`;
 }
@@ -1996,7 +2001,7 @@ function yoursHTML(){
     const done = readyCats().length;
     const note = mashupUnlocked()
       ? "Mashups are open. Tap a category to play it."
-      : `Mashups open with 10 voted items in any ${MASHUP_MIN_CATS} categories: ${done} of ${MASHUP_MIN_CATS} ready.`;
+      : `Mashups open once you crown a GOAT or vote on 10 items in any ${MASHUP_MIN_CATS} categories: ${done} of ${MASHUP_MIN_CATS} ready.`;
     const cards = visibleCats().map(c => {
       const n = Math.min(categoryVotedItems(c), 10);
       const top = categoryTop(c);
@@ -2030,7 +2035,7 @@ function yoursHTML(){
             <b class="display">Mashups</b>
             <span class="cc-meta">${matchupWord(mCount)} so far</span>
             <span class="prog"><span class="prog-fill" data-w="${Math.min(100, Math.round(100 * readyN / MASHUP_MIN_CATS))}"></span></span>
-            <span class="cc-meta">${readyN} of ${MASHUP_MIN_CATS} categories at 10 items</span>
+            <span class="cc-meta">${readyN} of ${MASHUP_MIN_CATS} categories ready (a GOAT or 10 votes)</span>
           </span>
         </div>`;
     html = `<p class="ko-sub">${note}</p>` + cards + mashCard;
