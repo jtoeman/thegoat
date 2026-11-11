@@ -167,9 +167,10 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .picker{position:absolute; inset:0; z-index:7; background:var(--ink); padding:2px 14px 12px; display:flex; flex-direction:column; gap:12px; min-height:0; overflow:hidden}
 .picker-title{font-size:clamp(26px,9vw,40px); margin:0; text-align:center}
 .picker-note{margin:0; text-align:center}
-.suggest-box{flex:none; width:100%; height:72px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; background:#1a1f2e; color:#6b7390; border:3px solid #000; box-shadow:3px 3px 0 #000; font:inherit; cursor:not-allowed}
-.suggest-box b{font:17px/1 Impact,"Arial Narrow",sans-serif; text-transform:uppercase; letter-spacing:.06em}
-.suggest-box span{font-size:12px; font-style:italic}
+/* Suggest a category: a half-height tile under the grid, greyed out until it is wired up. */
+.suggest-box{flex:none; width:100%; height:80px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; background:linear-gradient(135deg,#3a4259,#252c40); color:#7d87a4; border:3px solid #000; border-radius:16px; box-shadow:4px 4px 0 #000; font:inherit; cursor:not-allowed}
+.suggest-box b{font:20px/1 Impact,"Arial Narrow",sans-serif; text-transform:uppercase; letter-spacing:.04em; text-shadow:2px 2px 0 #000}
+.suggest-box span{font-size:13px; font-style:italic; text-shadow:1px 1px 0 #000}
 .picker .actions{margin-top:0}
 .skip-picker{display:flex; align-items:center; justify-content:center; gap:8px; margin:-4px 0 0; font-size:15px; color:#fff; cursor:pointer}
 .skip-picker input{width:18px; height:18px; margin:0; accent-color:var(--yellow)}
@@ -197,7 +198,8 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .wf-badge{position:relative; width:50%; align-self:flex-start; display:flex; flex-direction:column; align-items:center; text-align:center; pointer-events:none}
 .win-flash[data-side="right"] .wf-badge{align-self:flex-end}
 @media (prefers-reduced-motion: reduce){ .wf-title,.wf-name{animation:none} }
-.tiles{flex:1 1 auto; min-height:0; overflow-y:auto; display:grid; grid-template-columns:1fr 1fr; grid-auto-rows:minmax(172px,1fr); gap:12px; align-content:stretch; padding:10px 10px 12px}
+.tiles{flex:1 1 auto; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:12px; padding:10px 10px 12px}
+.tile-grid{flex:1 0 auto; display:grid; grid-template-columns:1fr 1fr; grid-auto-rows:minmax(150px,1fr); gap:12px; align-content:stretch}
 .tile{position:relative; min-height:150px; padding:14px 12px; display:flex; flex-direction:column; justify-content:space-between; text-align:left; color:#fff; border:3px solid #000; border-radius:16px; box-shadow:4px 4px 0 #000; cursor:pointer; font-family:system-ui,-apple-system,Arial,sans-serif}
 .tile-e{font-size:44px; line-height:1; filter:drop-shadow(0 3px 2px rgba(0,0,0,.4))}
 .tile-name{font-size:22px; line-height:1.05; text-shadow:2px 2px 0 #000; overflow-wrap:anywhere}
@@ -654,7 +656,6 @@ body.home #resetBtn{display:none}
           <button class="btn" id="pickerBack"><span>Back</span></button>
         </div>
         <p class="ko-sub picker-note hidden" id="pickerNote"></p>
-        <button type="button" class="suggest-box" id="suggestBox" disabled><b>Suggest a category</b><span>Coming soon</span></button>
       </section>
     </main>
 
@@ -667,7 +668,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B131";
+const BUILD = "B132";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1845,7 +1846,8 @@ function renderPicker(){
   });
   // Mashups is always the 5th entry (or last, if there are fewer than 5 categories showing).
   tiles.splice(Math.min(4, tiles.length), 0, mashupTileHTML());
-  $("tiles").innerHTML = tiles.join("");
+  $("tiles").innerHTML = `<div class="tile-grid">${tiles.join("")}</div>
+    <button type="button" class="suggest-box" id="suggestBox" disabled><b>Suggest a category</b><span>Coming soon</span></button>`;
   $("pickerNote").textContent = editing ? "Hidden categories leave the picker and Mashups. Tap a box to hide or show it." : "";
   $("pickerNote").classList.toggle("hidden", !editing);
 }
