@@ -167,6 +167,9 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .picker{position:absolute; inset:0; z-index:7; background:var(--ink); padding:2px 14px 12px; display:flex; flex-direction:column; gap:12px; min-height:0; overflow:hidden}
 .picker-title{font-size:clamp(26px,9vw,40px); margin:0; text-align:center}
 .picker-note{margin:0; text-align:center}
+.suggest-box{flex:none; width:100%; height:72px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; background:#1a1f2e; color:#6b7390; border:3px solid #000; box-shadow:3px 3px 0 #000; font:inherit; cursor:not-allowed}
+.suggest-box b{font:17px/1 Impact,"Arial Narrow",sans-serif; text-transform:uppercase; letter-spacing:.06em}
+.suggest-box span{font-size:12px; font-style:italic}
 .picker .actions{margin-top:0}
 .skip-picker{display:flex; align-items:center; justify-content:center; gap:8px; margin:-4px 0 0; font-size:15px; color:#fff; cursor:pointer}
 .skip-picker input{width:18px; height:18px; margin:0; accent-color:var(--yellow)}
@@ -194,7 +197,7 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .wf-badge{position:relative; width:50%; align-self:flex-start; display:flex; flex-direction:column; align-items:center; text-align:center; pointer-events:none}
 .win-flash[data-side="right"] .wf-badge{align-self:flex-end}
 @media (prefers-reduced-motion: reduce){ .wf-title,.wf-name{animation:none} }
-.tiles{flex:1 1 auto; min-height:0; overflow-y:auto; display:grid; grid-template-columns:1fr 1fr; grid-auto-rows:minmax(150px,1fr); gap:12px; align-content:stretch; padding:10px 10px 12px}
+.tiles{flex:1 1 auto; min-height:0; overflow-y:auto; display:grid; grid-template-columns:1fr 1fr; grid-auto-rows:minmax(172px,1fr); gap:12px; align-content:stretch; padding:10px 10px 12px}
 .tile{position:relative; min-height:150px; padding:14px 12px; display:flex; flex-direction:column; justify-content:space-between; text-align:left; color:#fff; border:3px solid #000; border-radius:16px; box-shadow:4px 4px 0 #000; cursor:pointer; font-family:system-ui,-apple-system,Arial,sans-serif}
 .tile-e{font-size:44px; line-height:1; filter:drop-shadow(0 3px 2px rgba(0,0,0,.4))}
 .tile-name{font-size:22px; line-height:1.05; text-shadow:2px 2px 0 #000; overflow-wrap:anywhere}
@@ -236,6 +239,7 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .start-row select{flex:1; min-width:0; height:30px; background:#1b2440; color:#fff; border:2px solid #000; box-shadow:2px 2px 0 #000; font:inherit; padding:0 6px}
 .start-row .btn{min-height:30px; padding:0 12px; flex:none}
 body.home .start-row{display:none !important}
+body.home .hint{display:none}
 /* Home screen (category picker): top bar shows only the brand and Stats */
 body.home .brand, body.home .round, body.home .streak, body.home .cat-pill{display:none}
 body.home #statsBtn{margin-left:auto}
@@ -381,9 +385,9 @@ body.home #resetBtn{display:none}
 .toast-btn{margin-left:10px; font:inherit; text-transform:inherit; letter-spacing:inherit; color:var(--yellow); background:#111; border:2px solid #000; padding:3px 10px; cursor:pointer}
 .stat-hero{display:flex; align-items:center; gap:14px; padding:4px 2px 8px}
 .ring{flex:0 0 92px; width:92px; height:92px; border-radius:50%; border:3px solid #000; box-shadow:3px 3px 0 #000; display:grid; place-items:center}
-.ring-in{width:66px; height:66px; border-radius:50%; background:var(--panel); border:2px solid #000; display:flex; flex-direction:column; align-items:center; justify-content:center}
+.ring-in{width:66px; height:66px; border-radius:50%; background:var(--panel); border:2px solid #000; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; box-sizing:border-box; padding:0 4px}
 .ring-in b{font:24px/1 Impact,sans-serif; color:var(--go)}
-.ring-in small{font-size:9px; color:var(--mute); text-transform:uppercase; letter-spacing:.04em; margin-top:2px}
+.ring-in small{font-size:8px; color:var(--mute); text-transform:uppercase; letter-spacing:.02em; margin-top:3px; white-space:nowrap; line-height:1}
 .hero-nums{display:grid; gap:6px; flex:1; min-width:0}
 .hero-nums div{display:flex; justify-content:space-between; gap:8px; font-size:13px; border-bottom:1px dashed #222c48; padding-bottom:4px}
 .hero-nums span{color:var(--mute)}
@@ -650,6 +654,7 @@ body.home #resetBtn{display:none}
           <button class="btn" id="pickerBack"><span>Back</span></button>
         </div>
         <p class="ko-sub picker-note hidden" id="pickerNote"></p>
+        <button type="button" class="suggest-box" id="suggestBox" disabled><b>Suggest a category</b><span>Coming soon</span></button>
       </section>
     </main>
 
@@ -662,7 +667,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B130";
+const BUILD = "B131";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -2149,6 +2154,9 @@ function yoursHTML(){
       if(crowd === entry.w) agree++;
     });
     const pct = counted ? Math.round(100 * agree / counted) : null;
+    const allWins = Object.entries(allTime).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    const favourite = allWins.length ? `${allWins[0][0]} (${allWins[0][1]})` : "none yet";
+    const myTopNow = S && S.ranked && S.ranked[0] ? S.ranked[0] : "not ranked yet";
     const source = statsTab === "all" ? allTime : session;
     const entries = Object.entries(source).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
     const max = entries.length ? entries[0][1] : 1;
@@ -2163,6 +2171,9 @@ function yoursHTML(){
           <div><span>${CUR.name} matchups, all time</span><b>${keys.length}</b></div>
           <div><span>Picks this session</span><b>${sessionTotal}</b></div>
           <div><span>Agreed with the crowd</span><b>${counted ? agree + " of " + counted : "not yet"}</b></div>
+          <div><span>Went against the crowd</span><b>${counted ? counted - agree : "not yet"}</b></div>
+          <div><span>Your most-picked</span><b>${favourite}</b></div>
+          <div><span>Your current #1</span><b>${myTopNow}</b></div>
         </div>
       </div>
       <div class="seg" role="tablist">
