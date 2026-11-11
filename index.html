@@ -230,6 +230,12 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 @media (prefers-reduced-motion: reduce){ .intro-card,.intro-title,.intro-go{animation:none} }
 .ico{display:inline-block; width:14px; height:14px; fill:currentColor; vertical-align:-2px; margin-right:5px}
 .picker-brand{display:none}
+/* Start row: shown only before the first pick of a run. */
+.start-row{flex:none; display:flex; align-items:center; gap:8px; font-size:13px; color:#cfd6ea; min-width:0}
+.start-row label{display:flex; align-items:center; gap:6px; flex:1; min-width:0; white-space:nowrap}
+.start-row select{flex:1; min-width:0; height:30px; background:#1b2440; color:#fff; border:2px solid #000; box-shadow:2px 2px 0 #000; font:inherit; padding:0 6px}
+.start-row .btn{min-height:30px; padding:0 12px; flex:none}
+body.home .start-row{display:none !important}
 /* Home screen (category picker): top bar shows only the brand and Stats */
 body.home .brand, body.home .round, body.home .streak, body.home .cat-pill{display:none}
 body.home #statsBtn{margin-left:auto}
@@ -443,6 +449,11 @@ body.home #resetBtn{display:none}
       <button class="reset stats-btn display" id="statsBtn"><span><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="1" y="9" width="3.5" height="6"/><rect x="6.25" y="5" width="3.5" height="10"/><rect x="11.5" y="1" width="3.5" height="14"/></svg>Stats</span></button>
     </div>
 
+    <div class="start-row hidden" id="startRow">
+      <label>Start with <select id="startSel" aria-label="Starting item"></select></label>
+      <button class="btn" id="startRand"><span>Random</span></button>
+    </div>
+
     <main class="stage" id="stage">
       <section class="boot" id="boot" role="status" aria-label="Loading The GOAT">
         <div class="boot-card">
@@ -541,15 +552,14 @@ body.home #resetBtn{display:none}
       </section>
 
       <section class="overlay dialog hidden" id="aboutPanel" role="dialog" aria-modal="true" aria-label="About The GOAT">
-        <p class="ko display">About</p>
-        <p class="about-p">The GOAT is a head-to-head game. Pick the better of two items, round after round, until one is crowned the GOAT of its category. Everyone's picks add up to a community GOAT for each category.</p>
+        <p class="ko display">What’s Your GOAT?</p>
+        <p class="about-p">Pick the better of two items, round after round, until one is crowned the GOAT of its category. Everyone's picks add up to a community GOAT for each category.</p>
         <p class="ko-sub">Made by Jeremy Toeman</p>
-        <p class="about-p">Jeremy has spent about 30 years building products people end up arguing about, from the original Slingbox at Sling Media to streaming apps at Viggle, Joyn and WarnerMedia. He studied at Carnegie Mellon and lives in the New York area with his family. He would like you to know he has strong opinions about who the GOAT is.</p>
-        <p class="about-p">Most recently he founded Augie Studio, an AI-assisted video platform that JW Player (now JWX) acquired, and he now leads AI innovation there. He built The GOAT because a head-to-head game is the best way he knows to find out what people really think, one pick at a time. There's a hidden 37 in here somewhere, if you go looking.</p>
+        <p class="about-p">Jeremy has spent about 30 years building products, websites, apps, and games. He studied at Carnegie Mellon and lives in the New York area with his family. He would like you to know he has strong opinions about what the GOAT is. He’s been nurturing this idea for over a decade!</p>
         <p class="ko-sub">Images</p>
         <p class="about-p">We've used best efforts to confirm that every image is licensed for this use: openly licensed, public domain, or used with permission. Where we couldn't confirm a license, we'll replace the image. If you hold rights to an image here and want it changed or removed, tell us and we will.</p>
         <p class="about-p" id="kofiWrap">if you like playing the Goat, support it here: <a id="kofiLink" href="http://ko-fi.com/jtoeman" target="_blank" rel="noopener">ko-fi.com/jtoeman</a></p>
-        <div class="actions"><button class="btn" id="aboutClose"><span>Close</span></button></div>
+        <div class="actions"><button class="btn" id="suggestCat"><span>Suggest a category</span></button><button class="btn" id="aboutClose"><span>Close</span></button></div>
       </section>
 
       <section class="overlay dialog hidden" id="profilePanel" role="dialog" aria-modal="true" aria-label="My page">
@@ -652,7 +662,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B128";
+const BUILD = "B129";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1052,6 +1062,21 @@ function tieRanks(cat){
 }
 /* A run picks a champion from the items not yet ranked. Each finished run ranks its champion; the next
    run excludes everything ranked so far. If prevChamp is still unranked (mid-run Reset), the run continues from it. */
+/* Per-category starting item. Empty means the default order. */
+function startPref(cat){ const m = readStore("goat_start") || {}; return (typeof m[cat.id] === "string" && cat.byName[m[cat.id]]) ? m[cat.id] : null; }
+function setStartPref(cat, name){ const m = readStore("goat_start") || {}; if(name) m[cat.id] = name; else delete m[cat.id]; writeStore("goat_start", m); }
+function freshRun(){ return newRunState([], startPref(CUR)); }
+function renderStartRow(){
+  const row = $("startRow");
+  const fresh = mode === "ladder" && S && !S.ranked.length && S.round === 0;
+  row.classList.toggle("hidden", !fresh);
+  if(!fresh) return;
+  const pref = startPref(CUR);
+  const opts = ['<option value="">Most picked first</option>']
+    .concat(CUR.items.map(f => f.n).sort((a, b) => a.localeCompare(b))
+      .map(n => `<option value="${n.replace(/"/g, "&quot;")}"${n === pref ? " selected" : ""}>${n}</option>`));
+  $("startSel").innerHTML = opts.join("");
+}
 function newRunState(ranked, prevChamp, shuffle){
   // most-picked first (times picked as a winner), seeded shuffle on ties. The first item opens the run.
   const tie = tieRanks(CUR);
@@ -1304,6 +1329,7 @@ function renderMatch(){
 }
 function renderMatchInner(){
   hideOops();
+  renderStartRow();
   voted = false;
   lastResult = null;
   $("result").classList.add("hidden");
@@ -1799,7 +1825,7 @@ function setCategory(cat){
   if(cat === MASHUP) refreshMashup();
   // A saved run with nothing in it (for example, saved before Mashups had items) starts fresh instead.
   S = loadLadder(cat);
-  if(!S || (!S.champ && !S.queue.length && !S.ranked.length)) S = newRunState([]);
+  if(!S || (!S.champ && !S.queue.length && !S.ranked.length)) S = freshRun();
   if(!Array.isArray(S.ranked)) S.ranked = [];
   saveLadder();
   renderMatch();
@@ -2265,6 +2291,19 @@ $("aboutBtn").addEventListener("click", () => {
   $("aboutPanel").classList.remove("hidden");
 });
 $("aboutClose").addEventListener("click", () => $("aboutPanel").classList.add("hidden"));
+$("suggestCat").addEventListener("click", () => {});  // wired up later
+$("startSel").addEventListener("change", e => {
+  if(!S || S.ranked.length || S.round) return;
+  setStartPref(CUR, e.target.value || null);
+  S = freshRun(); saveLadder(); renderMatch();
+});
+$("startRand").addEventListener("click", () => {
+  if(!S || S.ranked.length || S.round) return;
+  setStartPref(CUR, null);
+  const names = CUR.items.map(f => f.n);
+  const pick = names[Math.floor(Math.random() * names.length)];
+  S = newRunState([], pick); saveLadder(); renderMatch();
+});
 
 /* ---------- My page (step 1) ----------
    Private by default. Unchecking "My page is private" asks for a display name and makes a share link at
