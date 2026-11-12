@@ -19,8 +19,11 @@ export default {
         return Response.redirect(`${url.origin}${prefix}/${url.search}`, 301);
       }
       url.pathname = url.pathname.slice(prefix.length) || "/";
+      // Photos use relative paths (assets/...). On a profile page (/goat/u/<name>) the browser resolves them under /u/,
+      // so serve those files from the site root instead of the game shell.
+      if (url.pathname.startsWith("/u/assets/")) url.pathname = url.pathname.slice(2);
       // Profile links (/goat/u/<name>) load the game shell; the page reads the name from the URL.
-      if (url.pathname.startsWith("/u/")) url.pathname = "/";
+      else if (url.pathname.startsWith("/u/")) url.pathname = "/";
       return env.ASSETS.fetch(new Request(url, request));
     }
 
