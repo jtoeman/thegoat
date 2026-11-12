@@ -73,9 +73,26 @@ function slugFor(word, category){
 let catalogProblems = [];
 
 /* Every category on the Categories tab is listed. A tab that fails to load keeps its last saved names. */
+const CATALOG_TTL = 10 * 60 * 1000; // reuse a fresh copy for 10 minutes, so opening the form does not re-read the sheet
+
 async function loadCatalog(){
-  const saved = await chrome.storage.local.get(["goatCatalog", "goatWordsCache"]);
+  const saved = await chrome.storage.local.get(["goatCatalog", "goatWordsCache", "goatCatalogAt"]);
   const wordsCache = saved.goatWordsCache || {};
+  if(saved.goatCatalog && saved.goatCatalogAt && Date.now() - saved.goatCatalogAt < CATALOG_TTL){
+    return saved.goatCatalog;
+  }
+  // One request: the Worker reads the sheet once and caches it for everyone (needs the B19 Worker deployed).
+  try{
+    const r = await fetch(WORKER + "/catalog", { cache: "no-store" });
+    if(r.ok){
+      const data = await r.json();
+      if(Array.isArray(data.categories) && data.categories.length){
+        catalogProblems = [];
+        await chrome.storage.local.set({ goatCatalog: data.categories, goatCatalogAt: Date.now(), goatWordsCache: wordsCache });
+        return data.categories;
+      }
+    }
+  }catch(e){ /* Worker not deployed yet or offline: read the sheet directly below */ }
   let index;
   try{
     index = parseCSV(await sheetTab(INDEX_GID)).filter(r => r.category && r["tab id"]);
@@ -106,7 +123,7 @@ async function loadCatalog(){
     }
     cats.push({ id, name, words });
   }
-  await chrome.storage.local.set({ goatCatalog: cats, goatWordsCache: wordsCache });
+  await chrome.storage.local.set({ goatCatalog: cats, goatCatalogAt: Date.now(), goatWordsCache: wordsCache });
   catalogProblems = problems;
   return cats;
 }
@@ -247,7 +264,7 @@ function init(){
   $("cardImgA").src = src;
   $("cardImgB").src = src;
   $("source_page").value = params.get("page") || "";
-  $("foot").textContent = "EXT6 · v0.6.2 · " + (src.startsWith("https://") ? "ready" : "not an https image: cannot add");
+  $("foot").textContent = "EXT6 · v0.6.3 · " + (src.startsWith("https://") ? "ready" : "not an https image: cannot add");
   fillCategories();
 }
 

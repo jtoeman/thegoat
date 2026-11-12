@@ -73,11 +73,20 @@ function parseCSV(input) {
 }
 
 async function sheetTab(gid) {
-  const res = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`, {
-    cf: { cacheTtl: SHEET_TTL, cacheEverything: true },
-  });
-  if (!res.ok) throw new Error(`sheet tab ${gid} returned HTTP ${res.status}`);
-  return res.text();
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`;
+  let lastErr = new Error(`sheet tab ${gid} did not respond`);
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const res = await fetch(url, { cf: { cacheTtl: SHEET_TTL, cacheEverything: true } });
+    if (res.ok) {
+      const body = await res.text();
+      if (!body.trim().startsWith("<")) return body;
+      lastErr = new Error(`sheet tab ${gid} was not a sheet export`);
+    } else {
+      lastErr = new Error(`sheet tab ${gid} returned HTTP ${res.status}`);
+    }
+    await new Promise(r => setTimeout(r, 700 * (attempt + 1)));
+  }
+  throw lastErr;
 }
 
 const idOf = s => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -103,8 +112,8 @@ async function buildCatalog() {
     const id = idOf(r.category);
     if (!id || id === "uncategorized" || seen.has(id)) continue;
     seen.add(id);
-    let rows;
-    try { rows = parseCSV(await sheetTab(r["tab id"])); } catch (e) { continue; }
+    let rows = [];
+    try { rows = parseCSV(await sheetTab(r["tab id"])); } catch (e) { console.warn(e.message); }
     const names = new Set();
     const words = [];
     for (const w of rows) {
