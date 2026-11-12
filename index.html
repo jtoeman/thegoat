@@ -251,7 +251,11 @@ section#catWelcome{position:fixed; inset:0; z-index:10; padding:12px}
 .cw-table .k{font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:#cfd6ea; white-space:nowrap}
 .cw-table .v{font-size:16px; font-weight:700}
 .cw-foot{position:relative; z-index:1; flex:none; padding:10px 14px 16px; background:linear-gradient(180deg,rgba(7,10,20,0),rgba(7,10,20,.85) 40%)}
-.cw-foot .btn{width:100%}
+#cwGo{width:100%}
+.cw-foot .start-row{margin:0 0 10px; color:#fff; font-size:14px; text-shadow:0 1px 2px #000; gap:10px}
+.cw-foot .start-row label{gap:8px}
+.cw-foot .start-row select{height:38px; font-size:15px}
+.cw-foot .start-row .btn{min-height:38px; padding:0 14px; width:auto}
 
 #intro,#coach,#catWelcome{position:absolute; inset:0; z-index:10; background:rgba(5,7,14,.8); display:flex; align-items:center; justify-content:center; padding:18px}
 #coachActions{margin-top:16px}
@@ -688,7 +692,7 @@ body.home #resetBtn{display:none}
             </div>
             <div class="cw-table" id="cwBody"></div>
           </div>
-          <div class="cw-foot">
+          <div class="cw-foot" id="cwFoot">
             <button class="btn primary" id="cwGo"><span>Let's go</span></button>
           </div>
         </div>
@@ -731,7 +735,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B147";
+const BUILD = "B148";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -2048,9 +2052,16 @@ function maybeCoach(){
 /* ---------- category welcome ----------
    Shown each time the player enters a category: the crowd's GOAT, how many entries, and their own pick count. */
 let pendingCatWelcome = false;   // set while a category is being entered, so tips wait for the welcome card
+// The 'Start with' row sits in the welcome dialog above Let's go while it is open, and above the game otherwise.
+function placeStartRow(inWelcome){
+  const row = $("startRow");
+  if(inWelcome) $("cwFoot").insertBefore(row, $("cwGo"));
+  else $("stage").parentNode.insertBefore(row, $("stage"));
+}
 function showCatWelcome(){
   pendingCatWelcome = false;
-  if(!CUR || CUR.mashup){ maybeCoach(); return; }
+  if(!CUR || CUR.mashup){ placeStartRow(false); maybeCoach(); return; }
+  placeStartRow(true);
   const board = globalBoards()[CUR.id] || { wins: {}, crowns: {} };
   const goatsOf = n => board.crowns[n] ? board.crowns[n].size : 0;
   // The current GOAT is the item the most players have crowned. Until someone crowns one, there is none.
@@ -2087,7 +2098,7 @@ function showCatWelcome(){
   document.querySelector(".cw-inner").scrollTop = 0;
   $("catWelcome").classList.remove("hidden");
 }
-$("cwGo").addEventListener("click", () => { $("catWelcome").classList.add("hidden"); maybeCoach(); });
+$("cwGo").addEventListener("click", () => { $("catWelcome").classList.add("hidden"); placeStartRow(false); maybeCoach(); });
 
 function showCoach(step){
   markCoach(step.id);
