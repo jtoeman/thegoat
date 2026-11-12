@@ -14,7 +14,8 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://goat.froobaloo.com/assets/share-crown.png">
 <title>The GOAT</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23ffd23f'/%3E%3Ctext x='32' y='46' font-size='38' font-family='Impact,Arial Black,sans-serif' text-anchor='middle' fill='%23000'%3EG%3C/text%3E%3C/svg%3E">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/goat-crown-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/goat-crown-180.png">
 <style>
 /* Phone-first versus screen. Pinned to the viewport; nothing scrolls. One fixed dark look. */
 :root{
@@ -252,6 +253,7 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .start-row .btn{min-height:30px; padding:0 12px; flex:none}
 body.home .start-row{display:none !important}
 body.home .hint{display:none}
+.crown-ico{height:1em; width:auto; vertical-align:-0.14em; display:inline-block}
 /* Home screen (category picker): top bar shows only the brand and Stats */
 body.home .brand, body.home .round, body.home .streak, body.home .cat-pill{display:none}
 body.home #statsBtn{margin-left:auto}
@@ -473,7 +475,7 @@ body.home #resetBtn{display:none}
     <main class="stage" id="stage">
       <section class="boot" id="boot" role="status" aria-label="Loading The GOAT">
         <div class="boot-card">
-          <div class="boot-crown" aria-hidden="true">👑</div>
+          <div class="boot-crown" aria-hidden="true"><img class='crown-ico' src='assets/goat-crown.png' alt=''></div>
           <p class="display boot-title">The GOAT</p>
           <p class="boot-sub">Finding your greatest of all time…</p>
           <div class="boot-bar" aria-hidden="true"><span></span></div>
@@ -601,7 +603,7 @@ body.home #resetBtn{display:none}
         <p class="ko display">Your stats</p>
         <ul class="stats-intro-list">
           <li><b>Yours:</b> every matchup you have picked, by item, this session or all time.</li>
-          <li><b>Everyone:</b> the crowd's picks across all players, head to head. 👑 counts the players who crowned an item the GOAT.</li>
+          <li><b>Everyone:</b> the crowd's picks across all players, head to head. <img class='crown-ico' src='assets/goat-crown.png' alt=''> counts the players who crowned an item the GOAT.</li>
           <li><b>Agreed with the crowd:</b> how often your pick matched the majority on the same matchup.</li>
         </ul>
         <p class="dlg-body">You can hide stats between rounds at any time. Change it with the checkbox below, or the one in the Stats panel.</p>
@@ -637,7 +639,7 @@ body.home #resetBtn{display:none}
         <div class="intro-card">
           <div class="intro-band" aria-hidden="true"></div>
           <p class="display intro-title">Welcome to<br>The GOAT!</p>
-          <p class="dlg-body">Two items face off. Pick the one you like better. The winner stays on and faces the next, until one is left standing. That is your GOAT 👑.</p>
+          <p class="dlg-body">Two items face off. Pick the one you like better. The winner stays on and faces the next, until one is left standing. That is your GOAT <img class='crown-ico' src='assets/goat-crown.png' alt=''>.</p>
           <p class="display intro-q">What's <span>your</span> greatest of all time?</p>
           <p class="dlg-body intro-cta">Click to find out!</p>
           <div class="actions"><button class="btn primary intro-go" id="introGo"><span>Let's go</span></button></div>
@@ -647,7 +649,7 @@ body.home #resetBtn{display:none}
       <section class="overlay dialog hidden" id="dialog" role="alertdialog" aria-modal="true">
         <div class="dlg-art hidden" id="dlgArt">
           <div class="dlg-frame" id="dlgFrame"></div>
-          <div class="dlg-crown" aria-hidden="true">👑</div>
+          <div class="dlg-crown" aria-hidden="true"><img class='crown-ico' src='assets/goat-crown.png' alt=''></div>
         </div>
         <p class="ko display" id="dlgTitle"></p>
         <p class="dlg-body" id="dlgBody"></p>
@@ -678,7 +680,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B133";
+const BUILD = "B134";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1395,7 +1397,7 @@ function renderStats(winner, loser, note){
   // GOATs for the winner: players who have crowned this item in this category.
   const board = globalBoards()[CUR.id];
   const g = board && board.crowns[winner] ? board.crowns[winner].size : 0;
-  $("facts").textContent = note || `👑 ${g} ${g === 1 ? "GOAT" : "GOATs"} for ${winner}`;
+  $("facts").innerHTML = note || `<img class='crown-ico' src='assets/goat-crown.png' alt=''> ${g} ${g === 1 ? "GOAT" : "GOATs"} for ${winner}`;
   if(!db){
     $("overallLabel").textContent = "Pilot stats not available here";
     fill.style.width = "0%";
@@ -1436,7 +1438,7 @@ function ladderStat(name){
   const b = globalBoards()[CUR.id] || { wins: {}, crowns: {} };
   const w = b.wins[name] || 0;
   const g = b.crowns[name] ? b.crowns[name].size : 0;
-  return `${w} ${w === 1 ? "win" : "wins"} · 👑 ${g} GOAT${g === 1 ? "" : "s"}`;
+  return `${w} ${w === 1 ? "win" : "wins"} · <img class='crown-ico' src='assets/goat-crown.png' alt=''> ${g} GOAT${g === 1 ? "" : "s"}`;
 }
 function renderRankList(){
   const n = S.ranked.length;
@@ -1469,7 +1471,7 @@ function showGoatView(){
       <p class="ko display le-logo">The GOAT: ${CUR.name}</p>
     </div>
     <div class="le-grid single">${item
-      ? `<div class="le-cap"><span>Overall GOAT</span><b>${top}</b><small>${winsOf(top)} ${winsOf(top) === 1 ? "win" : "wins"}</small><small>👑 ${goatsOf(top)} GOAT${goatsOf(top) === 1 ? "" : "s"}</small></div>`
+      ? `<div class="le-cap"><span>Overall GOAT</span><b>${top}</b><small>${winsOf(top)} ${winsOf(top) === 1 ? "win" : "wins"}</small><small><img class='crown-ico' src='assets/goat-crown.png' alt=''> ${goatsOf(top)} GOAT${goatsOf(top) === 1 ? "" : "s"}</small></div>`
       : `<p class="ko-sub">No GOAT yet. Be the first.</p>`}</div>
     <div class="actions"><button class="btn primary" id="goatFresh"><span>Start fresh</span></button></div>`;
   $("ladderEnd").classList.remove("hidden");
@@ -1489,7 +1491,7 @@ function showLadderEnd(){
   const n = S.ranked.length;
   const done = n >= CUR.items.length;
   track("Game Completed", { category: CUR.id, items_ranked: n, items_total: CUR.items.length, fully_sorted: done });
-  const heading = done ? "Fully sorted" : (n === 0 ? "" : n === 1 ? `Your GOAT of ${CUR.name.toLowerCase()} 👑` : `Rank #${n}`);
+  const heading = done ? "Fully sorted" : (n === 0 ? "" : n === 1 ? `Your GOAT of ${CUR.name.toLowerCase()} <img class='crown-ico' src='assets/goat-crown.png' alt=''>` : `Rank #${n}`);
   rankEdit = false;
   // Header: the category's overall GOAT. Background: the same, full-bleed and dimmed.
   // Split runs the full panel height: left = the new entry with its stats; right = the player's #1 with its
@@ -1507,7 +1509,7 @@ function showLadderEnd(){
   const myTop = S.ranked[0];
   const topItem = myTop && CUR.byName[myTop];
   const stat = n => `${winsOf(n)} ${winsOf(n) === 1 ? "win" : "wins"}`;
-  const goatLine = n => `👑 ${goatsOf(n)} GOAT${goatsOf(n) === 1 ? "" : "s"}`;
+  const goatLine = n => `<img class='crown-ico' src='assets/goat-crown.png' alt=''> ${goatsOf(n)} GOAT${goatsOf(n) === 1 ? "" : "s"}`;
   const rank = S.ranked.indexOf(newName) + 1;
   const bg = bgItem ? `<div class="le-bg" aria-hidden="true">${portraitHTML(bgItem)}</div>` : "";
   const split = !!(newItem && topItem && myTop !== newName);
@@ -1631,7 +1633,7 @@ function flashStats(winner, loser){
   const pair = total ? `${wv}/${total} · ${pct}% of picks` : "No picks on this pair yet";
   const cell = f => {
     const sel = b.wins[f] || 0, g = b.crowns[f] ? b.crowns[f].size : 0;
-    return `<div><span>${sel} ${sel === 1 ? "win" : "wins"}</span><span class="wf-goat">👑 ${g} GOAT${g === 1 ? "" : "s"}</span></div>`;
+    return `<div><span>${sel} ${sel === 1 ? "win" : "wins"}</span><span class="wf-goat"><img class='crown-ico' src='assets/goat-crown.png' alt=''> ${g} GOAT${g === 1 ? "" : "s"}</span></div>`;
   };
   return { pair, cells: cell(current.a) + cell(current.b) };
 }
@@ -1820,10 +1822,10 @@ function mashupTileHTML(){
       <span class="tile-e" aria-hidden="true">${MASHUP.e}</span>
       <span class="tile-name display">Mashups (${MASHUP.items.length})</span>
       <span class="tile-n">Every category, shuffled together</span>
-      ${top ? `<span class="tile-goat">👑 ${top}</span>` : ""}
+      ${top ? `<span class="tile-goat"><img class='crown-ico' src='assets/goat-crown.png' alt=''> ${top}</span>` : ""}
     </button>`;
   }
-  const prog = visibleCats().map(c => `${c.name} ${hasMyGoat(c) ? "👑 GOAT" : `${Math.min(categoryVotedItems(c), 10)}/10`}`).join(" · ");
+  const prog = visibleCats().map(c => `${c.name} ${hasMyGoat(c) ? "<img class='crown-ico' src='assets/goat-crown.png' alt=''> GOAT" : `${Math.min(categoryVotedItems(c), 10)}/10`}`).join(" · ");
   return `
     <button class="tile mashup locked" data-id="mashup" aria-disabled="true" style="background:#3a3f4d">
       <span class="tile-e" aria-hidden="true">🔒</span>
@@ -1850,7 +1852,7 @@ function renderPicker(){
     <button class="tile${c === CUR ? " current" : ""}${off ? " is-hidden" : ""}" data-id="${c.id}" style="background:${c.bg}">
       <span class="tile-e" aria-hidden="true">${c.e}</span>
       <span class="tile-name display">${c.name} (${c.items.length})</span>
-      ${top ? `<span class="tile-goat">👑 ${top}</span>` : ""}
+      ${top ? `<span class="tile-goat"><img class='crown-ico' src='assets/goat-crown.png' alt=''> ${top}</span>` : ""}
       ${editing ? `<span class="hide-tag">${off ? "Show" : "Hide"}</span>` : ""}
     </button>`;
   });
@@ -2111,7 +2113,7 @@ function yoursHTML(){
         <span class="cc-e" aria-hidden="true">${c.e}</span>
         <span class="cc-body">
           <b class="display">${c.name}</b>
-          <span class="cc-meta">${matchupWord(matchupCount(c))}${top ? " · 👑 " + top : ""}</span>
+          <span class="cc-meta">${matchupWord(matchupCount(c))}${top ? " · <img class='crown-ico' src='assets/goat-crown.png' alt=''> " + top : ""}</span>
           <span class="prog"><span class="prog-fill" data-w="${n * 10}"></span></span>
           <span class="cc-meta">${n} of 10 items voted</span>
         </span>
@@ -2126,7 +2128,7 @@ function yoursHTML(){
           <span class="cc-e" aria-hidden="true">${MASHUP.e}</span>
           <span class="cc-body">
             <b class="display">Mashups</b>
-            <span class="cc-meta">${matchupWord(mCount)}${mTop ? " · 👑 " + mTop : ""}</span>
+            <span class="cc-meta">${matchupWord(mCount)}${mTop ? " · <img class='crown-ico' src='assets/goat-crown.png' alt=''> " + mTop : ""}</span>
             <span class="prog"><span class="prog-fill" data-w="100"></span></span>
             <span class="cc-meta">Open. Mixes the ${readyCats().length} categories you've finished. Tap to play.</span>
           </span>
@@ -2237,7 +2239,7 @@ function globalBars(c, n){
   const b = globalBoards()[c.id];
   if(!b) return `<p class="ko-sub">No picks yet.</p>`;
   const goats = f => (b.crowns[f] ? b.crowns[f].size : 0);
-  const crown = f => goats(f) ? `<span class="h2h-crown">👑 ${goats(f)}</span>` : "";
+  const crown = f => goats(f) ? `<span class="h2h-crown"><img class='crown-ico' src='assets/goat-crown.png' alt=''> ${goats(f)}</span>` : "";
   const pairs = Object.values(b.pairs)
     .sort((x, y) => (y.aw + y.bw) - (x.aw + x.bw) || x.a.localeCompare(y.a))
     .slice(0, n);
@@ -2312,9 +2314,9 @@ $("statsClose").addEventListener("click", () => $("statsPanel").classList.add("h
 
 /* Crown buttons name the current champion, e.g. "Cherry is the GOAT". */
 function setCrownLabels(){
-  const label = S && S.champ ? `${S.champ} is the GOAT 👑` : "This is the GOAT 👑";
-  $("resultCrown").querySelector("span").textContent = label;
-  $("cpCrown").querySelector("span").textContent = label;
+  const label = S && S.champ ? `${S.champ} is the GOAT <img class='crown-ico' src='assets/goat-crown.png' alt=''>` : "This is the GOAT <img class='crown-ico' src='assets/goat-crown.png' alt=''>";
+  $("resultCrown").querySelector("span").innerHTML = label;
+  $("cpCrown").querySelector("span").innerHTML = label;
 }
 
 /* New GOAT celebration: the full image, how many players have crowned it (you included), then on to the ranking. */
@@ -2335,7 +2337,7 @@ function showGoatCrown(champ){
     <div class="gc-confetti" aria-hidden="true">${confetti}</div>
     <p class="gc-kicker">New GOAT</p>
     <div class="gc-frame" style="--c:${f.c || "#333"}">${portraitHTML(f)}</div>
-    <div class="gc-crown" aria-hidden="true">👑</div>
+    <div class="gc-crown" aria-hidden="true"><img class='crown-ico' src='assets/goat-crown.png' alt=''></div>
     <p class="ko gc-name">${champ}</p>
     <div class="gc-badge"><span class="gc-num">${n}</span><span>${n === 1 ? "GOAT crown" : "GOAT crowns"}</span></div>
     <p class="gc-line">${line}</p>
@@ -2431,7 +2433,7 @@ $("pgShare").addEventListener("click", () => {
 async function crownGoat(){
   if(mode !== "ladder" || !S || !S.queue.length) return;
   const champ = S.champ, rest = S.queue.slice();
-  if(!await confirmBox(`Crown ${champ} the GOAT 👑?`,
+  if(!await confirmBox(`Crown ${champ} the GOAT?`,
       `Records ${champ} over the ${rest.length} remaining ${CUR.name.toLowerCase()}, then ends this run with ${champ} ranked #${S.ranked.length + 1}.`,
       "Crown", CUR.byName[champ])) return;
   rest.forEach(n => { myPicks[keyFor(champ, n)] = Object.assign({ w: champ, g: 1 }, DEVICE, { t: Date.now() }); });
@@ -2454,7 +2456,7 @@ function showCheckpoint(){
   // Only what matters for the champion: its GOAT count, and how the latest matchup split.
   const board = globalBoards()[CUR.id];
   const g = board && board.crowns[S.champ] ? board.crowns[S.champ].size : 0;
-  $("cpGoats").textContent = `👑 ${g} ${g === 1 ? "GOAT" : "GOATs"} for ${S.champ}`;
+  $("cpGoats").innerHTML = `<img class='crown-ico' src='assets/goat-crown.png' alt=''> ${g} ${g === 1 ? "GOAT" : "GOATs"} for ${S.champ}`;
   let agree = "";
   if(db && statsReady && lastResult && lastResult.winner === S.champ){
     const c = countsFor(keyFor(lastResult.winner, lastResult.loser), lastResult.winner, lastResult.loser);
