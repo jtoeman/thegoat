@@ -240,7 +240,7 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 #hint{display:none}
 /* Category welcome: a photo hero, a borderless info table, the category picker, and Let's go pinned at the bottom. */
 section#catWelcome{position:fixed; inset:0; z-index:10; padding:12px}
-.intro-card.cw-card{width:min(360px, calc(100vw - 24px)); max-width:360px; height:min(calc(100dvh - 24px), 820px); padding:0; display:flex; flex-direction:column; text-align:center; min-height:0}
+.intro-card.cw-card{width:min(360px, calc(100vw - 24px)); max-width:360px; height:auto; max-height:min(calc(100dvh - 24px), 820px); padding:0; display:flex; flex-direction:column; text-align:center; min-height:0}
 .cw-inner{position:relative; z-index:1; flex:1 1 auto; min-height:0; overflow-y:auto; padding:14px 14px 8px; display:flex; flex-direction:column; gap:12px}
 .cw-hero{position:relative; flex:none; height:min(240px, 34dvh); border-radius:12px; overflow:hidden; border:2px solid rgba(255,255,255,.12); background:#0b1024}
 .cw-hero-img{position:absolute; inset:0}
@@ -250,10 +250,6 @@ section#catWelcome{position:fixed; inset:0; z-index:10; padding:12px}
 .cw-table{display:grid; grid-template-columns:auto 1fr; gap:8px 14px; align-items:baseline; text-align:left; background:rgba(5,7,14,.8); border-radius:12px; padding:12px 14px; color:#fff; text-shadow:0 1px 2px #000}
 .cw-table .k{font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:#cfd6ea; white-space:nowrap}
 .cw-table .v{font-size:16px; font-weight:700}
-.cw-slot .tiles{flex:none; min-height:0; overflow:visible; padding:0}
-.cw-slot .tile-grid{grid-auto-rows:minmax(104px,auto); gap:10px}
-.cw-slot .tile{min-height:104px}
-.cw-slot .suggest-box{display:none}   /* placeholder: kept out of the welcome dialog to save room */
 .cw-foot{position:relative; z-index:1; flex:none; padding:10px 14px 16px; background:linear-gradient(180deg,rgba(7,10,20,0),rgba(7,10,20,.85) 40%)}
 .cw-foot .btn{width:100%}
 
@@ -667,7 +663,7 @@ body.home #resetBtn{display:none}
           <p class="display intro-title">Welcome to<br>The GOAT!</p>
           <p class="dlg-body">Two items face off. Pick the one you like better. The winner stays on and faces the next, until one is left standing. That is your GOAT <img class='crown-ico' src='assets/goat-crown.png' alt=''>.</p>
           <p class="dlg-body">Tap a fighter, or press and drag it toward the rival. Swipe or press Space for the next round.</p>
-          <p class="display intro-q">What's <span>your</span> greatest of all time?</p>
+          <p class="display intro-q">What <span>YOUR</span> Goat?</p>
           <p class="dlg-body intro-cta">Click to find out!</p>
           <div class="actions"><button class="btn primary intro-go" id="introGo"><span>Let's go</span></button></div>
         </div>
@@ -691,7 +687,6 @@ body.home #resetBtn{display:none}
               <p class="display intro-title" id="cwTitle"></p>
             </div>
             <div class="cw-table" id="cwBody"></div>
-            <div class="cw-slot" id="cwSlot"></div>
           </div>
           <div class="cw-foot">
             <button class="btn primary" id="cwGo"><span>Let's go</span></button>
@@ -736,7 +731,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B146";
+const BUILD = "B147";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1845,13 +1840,11 @@ function disarmReset(){
    Opened from the category button. Shows one box per category. Tap a box to play it. Back closes.
    Each category keeps its own ladder and stats. */
 // The category tiles live in the picker, or in the welcome dialog above "Let's go" when a category is entered.
-function placeTiles(inWelcome){
-  const tiles = $("tiles");
-  if(inWelcome) $("cwSlot").appendChild(tiles);
-  else $("pickerCard").insertBefore(tiles, $("pickerActions"));
+function placeTiles(){
+  $("pickerCard").insertBefore($("tiles"), $("pickerActions"));
 }
 function openPicker(){
-  placeTiles(false);
+  placeTiles();
   renderPicker();
   document.body.classList.add("home");
   $("picker").classList.remove("hidden");
@@ -2091,7 +2084,6 @@ function showCatWelcome(){
   });
   addRow(CUR.name, v => { v.textContent = `${CUR.items.length} choices`; });
   if(mine) addRow("Your picks", v => { v.textContent = `${mine} so far`; });
-  placeTiles(true);
   document.querySelector(".cw-inner").scrollTop = 0;
   $("catWelcome").classList.remove("hidden");
 }
