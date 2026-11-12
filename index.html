@@ -700,7 +700,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B138";
+const BUILD = "B139";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1634,6 +1634,9 @@ function castVote(side){
   else if(joined.length && mashupUnlocked()) setTimeout(() => toast(`${joined.map(c => c.name).join(" and ")} joined Mashups`), 300);
   lastPick = { key, previous, snapshotS, time: Date.now() };
   lastVoteCoach = { winner, loser, cat: CUR.name };
+  coachEvents.add("vote");
+  if(Object.keys(myPicks).length === 10) coachEvents.add("tenth");
+  coachReadyEvent();
   showOops();
   savePick(key, entry).then(ok => {
     if(!ok){
@@ -1931,7 +1934,7 @@ function setCategory(cat){
 $("introGo").addEventListener("click", () => {
   writeStore("goat_intro_seen", true);
   $("intro").classList.add("hidden");
-  maybeCoach();
+  raiseCoach("intro");
 });
 
 /* ---------- contextual coach ----------
@@ -1948,21 +1951,25 @@ function myGoatInfo(){
   }
   return null;
 }
+// Each tip is tied to the moment that causes it. coachEvents holds moments that just happened and are not yet shown,
+// so a player who already passed a milestone never gets its tip on load.
+let coachReady = false;   // set once startup has opened the picker, so tips never beat it on load
+let coachEvents = new Set();
+function raiseCoach(ev){ coachEvents.add(ev); maybeCoach(); }
+function coachReadyEvent(){ if(readyCats().length === 2) coachEvents.add("ready"); }
 function coachSteps(){
-  const votes = Object.keys(myPicks).length;
-  const ready = readyCats().length;
   const goat = myGoatInfo();
   const share = (text) => () => openShare(text, catUrl());
   return [
-    { id: "pick", when: () => !$("picker").classList.contains("hidden") && mode !== "challenge",
+    { id: "pick", event: "intro", when: () => !$("picker").classList.contains("hidden") && mode !== "challenge",
       title: "Pick a category",
       body: ["Each category is its own bracket of fighters. Choose one to start building your GOAT."],
       actions: [{ label: "Got it" }] },
-    { id: "ab", when: () => mode !== "challenge" && votes === 0 && !!CUR,
+    { id: "ab", event: "land", when: () => mode !== "challenge" && !!CUR,
       title: "Head to head",
       body: ["Every match is two items. Tap the one you like better, or drag it toward the rival. The winner stays on and faces the next, until one is left standing."],
       actions: [{ label: "Got it" }] },
-    { id: "firstVote", when: () => votes >= 1,
+    { id: "firstVote", event: "vote", when: () => true,
       title: "Your first pick is in",
       body: lastVoteCoach
         ? [`You picked ${lastVoteCoach.winner} over ${lastVoteCoach.loser} in ${lastVoteCoach.cat}.`, "Share it and see whether your friends pick the same winner."]
@@ -1970,31 +1977,30 @@ function coachSteps(){
       actions: [
         { label: "Share my pick", primary: true, run: lastVoteCoach ? share(`I just picked ${lastVoteCoach.winner} over ${lastVoteCoach.loser} in ${lastVoteCoach.cat}. Who would you pick?`) : share("I'm voting on The GOAT. Who's your pick?") },
         { label: "Keep playing" }] },
-    { id: "checkin10", when: () => votes >= 10,
+    { id: "checkin10", event: "tenth", when: () => true,
       title: "10 picks in",
       body: ["Your picks are helping set the crowd's favorites. Want to see how the board is shaping up?"],
       actions: [{ label: "See the stats", primary: true, run: openStats }, { label: "Keep playing" }] },
-    { id: "goat", when: () => !!goat,
+    { id: "goat", event: "crown", when: () => !!goat,
       title: "You crowned a GOAT",
       body: goat ? [`${goat.champ} is your GOAT in ${goat.cat.name}. Your crown now counts toward the crowd's board.`] : [],
       actions: [
         { label: "Ask your friends", primary: true, run: goat ? share(`I just declared ${goat.champ} is The GOAT of ${goat.cat.name}. HBU?`) : null },
         { label: "Keep playing" }] },
-    { id: "mashups", when: () => ready >= 2 && !mashupUnlocked(),
+    { id: "mashups", event: "ready", when: () => !mashupUnlocked(),
       title: "Mashups are close",
-      body: [`You are ready in ${ready} of ${MASHUP_MIN_CATS} categories. Get a GOAT or 10 votes in ${MASHUP_MIN_CATS} categories to unlock Mashups, where fighters from different categories face off.`],
+      body: [`You are ready in ${readyCats().length} of ${MASHUP_MIN_CATS} categories. Get a GOAT or 10 votes in ${MASHUP_MIN_CATS} categories to unlock Mashups, where fighters from different categories face off.`],
       actions: [{ label: "Got it" }] }
   ];
 }
-let coachReady = false;   // set once startup has opened the picker, so tips never beat it on load
 function maybeCoach(){
   if(!coachReady || !readStore("goat_intro_seen")) return;   // the welcome card always comes first
   if(COACH_OPEN.some(id => !$(id).classList.contains("hidden"))) return;
   // While the category picker is up, only the pick tip can show; the rest wait until a match is on screen.
   const pickerOpen = !$("picker").classList.contains("hidden");
   const seen = coachSeen();
-  const step = coachSteps().find(st => !seen[st.id] && (st.id === "pick") === pickerOpen && st.when());
-  if(step) showCoach(step);
+  const step = coachSteps().find(st => !seen[st.id] && coachEvents.has(st.event) && (st.id === "pick") === pickerOpen && st.when());
+  if(step){ coachEvents.delete(step.event); showCoach(step); }
 }
 function showCoach(step){
   markCoach(step.id);
@@ -2047,7 +2053,9 @@ $("tiles").addEventListener("click", e => {
   const c = CATEGORIES.find(x => x.id === b.dataset.id);
   closePicker();
   if(c === CUR && S && !S.queue.length){ startFreshHere(); return; }
+  coachEvents.add("land");
   setCategory(c);
+  maybeCoach();
 });
 
 /* While a fighter is dragged toward the rival, it brightens and the rival grays. p runs 0 to 1. */
@@ -2439,8 +2447,10 @@ $("statsBody").addEventListener("click", e => {
     const c = card.dataset.cat === "mashup" ? MASHUP : CATEGORIES.find(x => x.id === card.dataset.cat);
     if(!c || (c === MASHUP && !mashupUnlocked())) return;
     $("statsPanel").classList.add("hidden");
+    coachEvents.add("land");
     setCategory(c);
     closePicker();
+    maybeCoach();
   }
 });
 $("statsClose").addEventListener("click", () => $("statsPanel").classList.add("hidden"));
@@ -2454,6 +2464,8 @@ function setCrownLabels(){
 
 /* New GOAT celebration: the full image, how many players have crowned it (you included), then on to the ranking. */
 function showGoatCrown(champ){
+  coachEvents.add("crown");
+  coachReadyEvent();
   const f = CUR.byName[champ];
   const b = globalBoards()[CUR.id];
   const n = b && b.crowns[champ] ? b.crowns[champ].size : 1;
