@@ -2071,7 +2071,7 @@ function showCatWelcome(){
     p.textContent = text;
     return p;
   }));
-  $("cwInner").scrollTop = 0;
+  document.querySelector(".cw-inner").scrollTop = 0;
   $("catWelcome").classList.remove("hidden");
 }
 $("cwGo").addEventListener("click", () => { $("catWelcome").classList.add("hidden"); maybeCoach(); });
