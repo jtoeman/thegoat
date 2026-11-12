@@ -238,17 +238,24 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 @keyframes bootSlide{from{transform:translateX(-100%)} to{transform:translateX(260%)}}
 @media (prefers-reduced-motion: reduce){ .boot-crown,.boot-title,.boot-bar span{animation:none} }
 #hint{display:none}
-/* Category welcome: a tall card holding the category tiles above the button. The text sits on a translucent panel. */
-#catWelcome{padding:12px}
+/* Category welcome: a photo hero, a borderless info table, the category picker, and Let's go pinned at the bottom. */
 section#catWelcome{position:fixed; inset:0; z-index:10; padding:12px}
-.intro-card.cw-card{width:min(360px, calc(100vw - 24px)); max-width:360px; height:auto; max-height:min(calc(100dvh - 24px), 820px); padding:0; display:flex; flex-direction:column; text-align:center; min-height:0}
+.intro-card.cw-card{width:min(360px, calc(100vw - 24px)); max-width:360px; height:min(calc(100dvh - 24px), 820px); padding:0; display:flex; flex-direction:column; text-align:center; min-height:0}
+.cw-inner{position:relative; z-index:1; flex:1 1 auto; min-height:0; overflow-y:auto; padding:14px 14px 8px; display:flex; flex-direction:column; gap:12px}
+.cw-hero{position:relative; flex:none; height:min(240px, 34dvh); border-radius:12px; overflow:hidden; border:2px solid rgba(255,255,255,.12); background:#0b1024}
+.cw-hero-img{position:absolute; inset:0}
+.cw-hero-img img{width:100%; height:100%; object-fit:cover; display:block}
+.cw-hero-img .glyph{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:110px}
+.cw-hero .intro-title{position:absolute; left:0; right:0; bottom:0; margin:0; padding:40px 10px 10px; background:linear-gradient(180deg, rgba(5,7,14,0), rgba(5,7,14,.9) 65%); text-shadow:3px 3px 0 #000}
+.cw-table{display:grid; grid-template-columns:auto 1fr; gap:8px 14px; align-items:baseline; text-align:left; background:rgba(5,7,14,.8); border-radius:12px; padding:12px 14px; color:#fff; text-shadow:0 1px 2px #000}
+.cw-table .k{font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:#cfd6ea; white-space:nowrap}
+.cw-table .v{font-size:16px; font-weight:700}
+.cw-slot .tiles{flex:none; min-height:0; overflow:visible; padding:0}
+.cw-slot .tile-grid{grid-auto-rows:minmax(104px,auto); gap:10px}
+.cw-slot .tile{min-height:104px}
+.cw-slot .suggest-box{display:none}   /* placeholder: kept out of the welcome dialog to save room */
 .cw-foot{position:relative; z-index:1; flex:none; padding:10px 14px 16px; background:linear-gradient(180deg,rgba(7,10,20,0),rgba(7,10,20,.85) 40%)}
 .cw-foot .btn{width:100%}
-.cw-card #cwBg::after{background:rgba(7,10,20,.22)}   /* light enough to read the photo; the text panel keeps copy legible */
-.cw-inner{position:relative; z-index:1; flex:1 1 auto; min-height:0; overflow-y:auto; padding:22px 14px 8px; display:flex; flex-direction:column; gap:12px}
-.cw-text{background:rgba(5,7,14,.78); border:2px solid rgba(255,255,255,.12); border-radius:12px; padding:10px 12px 12px; text-shadow:0 1px 2px #000}
-.cw-text .intro-title{margin:0 0 6px; text-shadow:3px 3px 0 #000}
-.cw-text .dlg-body{margin:4px 0; font-size:16px; color:#fff}
 
 #intro,#coach,#catWelcome{position:absolute; inset:0; z-index:10; background:rgba(5,7,14,.8); display:flex; align-items:center; justify-content:center; padding:18px}
 #coachActions{margin-top:16px}
@@ -677,13 +684,14 @@ body.home #resetBtn{display:none}
 
       <section class="hidden" id="catWelcome" role="dialog" aria-modal="true" aria-label="Welcome to this category">
         <div class="intro-card cw-card" id="cwCard">
-          <div class="le-bg" id="cwBg" aria-hidden="true"></div>
           <div class="intro-band" aria-hidden="true"></div>
           <div class="cw-inner">
-            <div class="cw-text">
+            <div class="cw-hero">
+              <div class="cw-hero-img" id="cwBg" aria-hidden="true"></div>
               <p class="display intro-title" id="cwTitle"></p>
-              <div id="cwBody"></div>
             </div>
+            <div class="cw-table" id="cwBody"></div>
+            <div class="cw-slot" id="cwSlot"></div>
           </div>
           <div class="cw-foot">
             <button class="btn primary" id="cwGo"><span>Let's go</span></button>
@@ -728,7 +736,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B145";
+const BUILD = "B146";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1837,11 +1845,13 @@ function disarmReset(){
    Opened from the category button. Shows one box per category. Tap a box to play it. Back closes.
    Each category keeps its own ladder and stats. */
 // The category tiles live in the picker, or in the welcome dialog above "Let's go" when a category is entered.
-function placeTiles(){
-  $("pickerCard").insertBefore($("tiles"), $("pickerActions"));
+function placeTiles(inWelcome){
+  const tiles = $("tiles");
+  if(inWelcome) $("cwSlot").appendChild(tiles);
+  else $("pickerCard").insertBefore(tiles, $("pickerActions"));
 }
 function openPicker(){
-  placeTiles();
+  placeTiles(false);
   renderPicker();
   document.body.classList.add("home");
   $("picker").classList.remove("hidden");
@@ -2057,24 +2067,31 @@ function showCatWelcome(){
   const mine = countPicks((k, p) => p.cat === CUR.id);
   $("cwTitle").textContent = CUR.name;
   $("cwBg").innerHTML = goat && CUR.byName[goat] ? portraitHTML(CUR.byName[goat]) : "";
-  const lines = [
-    `THE CURRENT GOAT: ${goat || "none yet"}`,
-    `${CUR.name}: ${CUR.items.length} choices`
-  ];
-  if(mine) lines.push(`Your Picks: ${mine} so far`);
-  $("cwBody").replaceChildren(...lines.map((text, i) => {
-    const p = document.createElement("p");
-    p.className = "dlg-body";
-    p.textContent = text;
-    if(i === 0){   // the GOAT line gets the crown icon, same as elsewhere in the game
+  const table = $("cwBody");
+  table.replaceChildren();
+  const addRow = (label, fill) => {
+    const k = document.createElement("div");
+    k.className = "k";
+    k.textContent = label;
+    const v = document.createElement("div");
+    v.className = "v";
+    fill(v);
+    table.append(k, v);
+  };
+  addRow("The current GOAT", v => {
+    if(goat){
       const crown = document.createElement("img");
       crown.className = "crown-ico";
       crown.src = "assets/goat-crown.png";
       crown.alt = "";
-      p.prepend(crown, " ");
+      v.append(crown, " ", goat);
+    } else {
+      v.textContent = "None yet";
     }
-    return p;
-  }));
+  });
+  addRow(CUR.name, v => { v.textContent = `${CUR.items.length} choices`; });
+  if(mine) addRow("Your picks", v => { v.textContent = `${mine} so far`; });
+  placeTiles(true);
   document.querySelector(".cw-inner").scrollTop = 0;
   $("catWelcome").classList.remove("hidden");
 }
