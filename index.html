@@ -735,7 +735,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B148";
+const BUILD = "B149";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1147,7 +1147,9 @@ function setStartPref(cat, name){ const m = readStore("goat_start") || {}; if(na
 function freshRun(){ return newRunState([], startPref(CUR)); }
 function renderStartRow(){
   const row = $("startRow");
-  const fresh = mode === "ladder" && S && S.round === 0;
+  // Only while the category welcome dialog holds the row. In the match view it never shows.
+  const inDialog = row.parentNode === $("cwFoot");
+  const fresh = inDialog && mode === "ladder" && S && S.round === 0;
   row.classList.toggle("hidden", !fresh);
   if(!fresh) return;
   const pref = startPref(CUR);
@@ -2056,7 +2058,8 @@ let pendingCatWelcome = false;   // set while a category is being entered, so ti
 function placeStartRow(inWelcome){
   const row = $("startRow");
   if(inWelcome) $("cwFoot").insertBefore(row, $("cwGo"));
-  else $("stage").parentNode.insertBefore(row, $("stage"));
+  else { row.classList.add("hidden"); $("stage").parentNode.insertBefore(row, $("stage")); }
+  renderStartRow();
 }
 function showCatWelcome(){
   pendingCatWelcome = false;
