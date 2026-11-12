@@ -236,7 +236,8 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 @keyframes bootSlide{from{transform:translateX(-100%)} to{transform:translateX(260%)}}
 @media (prefers-reduced-motion: reduce){ .boot-crown,.boot-title,.boot-bar span{animation:none} }
 #hint{display:none}
-#intro{position:absolute; inset:0; z-index:10; background:rgba(5,7,14,.8); display:flex; align-items:center; justify-content:center; padding:18px}
+#intro,#coach{position:absolute; inset:0; z-index:10; background:rgba(5,7,14,.8); display:flex; align-items:center; justify-content:center; padding:18px}
+#coachActions{margin-top:16px}
 .intro-card{position:relative; width:100%; max-width:360px; padding:26px 20px 20px; text-align:center; overflow:hidden; background:linear-gradient(165deg,#1d2650,#0b1024 70%); border:3px solid #000; border-radius:18px; box-shadow:6px 6px 0 #000, 0 0 0 3px var(--yellow); animation:introPop .5s cubic-bezier(.2,1.35,.4,1) both}
 .intro-band{position:absolute; left:-10%; right:-10%; top:0; height:14px; transform:skewY(-4deg); background:linear-gradient(90deg,#e8303a 0 50%,#2d6fd6 50% 100%); border-bottom:3px solid #000}
 .intro-title{margin:14px 0 10px; font-size:clamp(36px,12vw,52px); line-height:.95; color:var(--yellow); text-shadow:3px 3px 0 #000; animation:introWobble 2.6s ease-in-out infinite}
@@ -651,6 +652,15 @@ body.home #resetBtn{display:none}
         </div>
       </section>
 
+      <section class="hidden" id="coach" role="dialog" aria-modal="true" aria-label="Tip">
+        <div class="intro-card">
+          <div class="intro-band" aria-hidden="true"></div>
+          <p class="display intro-title" id="coachTitle"></p>
+          <div id="coachBody"></div>
+          <div class="actions" id="coachActions"></div>
+        </div>
+      </section>
+
       <section class="overlay dialog hidden" id="dialog" role="alertdialog" aria-modal="true">
         <div class="dlg-art hidden" id="dlgArt">
           <div class="dlg-frame" id="dlgFrame"></div>
@@ -685,7 +695,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B136";
+const BUILD = "B137";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1357,6 +1367,7 @@ function renderMatch(){
     S = newRunState([]); saveLadder();
     renderMatchInner();
   }
+  maybeCoach();
 }
 function renderMatchInner(){
   hideOops();
@@ -1617,6 +1628,7 @@ function castVote(side){
   if(!wasUnlocked && mashupUnlocked()) setTimeout(celebrateUnlock, 300);
   else if(joined.length && mashupUnlocked()) setTimeout(() => toast(`${joined.map(c => c.name).join(" and ")} joined Mashups`), 300);
   lastPick = { key, previous, snapshotS, time: Date.now() };
+  lastVoteCoach = { winner, loser, cat: CUR.name };
   showOops();
   savePick(key, entry).then(ok => {
     if(!ok){
@@ -1786,6 +1798,7 @@ function openPicker(){
   renderPicker();
   document.body.classList.add("home");
   $("picker").classList.remove("hidden");
+  maybeCoach();
 }
 function closePicker(){
   editing = false;
@@ -1794,6 +1807,7 @@ function closePicker(){
   document.body.classList.remove("home");
   // If the category being played was hidden in edit mode, move to the first one still shown.
   if(isHidden(CUR) && visibleCats()[0]) setCategory(visibleCats()[0]);
+  maybeCoach();   // the match tips wait for the picker to close
 }
 /* The current #1 of a category is the first item in its ranking, if any run has finished. */
 function categoryTop(c){
@@ -1912,7 +1926,96 @@ function setCategory(cat){
 $("introGo").addEventListener("click", () => {
   writeStore("goat_intro_seen", true);
   $("intro").classList.add("hidden");
+  maybeCoach();
 });
+
+/* ---------- contextual coach ----------
+   One short tip at a time, shown when the player reaches that moment. Each tip is seen once (goat_coach). */
+let lastVoteCoach = null;
+const COACH_OPEN = ["statsPanel","statsIntro","resetPanel","dialog","shareSheet","checkpoint","ladderEnd","intro","result","goatCrown","coach"];
+function coachSeen(){ return readStore("goat_coach") || {}; }
+function markCoach(id){ const s = coachSeen(); s[id] = true; writeStore("goat_coach", s); }
+function myGoatInfo(){
+  for(const c of CATEGORIES){
+    if(!hasMyGoat(c)) continue;
+    const k = Object.keys(myPicks).find(k => { const p = parseKey(k); return p.cat === c.id && myPicks[k] && myPicks[k].g; });
+    if(k) return { champ: myPicks[k].w, cat: c };
+  }
+  return null;
+}
+function coachSteps(){
+  const votes = Object.keys(myPicks).length;
+  const ready = readyCats().length;
+  const goat = myGoatInfo();
+  const share = (text) => () => openShare(text, catUrl());
+  return [
+    { id: "pick", when: () => !$("picker").classList.contains("hidden") && mode !== "challenge",
+      title: "Pick a category",
+      body: ["Each category is its own bracket of fighters. Choose one to start building your GOAT."],
+      actions: [{ label: "Got it" }] },
+    { id: "ab", when: () => mode !== "challenge" && votes === 0 && !!CUR,
+      title: "Head to head",
+      body: ["Every match is two items. Tap the one you like better, or drag it toward the rival. The winner stays on and faces the next, until one is left standing."],
+      actions: [{ label: "Got it" }] },
+    { id: "firstVote", when: () => votes >= 1,
+      title: "Your first pick is in",
+      body: lastVoteCoach
+        ? [`You picked ${lastVoteCoach.winner} over ${lastVoteCoach.loser} in ${lastVoteCoach.cat}.`, "Share it and see whether your friends pick the same winner."]
+        : ["Your picks feed the crowd's rankings. Share yours and see whether friends agree."],
+      actions: [
+        { label: "Share my pick", primary: true, run: lastVoteCoach ? share(`I just picked ${lastVoteCoach.winner} over ${lastVoteCoach.loser} in ${lastVoteCoach.cat}. Who would you pick?`) : share("I'm voting on The GOAT. Who's your pick?") },
+        { label: "Keep playing" }] },
+    { id: "checkin10", when: () => votes >= 10,
+      title: "10 picks in",
+      body: ["Your picks are helping set the crowd's favorites. Want to see how the board is shaping up?"],
+      actions: [{ label: "See the stats", primary: true, run: openStats }, { label: "Keep playing" }] },
+    { id: "goat", when: () => !!goat,
+      title: "You crowned a GOAT",
+      body: goat ? [`${goat.champ} is your GOAT in ${goat.cat.name}. Your crown now counts toward the crowd's board.`] : [],
+      actions: [
+        { label: "Ask your friends", primary: true, run: goat ? share(`I just declared ${goat.champ} is The GOAT of ${goat.cat.name}. HBU?`) : null },
+        { label: "Keep playing" }] },
+    { id: "mashups", when: () => ready >= 2 && !mashupUnlocked(),
+      title: "Mashups are close",
+      body: [`You are ready in ${ready} of ${MASHUP_MIN_CATS} categories. Get a GOAT or 10 votes in ${MASHUP_MIN_CATS} categories to unlock Mashups, where fighters from different categories face off.`],
+      actions: [{ label: "Got it" }] }
+  ];
+}
+function maybeCoach(){
+  if(!readStore("goat_intro_seen")) return;   // the welcome card always comes first
+  if(COACH_OPEN.some(id => !$(id).classList.contains("hidden"))) return;
+  // While the category picker is up, only the pick tip can show; the rest wait until a match is on screen.
+  const pickerOpen = !$("picker").classList.contains("hidden");
+  const seen = coachSeen();
+  const step = coachSteps().find(st => !seen[st.id] && (st.id === "pick") === pickerOpen && st.when());
+  if(step) showCoach(step);
+}
+function showCoach(step){
+  markCoach(step.id);
+  if(step.id === "ab") markCoach("pick");   // starting a category counts as having picked one
+  $("coachTitle").textContent = step.title;
+  $("coachBody").replaceChildren(...step.body.map(text => {
+    const p = document.createElement("p");
+    p.className = "dlg-body";
+    p.textContent = text;
+    return p;
+  }));
+  const acts = $("coachActions");
+  acts.replaceChildren();
+  step.actions.forEach(a => {
+    const b = document.createElement("button");
+    b.className = "btn" + (a.primary ? " primary" : "");
+    const span = document.createElement("span");
+    span.textContent = a.label;
+    b.appendChild(span);
+    b.addEventListener("click", () => {
+      $("coach").classList.add("hidden");
+      if(a.run) a.run();
+    });
+    acts.appendChild(b);
+  });
+  $("coach").classList.remove("hidden");
+}
 $("brand").addEventListener("click", () => { if(!document.body.classList.contains("home")) openPicker(); });   // logo returns to home
 $("catBtn").addEventListener("click", openPicker);
 $("pickerBack").addEventListener("click", closePicker);
@@ -2627,7 +2730,7 @@ document.addEventListener("keydown", e => {
     }
     return;
   }
-  const open = ["picker", "statsPanel", "statsIntro", "resetPanel", "dialog", "shareSheet", "checkpoint", "ladderEnd", "intro"]
+  const open = ["picker", "statsPanel", "statsIntro", "resetPanel", "dialog", "shareSheet", "checkpoint", "ladderEnd", "intro", "coach"]
     .some(id => !$(id).classList.contains("hidden"));
   if(open) return;
   const resultOpen = !$("result").classList.contains("hidden");
@@ -2648,7 +2751,7 @@ document.addEventListener("keydown", e => {
 (function(){
   const stage = $("stage");
   const SWIPE = 80;
-  const OPEN_PANELS = ["picker", "statsPanel", "statsIntro", "resetPanel", "dialog", "shareSheet", "checkpoint", "ladderEnd", "intro"];
+  const OPEN_PANELS = ["picker", "statsPanel", "statsIntro", "resetPanel", "dialog", "shareSheet", "checkpoint", "ladderEnd", "intro", "coach"];
   let g = null;
   const resultEl = () => $("result");
   const modalOpen = () => OPEN_PANELS.some(id => !$(id).classList.contains("hidden"));
