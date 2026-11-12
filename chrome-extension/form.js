@@ -39,8 +39,24 @@ function parseCSV(text){
   const head = (rows.shift() || []).map(h => h.trim().toLowerCase());
   return rows.filter(r => r.some(c => c.trim())).map(r => Object.fromEntries(head.map((h, i) => [h, (r[i] || "").trim()])));
 }
-const sheetTab = gid => fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`, { cache: "no-store" })
-  .then(r => { if(!r.ok) throw new Error("HTTP " + r.status); return r.text(); });
+/* One sheet tab as CSV. Retries because Google sometimes refuses a burst of reads; a sign-in or error page is a failure. */
+async function sheetTab(gid){
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`;
+  let lastErr = new Error("no response");
+  for(let attempt = 0; attempt < 3; attempt++){
+    try{
+      const r = await fetch(url, { cache: "no-store" });
+      if(!r.ok) throw new Error("HTTP " + r.status);
+      const t = await r.text();
+      if(t.trim().startsWith("<")) throw new Error("not a sheet export");
+      return t;
+    }catch(e){
+      lastErr = e;
+      await new Promise(res => setTimeout(res, 700 * (attempt + 1)));
+    }
+  }
+  throw lastErr;
+}
 const idOf = s => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 const photoSlugOf = name => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
@@ -54,32 +70,45 @@ function slugFor(word, category){
   return photoSlugOf(word.name);
 }
 
-/* Categories and words, read from the GOAT sheet (Categories tab, then each category tab). Last good copy is the fallback. */
+let catalogProblems = [];
+
+/* Every category on the Categories tab is listed. A tab that fails to load keeps its last saved names. */
 async function loadCatalog(){
+  const saved = await chrome.storage.local.get(["goatCatalog", "goatWordsCache"]);
+  const wordsCache = saved.goatWordsCache || {};
+  let index;
   try{
-    const index = parseCSV(await sheetTab(INDEX_GID)).filter(r => r.category && r["tab id"]);
-    const cats = [], seen = new Set();
-    for(const r of index){
-      const id = idOf(r.category);
-      if(!id || id === UNCATEGORIZED || seen.has(id)) continue;
-      seen.add(id);
-      let rows = [];
-      try{ rows = parseCSV(await sheetTab(r["tab id"])); }catch(e){ continue; }
-      const names = new Set(), words = [];
+    index = parseCSV(await sheetTab(INDEX_GID)).filter(r => r.category && r["tab id"]);
+  }catch(e){
+    catalogProblems = ["Categories tab: " + e.message];
+    return saved.goatCatalog || [];
+  }
+  const cats = [], seen = new Set(), problems = [];
+  for(const r of index){
+    const id = idOf(r.category);
+    if(!id || id === UNCATEGORIZED || seen.has(id)) continue;
+    seen.add(id);
+    const name = r["display name"] || r.category;
+    let words;
+    try{
+      const rows = parseCSV(await sheetTab(r["tab id"]));
+      const names = new Set();
+      words = [];
       for(const w of rows){
         if(!w.name || (w.on || "TRUE").toUpperCase() === "FALSE" || names.has(w.name)) continue;
         names.add(w.name);
         words.push({ name: w.name, slug: slugFor(w, id), photo: w.photo || null });
       }
-      cats.push({ id, name: r["display name"] || r.category, words });
+      wordsCache[id] = words;
+    }catch(e){
+      problems.push(`${name} (${e.message})`);
+      words = wordsCache[id] || [];
     }
-    if(!cats.length) throw new Error("no categories in the sheet");
-    await chrome.storage.local.set({ goatCatalog: cats });
-    return cats;
-  }catch(e){
-    console.warn("catalog not loaded from sheet", e);
-    return (await chrome.storage.local.get("goatCatalog")).goatCatalog || [];
+    cats.push({ id, name, words });
   }
+  await chrome.storage.local.set({ goatCatalog: cats, goatWordsCache: wordsCache });
+  catalogProblems = problems;
+  return cats;
 }
 
 async function fillCategories(){
@@ -91,6 +120,7 @@ async function fillCategories(){
   const known = last === UNCATEGORIZED || catalog.some(c => c.id === last);
   $("category").value = known ? last : (catalog[0] ? catalog[0].id : UNCATEGORIZED);
   if(!catalog.length) setMsg("Could not load the categories from the sheet. Images will go to Uncategorized.", "err");
+  else if(catalogProblems.length) setMsg("Could not refresh " + catalogProblems.join("; ") + ". Showing the last saved names for those.", "err");
   onCategoryChange();
 }
 
@@ -217,7 +247,7 @@ function init(){
   $("cardImgA").src = src;
   $("cardImgB").src = src;
   $("source_page").value = params.get("page") || "";
-  $("foot").textContent = "EXT6 · v0.6.1 · " + (src.startsWith("https://") ? "ready" : "not an https image: cannot add");
+  $("foot").textContent = "EXT6 · v0.6.2 · " + (src.startsWith("https://") ? "ready" : "not an https image: cannot add");
   fillCategories();
 }
 
