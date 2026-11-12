@@ -241,7 +241,7 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 /* Category welcome: a tall card holding the category tiles above the button. The text sits on a translucent panel. */
 #catWelcome{padding:12px}
 section#catWelcome{position:fixed; inset:0; z-index:10; padding:12px}
-.intro-card.cw-card{width:min(360px, calc(100vw - 24px)); max-width:360px; height:min(calc(100dvh - 24px), 820px); max-height:calc(100dvh - 24px); padding:0; display:flex; flex-direction:column; text-align:center; min-height:0}
+.intro-card.cw-card{width:min(360px, calc(100vw - 24px)); max-width:360px; height:auto; max-height:min(calc(100dvh - 24px), 820px); padding:0; display:flex; flex-direction:column; text-align:center; min-height:0}
 .cw-foot{position:relative; z-index:1; flex:none; padding:10px 14px 16px; background:linear-gradient(180deg,rgba(7,10,20,0),rgba(7,10,20,.85) 40%)}
 .cw-foot .btn{width:100%}
 .cw-card #cwBg::after{background:rgba(7,10,20,.22)}   /* light enough to read the photo; the text panel keeps copy legible */
@@ -249,10 +249,6 @@ section#catWelcome{position:fixed; inset:0; z-index:10; padding:12px}
 .cw-text{background:rgba(5,7,14,.78); border:2px solid rgba(255,255,255,.12); border-radius:12px; padding:10px 12px 12px; text-shadow:0 1px 2px #000}
 .cw-text .intro-title{margin:0 0 6px; text-shadow:3px 3px 0 #000}
 .cw-text .dlg-body{margin:4px 0; font-size:16px; color:#fff}
-.cw-slot .tiles{flex:none; min-height:0; overflow:visible; padding:0}
-.cw-slot .tile-grid{grid-auto-rows:minmax(104px,auto); gap:10px}
-.cw-slot .tile{min-height:104px}
-.cw-slot .suggest-box{display:none}   /* placeholder: kept out of the welcome dialog to save room */
 
 #intro,#coach,#catWelcome{position:absolute; inset:0; z-index:10; background:rgba(5,7,14,.8); display:flex; align-items:center; justify-content:center; padding:18px}
 #coachActions{margin-top:16px}
@@ -688,7 +684,6 @@ body.home #resetBtn{display:none}
               <p class="display intro-title" id="cwTitle"></p>
               <div id="cwBody"></div>
             </div>
-            <div class="cw-slot" id="cwSlot"></div>
           </div>
           <div class="cw-foot">
             <button class="btn primary" id="cwGo"><span>Let's go</span></button>
@@ -733,7 +728,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B144";
+const BUILD = "B145";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1842,13 +1837,11 @@ function disarmReset(){
    Opened from the category button. Shows one box per category. Tap a box to play it. Back closes.
    Each category keeps its own ladder and stats. */
 // The category tiles live in the picker, or in the welcome dialog above "Let's go" when a category is entered.
-function placeTiles(inWelcome){
-  const tiles = $("tiles");
-  if(inWelcome) $("cwSlot").appendChild(tiles);
-  else $("pickerCard").insertBefore(tiles, $("pickerActions"));
+function placeTiles(){
+  $("pickerCard").insertBefore($("tiles"), $("pickerActions"));
 }
 function openPicker(){
-  placeTiles(false);
+  placeTiles();
   renderPicker();
   document.body.classList.add("home");
   $("picker").classList.remove("hidden");
@@ -2055,7 +2048,6 @@ let pendingCatWelcome = false;   // set while a category is being entered, so ti
 function showCatWelcome(){
   pendingCatWelcome = false;
   if(!CUR || CUR.mashup){ maybeCoach(); return; }
-  placeTiles(true);
   const board = globalBoards()[CUR.id] || { wins: {}, crowns: {} };
   const goatsOf = n => board.crowns[n] ? board.crowns[n].size : 0;
   // The current GOAT is the item the most players have crowned. Until someone crowns one, there is none.
