@@ -238,7 +238,7 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 @keyframes bootSlide{from{transform:translateX(-100%)} to{transform:translateX(260%)}}
 @media (prefers-reduced-motion: reduce){ .boot-crown,.boot-title,.boot-bar span{animation:none} }
 #hint{display:none}
-#intro,#coach{position:absolute; inset:0; z-index:10; background:rgba(5,7,14,.8); display:flex; align-items:center; justify-content:center; padding:18px}
+#intro,#coach,#catWelcome{position:absolute; inset:0; z-index:10; background:rgba(5,7,14,.8); display:flex; align-items:center; justify-content:center; padding:18px}
 #coachActions{margin-top:16px}
 .intro-card{position:relative; width:100%; max-width:360px; padding:26px 20px 20px; text-align:center; overflow:hidden; background:linear-gradient(165deg,#1d2650,#0b1024 70%); border:3px solid #000; border-radius:18px; box-shadow:6px 6px 0 #000, 0 0 0 3px var(--yellow); animation:introPop .5s cubic-bezier(.2,1.35,.4,1) both}
 .intro-band{position:absolute; left:-10%; right:-10%; top:0; height:14px; transform:skewY(-4deg); background:linear-gradient(90deg,#e8303a 0 50%,#2d6fd6 50% 100%); border-bottom:3px solid #000}
@@ -663,6 +663,15 @@ body.home #resetBtn{display:none}
         </div>
       </section>
 
+      <section class="hidden" id="catWelcome" role="dialog" aria-modal="true" aria-label="Welcome to this category">
+        <div class="intro-card">
+          <div class="intro-band" aria-hidden="true"></div>
+          <p class="display intro-title" id="cwTitle"></p>
+          <div id="cwBody"></div>
+          <div class="actions"><button class="btn primary" id="cwGo"><span>Let's go</span></button></div>
+        </div>
+      </section>
+
       <section class="overlay dialog hidden" id="dialog" role="alertdialog" aria-modal="true">
         <div class="dlg-art hidden" id="dlgArt">
           <div class="dlg-frame" id="dlgFrame"></div>
@@ -700,7 +709,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B139";
+const BUILD = "B140";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1042,7 +1051,13 @@ const DEVICE = deviceInfo();
 /* ---------- storage (guarded: viewers can block or wipe it) ---------- */
 function readStore(key){ try{ return JSON.parse(localStorage.getItem(key) || "null"); }catch(e){ return null; } }
 function writeStore(key, value){ try{ localStorage.setItem(key, JSON.stringify(value)); }catch(e){} }
-function loadLadder(cat){ const s = readStore(cat.ladderKey); return (s && typeof s.champ === "string" && Array.isArray(s.queue)) ? s : null; }
+function loadLadder(cat){
+  const s = readStore(cat.ladderKey);
+  if(!(s && typeof s.champ === "string" && Array.isArray(s.queue))) return null;
+  // Coming back to a run at #10, 20, ...: the checkpoint is not shown again, the next matchup is.
+  if(s.round > 0 && s.round % 10 === 0) s.checkpoint = s.round;
+  return s;
+}
 function saveLadder(){ writeStore(CUR.ladderKey, S); }
 
 /* ---------- helpers ---------- */
@@ -1106,7 +1121,7 @@ function setStartPref(cat, name){ const m = readStore("goat_start") || {}; if(na
 function freshRun(){ return newRunState([], startPref(CUR)); }
 function renderStartRow(){
   const row = $("startRow");
-  const fresh = mode === "ladder" && S && !S.ranked.length && S.round === 0;
+  const fresh = mode === "ladder" && S && S.round === 0;
   row.classList.toggle("hidden", !fresh);
   if(!fresh) return;
   const pref = startPref(CUR);
@@ -1919,6 +1934,7 @@ function setCategory(cat){
   mode = "ladder";
   challengePair = null;
   lastResult = null;
+  justFinished = false;
   ["result","ladderEnd","statsPanel","checkpoint"].forEach(id => $(id).classList.add("hidden"));
   hideOops();
   history.replaceState(null, "", location.href.split("#")[0]);
@@ -1940,7 +1956,7 @@ $("introGo").addEventListener("click", () => {
 /* ---------- contextual coach ----------
    One short tip at a time, shown when the player reaches that moment. Each tip is seen once (goat_coach). */
 let lastVoteCoach = null;
-const COACH_OPEN = ["statsPanel","statsIntro","resetPanel","dialog","shareSheet","checkpoint","ladderEnd","intro","result","goatCrown","coach"];
+const COACH_OPEN = ["statsPanel","statsIntro","resetPanel","dialog","shareSheet","checkpoint","ladderEnd","intro","result","goatCrown","coach","catWelcome"];
 function coachSeen(){ return readStore("goat_coach") || {}; }
 function markCoach(id){ const s = coachSeen(); s[id] = true; writeStore("goat_coach", s); }
 function myGoatInfo(){
@@ -1965,7 +1981,7 @@ function coachSteps(){
       title: "Pick a category",
       body: ["Each category is its own bracket of fighters. Choose one to start building your GOAT."],
       actions: [{ label: "Got it" }] },
-    { id: "ab", event: "land", when: () => mode !== "challenge" && !!CUR,
+    { id: "ab", event: "land", when: () => mode !== "challenge" && !!CUR && !!S && S.queue.length > 0,
       title: "Head to head",
       body: ["Every match is two items. Tap the one you like better, or drag it toward the rival. The winner stays on and faces the next, until one is left standing."],
       actions: [{ label: "Got it" }] },
@@ -1995,13 +2011,46 @@ function coachSteps(){
 }
 function maybeCoach(){
   if(!coachReady || !readStore("goat_intro_seen")) return;   // the welcome card always comes first
-  if(COACH_OPEN.some(id => !$(id).classList.contains("hidden"))) return;
+  if(pendingCatWelcome || COACH_OPEN.some(id => !$(id).classList.contains("hidden"))) return;
   // While the category picker is up, only the pick tip can show; the rest wait until a match is on screen.
   const pickerOpen = !$("picker").classList.contains("hidden");
   const seen = coachSeen();
   const step = coachSteps().find(st => !seen[st.id] && coachEvents.has(st.event) && (st.id === "pick") === pickerOpen && st.when());
   if(step){ coachEvents.delete(step.event); showCoach(step); }
 }
+/* ---------- category welcome ----------
+   Shown each time the player enters a category: the crowd's GOAT, how many entries, and their own pick count. */
+let pendingCatWelcome = false;   // set while a category is being entered, so tips wait for the welcome card
+function showCatWelcome(){
+  pendingCatWelcome = false;
+  if(!CUR || CUR.mashup){ maybeCoach(); return; }
+  const board = globalBoards()[CUR.id] || { wins: {}, crowns: {} };
+  const goatsOf = n => board.crowns[n] ? board.crowns[n].size : 0;
+  const winsOf = n => board.wins[n] || 0;
+  const top = CUR.items.map(i => i.n)
+    .filter(n => goatsOf(n) > 0 || winsOf(n) > 0)
+    .sort((a, b) => (goatsOf(b) - goatsOf(a)) || (winsOf(b) - winsOf(a)))[0];
+  const mine = countPicks((k, p) => p.cat === CUR.id);
+  const lines = [];
+  if(top){
+    const g = goatsOf(top);
+    lines.push(g ? `Everyone's GOAT: ${top}, crowned by ${g} ${g === 1 ? "player" : "players"}.` : `Most picked by everyone: ${top}.`);
+  } else {
+    lines.push("Everyone's GOAT: none yet. Be the first to crown one.");
+  }
+  lines.push(`${CUR.items.length} entries in ${CUR.name}.`);
+  if(mine) lines.push(`You have made ${mine} ${mine === 1 ? "pick" : "picks"} here.`);
+  $("cwTitle").textContent = CUR.name;
+  $("cwBody").replaceChildren(...lines.map(text => {
+    const p = document.createElement("p");
+    p.className = "dlg-body";
+    p.textContent = text;
+    return p;
+  }));
+  $("catWelcome").classList.remove("hidden");
+}
+$("cwGo").addEventListener("click", () => { $("catWelcome").classList.add("hidden"); maybeCoach(); });
+
 function showCoach(step){
   markCoach(step.id);
   if(step.id === "ab") markCoach("pick");   // starting a category counts as having picked one
@@ -2052,10 +2101,11 @@ $("tiles").addEventListener("click", e => {
   }
   const c = CATEGORIES.find(x => x.id === b.dataset.id);
   closePicker();
-  if(c === CUR && S && !S.queue.length){ startFreshHere(); return; }
+  if(c === CUR && S && !S.queue.length){ pendingCatWelcome = true; startFreshHere(); showCatWelcome(); return; }
+  pendingCatWelcome = true;
   coachEvents.add("land");
   setCategory(c);
-  maybeCoach();
+  showCatWelcome();
 });
 
 /* While a fighter is dragged toward the rival, it brightens and the rival grays. p runs 0 to 1. */
@@ -2447,10 +2497,11 @@ $("statsBody").addEventListener("click", e => {
     const c = card.dataset.cat === "mashup" ? MASHUP : CATEGORIES.find(x => x.id === card.dataset.cat);
     if(!c || (c === MASHUP && !mashupUnlocked())) return;
     $("statsPanel").classList.add("hidden");
+    pendingCatWelcome = true;
     coachEvents.add("land");
     setCategory(c);
     closePicker();
-    maybeCoach();
+    showCatWelcome();
   }
 });
 $("statsClose").addEventListener("click", () => $("statsPanel").classList.add("hidden"));
@@ -2505,16 +2556,16 @@ $("aboutBtn").addEventListener("click", () => {
 $("aboutClose").addEventListener("click", () => $("aboutPanel").classList.add("hidden"));
 $("suggestCat").addEventListener("click", () => {});  // wired up later
 $("startSel").addEventListener("change", e => {
-  if(!S || S.ranked.length || S.round) return;
+  if(!S || S.round) return;
   setStartPref(CUR, e.target.value || null);
-  S = freshRun(); saveLadder(); renderMatch();
+  S = newRunState(S.ranked || [], startPref(CUR)); saveLadder(); renderMatch();
 });
 $("startRand").addEventListener("click", () => {
-  if(!S || S.ranked.length || S.round) return;
+  if(!S || S.round) return;
   setStartPref(CUR, null);
   const names = CUR.items.map(f => f.n);
   const pick = names[Math.floor(Math.random() * names.length)];
-  S = newRunState([], pick); saveLadder(); renderMatch();
+  S = newRunState(S.ranked || [], pick); saveLadder(); renderMatch();
 });
 
 /* ---------- My page (step 1) ----------
@@ -2748,7 +2799,7 @@ document.addEventListener("keydown", e => {
     }
     return;
   }
-  const open = ["picker", "statsPanel", "statsIntro", "resetPanel", "dialog", "shareSheet", "checkpoint", "ladderEnd", "intro", "coach"]
+  const open = ["picker", "statsPanel", "statsIntro", "resetPanel", "dialog", "shareSheet", "checkpoint", "ladderEnd", "intro", "coach", "catWelcome"]
     .some(id => !$(id).classList.contains("hidden"));
   if(open) return;
   const resultOpen = !$("result").classList.contains("hidden");
@@ -2769,7 +2820,7 @@ document.addEventListener("keydown", e => {
 (function(){
   const stage = $("stage");
   const SWIPE = 80;
-  const OPEN_PANELS = ["picker", "statsPanel", "statsIntro", "resetPanel", "dialog", "shareSheet", "checkpoint", "ladderEnd", "intro", "coach"];
+  const OPEN_PANELS = ["picker", "statsPanel", "statsIntro", "resetPanel", "dialog", "shareSheet", "checkpoint", "ladderEnd", "intro", "coach", "catWelcome"];
   let g = null;
   const resultEl = () => $("result");
   const modalOpen = () => OPEN_PANELS.some(id => !$(id).classList.contains("hidden"));
