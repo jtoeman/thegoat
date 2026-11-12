@@ -240,17 +240,20 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 #hint{display:none}
 /* Category welcome: a tall card holding the category tiles above the button. The text sits on a translucent panel. */
 #catWelcome{padding:12px}
-.intro-card.cw-card{width:min(360px, calc(100vw - 32px)); max-width:360px; height:min(calc(100dvh - 24px), 820px); padding:0; display:flex; flex-direction:column; text-align:center; min-height:0}
+section#catWelcome{position:fixed; inset:0; z-index:10; padding:12px}
+.intro-card.cw-card{width:min(360px, calc(100vw - 24px)); max-width:360px; height:min(calc(100dvh - 24px), 820px); max-height:calc(100dvh - 24px); padding:0; display:flex; flex-direction:column; text-align:center; min-height:0}
+.cw-foot{position:relative; z-index:1; flex:none; padding:10px 14px 16px; background:linear-gradient(180deg,rgba(7,10,20,0),rgba(7,10,20,.85) 40%)}
+.cw-foot .btn{width:100%}
 .cw-card #cwBg::after{background:rgba(7,10,20,.6)}
-.cw-inner{position:relative; z-index:1; flex:1 1 auto; min-height:0; overflow-y:auto; padding:22px 14px 14px; display:flex; flex-direction:column; gap:12px}
+.cw-inner{position:relative; z-index:1; flex:1 1 auto; min-height:0; overflow-y:auto; padding:22px 14px 8px; display:flex; flex-direction:column; gap:12px}
 .cw-text{background:rgba(5,7,14,.78); border:2px solid rgba(255,255,255,.12); border-radius:12px; padding:10px 12px 12px; text-shadow:0 1px 2px #000}
 .cw-text .intro-title{margin:0 0 6px; text-shadow:3px 3px 0 #000}
 .cw-text .dlg-body{margin:4px 0; font-size:16px; color:#fff}
 .cw-slot .tiles{flex:none; min-height:0; overflow:visible; padding:0}
-.cw-slot .tile-grid{grid-auto-rows:minmax(116px,auto); gap:10px}
-.cw-slot .tile{min-height:116px}
+.cw-slot .tile-grid{grid-auto-rows:minmax(104px,auto); gap:10px}
+.cw-slot .tile{min-height:104px}
 .cw-slot .suggest-box{display:none}   /* placeholder: kept out of the welcome dialog to save room */
-.cw-actions{margin-top:0}
+
 #intro,#coach,#catWelcome{position:absolute; inset:0; z-index:10; background:rgba(5,7,14,.8); display:flex; align-items:center; justify-content:center; padding:18px}
 #coachActions{margin-top:16px}
 .intro-card{position:relative; width:100%; max-width:360px; padding:26px 20px 20px; text-align:center; overflow:hidden; background:linear-gradient(165deg,#1d2650,#0b1024 70%); border:3px solid #000; border-radius:18px; box-shadow:6px 6px 0 #000, 0 0 0 3px var(--yellow); animation:introPop .5s cubic-bezier(.2,1.35,.4,1) both}
@@ -686,7 +689,9 @@ body.home #resetBtn{display:none}
               <div id="cwBody"></div>
             </div>
             <div class="cw-slot" id="cwSlot"></div>
-            <div class="actions cw-actions"><button class="btn primary" id="cwGo"><span>Let's go</span></button></div>
+          </div>
+          <div class="cw-foot">
+            <button class="btn primary" id="cwGo"><span>Let's go</span></button>
           </div>
         </div>
       </section>
@@ -728,7 +733,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B142";
+const BUILD = "B143";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
