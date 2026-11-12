@@ -175,9 +175,9 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .foot-help{flex:none; width:28px; height:28px; padding:0; border:2px solid #000; box-shadow:2px 2px 0 #000; background:var(--yellow); color:#111; font-size:16px; cursor:pointer; transform:skewX(-8deg); display:grid; place-items:center}
 .foot-help span{display:block; transform:skewX(8deg); font-family:Impact,sans-serif; line-height:1}
 .foot .build{margin-left:auto}
-.picker{position:absolute; inset:0; z-index:7; background:rgba(5,7,14,.82); display:flex; align-items:center; justify-content:center; padding:16px; min-height:0; overflow:hidden}
+.picker{position:fixed; inset:0; z-index:7; background:rgba(5,7,14,.82); display:flex; align-items:center; justify-content:center; padding:16px; min-height:0; overflow:hidden}
 /* The category picker is a centered modal card: narrower and taller than the page. */
-.intro-card.picker-card{width:min(330px,100%); max-width:330px; height:min(680px,100%); padding:26px 14px 14px; display:flex; flex-direction:column; gap:12px; text-align:center; min-height:0}
+.intro-card.picker-card{width:min(330px, calc(100vw - 48px)); max-width:330px; height:min(600px, calc(100dvh - 72px)); padding:26px 14px 14px; display:flex; flex-direction:column; gap:12px; text-align:center; min-height:0}
 .picker-title{font-size:clamp(26px,9vw,40px); margin:0; text-align:center}
 .picker-note{margin:0; text-align:center}
 /* Suggest a category: a half-height tile under the grid, greyed out until it is wired up. */
@@ -238,6 +238,8 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 @keyframes bootSlide{from{transform:translateX(-100%)} to{transform:translateX(260%)}}
 @media (prefers-reduced-motion: reduce){ .boot-crown,.boot-title,.boot-bar span{animation:none} }
 #hint{display:none}
+#catWelcome .intro-title,#catWelcome #cwBody,#catWelcome .actions{position:relative; z-index:1}
+#catWelcome .actions{margin-top:18px}
 #intro,#coach,#catWelcome{position:absolute; inset:0; z-index:10; background:rgba(5,7,14,.8); display:flex; align-items:center; justify-content:center; padding:18px}
 #coachActions{margin-top:16px}
 .intro-card{position:relative; width:100%; max-width:360px; padding:26px 20px 20px; text-align:center; overflow:hidden; background:linear-gradient(165deg,#1d2650,#0b1024 70%); border:3px solid #000; border-radius:18px; box-shadow:6px 6px 0 #000, 0 0 0 3px var(--yellow); animation:introPop .5s cubic-bezier(.2,1.35,.4,1) both}
@@ -666,6 +668,7 @@ body.home #resetBtn{display:none}
       <section class="hidden" id="catWelcome" role="dialog" aria-modal="true" aria-label="Welcome to this category">
         <div class="intro-card">
           <div class="intro-band" aria-hidden="true"></div>
+          <div class="le-bg" id="cwBg" aria-hidden="true"></div>
           <p class="display intro-title" id="cwTitle"></p>
           <div id="cwBody"></div>
           <div class="actions"><button class="btn primary" id="cwGo"><span>Let's go</span></button></div>
@@ -709,7 +712,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B140";
+const BUILD = "B141";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -2026,21 +2029,18 @@ function showCatWelcome(){
   if(!CUR || CUR.mashup){ maybeCoach(); return; }
   const board = globalBoards()[CUR.id] || { wins: {}, crowns: {} };
   const goatsOf = n => board.crowns[n] ? board.crowns[n].size : 0;
-  const winsOf = n => board.wins[n] || 0;
-  const top = CUR.items.map(i => i.n)
-    .filter(n => goatsOf(n) > 0 || winsOf(n) > 0)
-    .sort((a, b) => (goatsOf(b) - goatsOf(a)) || (winsOf(b) - winsOf(a)))[0];
+  // The current GOAT is the item the most players have crowned. Until someone crowns one, there is none.
+  const goat = CUR.items.map(i => i.n)
+    .filter(n => goatsOf(n) > 0)
+    .sort((a, b) => goatsOf(b) - goatsOf(a))[0] || null;
   const mine = countPicks((k, p) => p.cat === CUR.id);
-  const lines = [];
-  if(top){
-    const g = goatsOf(top);
-    lines.push(g ? `Everyone's GOAT: ${top}, crowned by ${g} ${g === 1 ? "player" : "players"}.` : `Most picked by everyone: ${top}.`);
-  } else {
-    lines.push("Everyone's GOAT: none yet. Be the first to crown one.");
-  }
-  lines.push(`${CUR.items.length} entries in ${CUR.name}.`);
-  if(mine) lines.push(`You have made ${mine} ${mine === 1 ? "pick" : "picks"} here.`);
   $("cwTitle").textContent = CUR.name;
+  $("cwBg").innerHTML = goat && CUR.byName[goat] ? portraitHTML(CUR.byName[goat]) : "";
+  const lines = [
+    `THE CURRENT GOAT: ${goat || "none yet"}`,
+    `${CUR.name}: ${CUR.items.length} choices`
+  ];
+  if(mine) lines.push(`Your Picks: ${mine} so far`);
   $("cwBody").replaceChildren(...lines.map(text => {
     const p = document.createElement("p");
     p.className = "dlg-body";
