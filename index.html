@@ -182,6 +182,9 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .suggest-box{flex:none; width:100%; height:80px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; background:linear-gradient(135deg,#3a4259,#252c40); color:#7d87a4; border:3px solid #000; border-radius:16px; box-shadow:4px 4px 0 #000; font:inherit; cursor:not-allowed}
 .suggest-box b{font:20px/1 Impact,"Arial Narrow",sans-serif; text-transform:uppercase; letter-spacing:.04em; text-shadow:2px 2px 0 #000}
 .suggest-box span{font-size:13px; font-style:italic; text-shadow:1px 1px 0 #000}
+.suggest-box.hot{background:linear-gradient(135deg,#ffd23f,#e0a800); color:#1a1400; border-color:#000}
+.suggest-box.hot b{color:#1a1400; text-shadow:none; font-size:17px}
+.suggest-box.hot span{color:#3a2e00; text-shadow:none}
 .picker .actions{margin-top:0}
 .skip-picker{display:flex; align-items:center; justify-content:center; gap:8px; margin:-4px 0 0; font-size:15px; color:#fff; cursor:pointer}
 .skip-picker input{width:18px; height:18px; margin:0; accent-color:var(--yellow)}
@@ -232,6 +235,7 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 @keyframes bootPulse{0%,100%{transform:scale(1) rotate(-6deg)} 50%{transform:scale(1.15) rotate(6deg)}}
 @keyframes bootSlide{from{transform:translateX(-100%)} to{transform:translateX(260%)}}
 @media (prefers-reduced-motion: reduce){ .boot-crown,.boot-title,.boot-bar span{animation:none} }
+#hint{display:none}
 #intro{position:absolute; inset:0; z-index:10; background:rgba(5,7,14,.8); display:flex; align-items:center; justify-content:center; padding:18px}
 .intro-card{position:relative; width:100%; max-width:360px; padding:26px 20px 20px; text-align:center; overflow:hidden; background:linear-gradient(165deg,#1d2650,#0b1024 70%); border:3px solid #000; border-radius:18px; box-shadow:6px 6px 0 #000, 0 0 0 3px var(--yellow); animation:introPop .5s cubic-bezier(.2,1.35,.4,1) both}
 .intro-band{position:absolute; left:-10%; right:-10%; top:0; height:14px; transform:skewY(-4deg); background:linear-gradient(90deg,#e8303a 0 50%,#2d6fd6 50% 100%); border-bottom:3px solid #000}
@@ -640,6 +644,7 @@ body.home #resetBtn{display:none}
           <div class="intro-band" aria-hidden="true"></div>
           <p class="display intro-title">Welcome to<br>The GOAT!</p>
           <p class="dlg-body">Two items face off. Pick the one you like better. The winner stays on and faces the next, until one is left standing. That is your GOAT <img class='crown-ico' src='assets/goat-crown.png' alt=''>.</p>
+          <p class="dlg-body">Tap a fighter, or press and drag it toward the rival. Swipe or press Space for the next round.</p>
           <p class="display intro-q">What's <span>your</span> greatest of all time?</p>
           <p class="dlg-body intro-cta">Click to find out!</p>
           <div class="actions"><button class="btn primary intro-go" id="introGo"><span>Let's go</span></button></div>
@@ -680,7 +685,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B134";
+const BUILD = "B135";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1315,11 +1320,8 @@ function resetFighterVisuals(){
     c.style.setProperty("--p", 0);
   });
 }
-function setHint(text, go){
-  const h = $("hint");
-  h.textContent = text;
-  h.classList.toggle("go", !!go);
-}
+/* Instructions now live in the first-play card, so the hint line stays empty. */
+function setHint(){}
 
 /* In Mashups, the challenger is never from the same category as the champion. The first queued item
    from another category moves to the front; if none is left, the queue order stands. Other categories are unchanged. */
@@ -1693,6 +1695,8 @@ function challengeUrl(x, y){
   const head = CUR.id === "fruit" ? "" : CUR.id + "-";
   return SITE_URL + "#vs-" + head + CUR.byName[x].s + "-" + CUR.byName[y].s;
 }
+/* Category links: #cat-<id> opens that category. Mashups is #cat-mashup. */
+function catUrl(){ return SITE_URL + "#cat-" + (CUR === MASHUP ? "mashup" : CUR.id); }
 function openShare(text, url){
   $("shareText").textContent = text;
   $("shareUrl").value = url;
@@ -1709,7 +1713,7 @@ function shareRanking(){
   track("Share Clicked", { result: "ranking", category: CUR.id, items_ranked: S.ranked.length });
   const list = S.ranked.slice(0, 10).map((f, i) => `${i + 1}. ${f}`).join("\n")
     + (S.ranked.length > 10 ? `\n…and ${S.ranked.length - 10} more` : "");
-  openShare(`My ${CUR.name} ranking on The GOAT:\n${list}`, SITE_URL);
+  openShare(`My ${CUR.name} ranking on The GOAT:\n${list}`, catUrl());
 }
 function legacyCopy(){
   const i = $("shareUrl");
@@ -1838,6 +1842,13 @@ function mashupTileHTML(){
 let editing = false;
 // Category tiles appear in a random order, set once per page load so the order holds while you play.
 let pickerOrder = null;
+/* The suggest box is a prompt once the player has crowned five GOATs. */
+function suggestBoxHTML(){
+  const goats = CATEGORIES.filter(c => hasMyGoat(c)).length;
+  const hot = goats >= 5;
+  const title = hot ? "You've crowned 5 GOATs. Suggest a new category" : "Suggest a category";
+  return `<button type="button" class="suggest-box${hot ? " hot" : ""}" id="suggestBox" disabled><b>${title}</b><span>Coming soon</span></button>`;
+}
 function renderPicker(){
   const hid = hiddenIds();
   if(!pickerOrder) pickerOrder = shuffleList(CATEGORIES.map(c => c.id));
@@ -1859,7 +1870,7 @@ function renderPicker(){
   // Mashups is always the 5th entry (or last, if there are fewer than 5 categories showing).
   tiles.splice(Math.min(4, tiles.length), 0, mashupTileHTML());
   $("tiles").innerHTML = `<div class="tile-grid">${tiles.join("")}</div>
-    <button type="button" class="suggest-box" id="suggestBox" disabled><b>Suggest a category</b><span>Coming soon</span></button>`;
+    ${suggestBoxHTML()}`;
   $("pickerNote").textContent = editing ? "Hidden categories leave the picker and Mashups. Tap a box to hide or show it." : "";
   $("pickerNote").classList.toggle("hidden", !editing);
 }
@@ -2345,7 +2356,7 @@ function showGoatCrown(champ){
   $("goatCrown").classList.remove("hidden");
   $("gcShare").onclick = () => {
     track("Share Clicked", { result: "crown", category: CUR.id });
-    openShare(`I just declared ${champ} is The GOAT of ${CUR.name}. HBU?`, SITE_URL);
+    openShare(`I just declared ${champ} is The GOAT of ${CUR.name}. HBU?`, catUrl());
   };
   $("gcContinue").onclick = () => { $("goatCrown").classList.add("hidden"); renderMatch(); };
 }
@@ -2702,6 +2713,14 @@ function init(){
     }
   }
   CUR = challenge ? challenge.cat : (CATEGORIES.find(c => c.id === readStore("goat_cat")) || (readStore("goat_cat") === "mashup" ? MASHUP : CATEGORIES[0]));
+  if(!challenge){
+    const catHash = (location.hash.match(/#cat-([a-z0-9-]+)/i) || [])[1];
+    if(catHash){
+      const id = catHash.toLowerCase();
+      const linked = id === "mashup" ? MASHUP : CATEGORIES.find(c => c.id === id);
+      if(linked) CUR = linked;
+    }
+  }
   if(!challenge && isHidden(CUR) && visibleCats()[0]) CUR = visibleCats()[0];
   $("catLabel").textContent = CUR.name;
   recomputeWins();
