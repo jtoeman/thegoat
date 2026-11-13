@@ -215,7 +215,7 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .win-flash[data-side="right"] .wf-badge{align-self:flex-end}
 @media (prefers-reduced-motion: reduce){ .wf-title,.wf-name{animation:none} }
 .tiles{flex:1 1 auto; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:12px; padding:10px 10px 12px}
-.tile-grid{flex:1 1 auto; min-height:0; overflow-y:auto; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); grid-auto-rows:minmax(150px,1fr); gap:12px; align-content:stretch}
+.tile-grid{flex:1 1 auto; min-height:0; overflow-y:auto; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); grid-auto-rows:minmax(170px,1fr); gap:12px; align-content:stretch}
 .tile{position:relative; min-height:150px; padding:14px 12px; display:flex; flex-direction:column; justify-content:space-between; text-align:left; color:#fff; border:3px solid #000; border-radius:16px; box-shadow:4px 4px 0 #000; cursor:pointer; font-family:system-ui,-apple-system,Arial,sans-serif}
 .tile-e{font-size:44px; line-height:1; filter:drop-shadow(0 3px 2px rgba(0,0,0,.4))}
 .tile-name{display:block; font-size:22px; line-height:1.05; text-shadow:2px 2px 0 #000; overflow-wrap:normal; word-break:normal}
@@ -224,19 +224,17 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .tile.mashup{grid-column:1 / -1}
 .tile.locked{filter:grayscale(1); opacity:.6; cursor:not-allowed; box-shadow:none}
 .tile.current:hover::after{content:"Now playing"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; border-radius:13px; background:rgba(7,10,20,.72); color:#fff; font:22px/1 Impact,"Arial Narrow",system-ui,sans-serif; text-transform:uppercase; text-shadow:2px 2px 0 #000}
-/* GOAT tab: a gold tab tucked into the top corner, with a folded flap under its left edge */
-.tile-goat{position:absolute; top:0; right:0; max-width:58%; display:flex; flex-direction:column; align-items:flex-end; gap:2px;
-  padding:7px 8px 5px 11px; background:linear-gradient(180deg,#fff3a6 0%,#ffd23f 50%,#e3a300 100%);
+/* GOAT band: a slim gold strip across the top of the tile. Name on the left, crown on the right, a slanted end. */
+.tile.has-goat .tile-e{font-size:30px; margin-top:30px}
+.tile-goat{position:absolute; top:0; left:0; right:0; min-height:30px; display:flex; align-items:center; justify-content:space-between; gap:8px;
+  padding:5px 12px 5px 14px; background:linear-gradient(180deg,#fff2a6 0%,#ffd23f 60%,#f2b600 100%);
   color:#1a1200; font-family:Impact,"Haettenschweiler",sans-serif; text-transform:uppercase; letter-spacing:.03em;
-  font-size:11px; line-height:1.05; text-align:right; text-shadow:none;
-  border:3px solid #000; border-top:0; border-right:0; border-bottom-left-radius:10px;
-  box-shadow:inset 0 2px 0 rgba(255,255,255,.75), inset 0 -3px 0 rgba(0,0,0,.22), -3px 3px 0 rgba(0,0,0,.45);
+  font-size:12px; line-height:1.05; text-align:left; text-shadow:none;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.7), inset 0 -2px 0 rgba(0,0,0,.14);
+  clip-path:polygon(0 0,100% 0,100% 72%,calc(100% - 16px) 100%,0 100%);
   overflow-wrap:normal; word-break:normal}
-.tile-goat::before{content:""; position:absolute; left:-3px; bottom:-12px; width:0; height:0;
-  border-top:12px solid #7a5600; border-left:12px solid transparent}
-.tile-goat .tg-name{display:block; white-space:normal}
-.tile-goat .tg-crown{display:block; line-height:1}
-.tile-goat .tg-crown img{height:16px; width:auto; display:block; margin-left:auto}
+.tile-goat .tg-name{display:block; min-width:0; white-space:normal}
+.tile-goat img{height:16px; width:auto; flex:none}
 /* Welcome modal: a card centered over the category screen */
 .boot{position:absolute; inset:0; z-index:12; display:flex; align-items:center; justify-content:center; background:radial-gradient(circle at 50% 35%,#1d2650,#070a14 70%); padding:18px}
 .boot.hidden{display:none}
@@ -761,7 +759,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B155";
+const BUILD = "B156";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1966,11 +1964,11 @@ function mashupTileHTML(){
   if(mashupUnlocked()){
     const top = categoryTop(MASHUP);
     return `
-    <button class="tile mashup${MASHUP === CUR ? " current" : ""}" data-id="mashup" style="background:${MASHUP.bg}">
+    <button class="tile mashup${MASHUP === CUR ? " current" : ""}${top ? " has-goat" : ""}" data-id="mashup" style="background:${MASHUP.bg}">
       <span class="tile-e" aria-hidden="true">${MASHUP.e}</span>
       <span class="tile-name display">Mashups (${MASHUP.items.length})</span>
       <span class="tile-n">Every category, shuffled together</span>
-      ${top ? `<span class="tile-goat"><span class="tg-name">${top}</span><span class="tg-crown"><img class='crown-ico' src='assets/goat-crown.png' alt=''></span></span>` : ""}
+      ${top ? `<span class="tile-goat"><span class="tg-name">${top}</span><img class='crown-ico' src='assets/goat-crown.png' alt=''></span>` : ""}
     </button>`;
   }
   const prog = visibleCats().map(c => `${c.name} ${hasMyGoat(c) ? "<img class='crown-ico' src='assets/goat-crown.png' alt=''> GOAT" : `${Math.min(categoryVotedItems(c), 10)}/10`}`).join(" · ");
@@ -2004,17 +2002,16 @@ function renderPicker(){
     const top = categoryTop(c);
     const off = hid.has(c.id);
     return `
-    <button class="tile${c === CUR ? " current" : ""}${off ? " is-hidden" : ""}" data-id="${c.id}" style="background:${c.bg}">
+    <button class="tile${c === CUR ? " current" : ""}${off ? " is-hidden" : ""}${top ? " has-goat" : ""}" data-id="${c.id}" style="background:${c.bg}">
       <span class="tile-e" aria-hidden="true">${c.e}</span>
       <span class="tile-name display">${c.name} (${c.items.length})</span>
-      ${top ? `<span class="tile-goat"><span class="tg-name">${top}</span><span class="tg-crown"><img class='crown-ico' src='assets/goat-crown.png' alt=''></span></span>` : ""}
+      ${top ? `<span class="tile-goat"><span class="tg-name">${top}</span><img class='crown-ico' src='assets/goat-crown.png' alt=''></span>` : ""}
       ${editing ? `<span class="hide-tag">${off ? "Show" : "Hide"}</span>` : ""}
     </button>`;
   });
   // Mashups is always the 5th entry (or last, if there are fewer than 5 categories showing).
   tiles.splice(Math.min(4, tiles.length), 0, mashupTileHTML());
-  $("tiles").innerHTML = `<div class="tile-grid">${tiles.join("")}</div>
-    ${suggestBoxHTML()}`;
+  $("tiles").innerHTML = `<div class="tile-grid">${tiles.join("")}</div>`;
   requestAnimationFrame(fitNames);
   $("pickerNote").textContent = editing ? "Hidden categories leave the picker and Mashups. Tap a box to hide or show it." : "";
   $("pickerNote").classList.toggle("hidden", !editing);
