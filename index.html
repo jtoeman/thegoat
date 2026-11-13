@@ -67,7 +67,8 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
   box-shadow:0 8px 24px rgba(0,0,0,.6);
 }
 
-.fighter{position:absolute; top:0; bottom:0; width:60%; touch-action:none; user-select:none; -webkit-user-select:none; cursor:pointer; z-index:2; min-width:0; overflow:hidden; --p:0}
+.fighter, .fighter *, .stage, .stage *{touch-action:none}
+.fighter{position:absolute; top:0; bottom:0; width:60%; user-select:none; -webkit-user-select:none; cursor:pointer; z-index:2; min-width:0; overflow:hidden; --p:0}
 .fighter[data-side="a"]{left:0}
 .fighter[data-side="b"]{right:0}
 .fighter.dragging{z-index:6; cursor:grabbing; transition:none}
@@ -774,7 +775,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B163";
+const BUILD = "B164";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -2414,6 +2415,13 @@ function advanceMatch(){
   renderMatch();
 }
 $("nextBtn").addEventListener("click", advanceMatch);
+/* Double tap on the stage would zoom the page on iOS and leave the fixed layout stuck. Block that second tap's default; the tap still picks or advances. */
+let lastStageTouchEnd = 0;
+document.addEventListener("touchend", e => {
+  const now = Date.now();
+  if(now - lastStageTouchEnd < 350 && e.target && e.target.closest && e.target.closest(".stage")) e.preventDefault();
+  lastStageTouchEnd = now;
+}, { passive: false });
 $("shareBtn").addEventListener("click", () => shareMatch(current.a, current.b));
 $("resetBtn").addEventListener("click", handleReset);
 
