@@ -768,7 +768,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B158";
+const BUILD = "B159";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1048,7 +1048,8 @@ let resetTimer = null;
 
 /* ---------- pilot data ----------
    Supabase table "votes": one row per viewer, category and matchup. Only the latest pick per matchup counts.
-   Everyone reads all votes. Each viewer signs in anonymously and can only write their own rows.
+   The crowd split reads matchup_counts instead (see refreshCounts). Votes are still read for GOATs and wins.
+   Each viewer signs in anonymously and can only write their own rows.
    Fruit keys are "Apple__Banana". Other categories prefix the category: "dogs:Beagle__Pug".
    If Supabase cannot be reached, the game still works and stats are hidden. */
 let db = null;                // Supabase client once connected, else null
@@ -1060,6 +1061,12 @@ let statsError = false;       // true when the last vote fetch failed or timed o
 const SESSION_START = Date.now();   // picks made since this page opened count as "this session"
 let pollTimer = null;
 const POLL_MS = 15000;
+/* Crowd split source: matchup_counts (one row per category, matchup and fruit, kept current by a trigger on votes).
+   matchupCounts is null until a read succeeds; then countsFor falls back to the votes-based count. */
+let matchupCounts = null;        // "category|x__y" -> {name: picks}
+let countsSeq = 0;               // numbered per read, so an older read cannot overwrite a newer one
+let countsWriteSeq = 0;          // countsSeq when the last pick was confirmed saved
+const pendingVotes = new Map();  // key -> winner, for picks this page made that no read has confirmed yet
 let writeChain = Promise.resolve();
 let lastResult = null;        // {winner, loser} while the result panel is open
 let enterSide = null;         // side where the new entry slides in on the next matchup
@@ -1211,6 +1218,15 @@ function newRunState(ranked, prevChamp, shuffle){
 /* ---------- tallies ---------- */
 function countsFor(key, x, y){
   const c = {[x]:0, [y]:0};
+  if(matchupCounts){
+    const p = parseKey(key);
+    const row = matchupCounts.get(p.cat + "|" + p.x + "__" + p.y) || {};
+    if(x in c) c[x] = row[x] || 0;
+    if(y in c) c[y] = row[y] || 0;
+    const pend = pendingVotes.get(key);
+    if(pend && pend in c) c[pend]++;   // this page's pick, until a read confirms it
+    return c;
+  }
   othersPicks.forEach(picks => {
     const v = picks && picks[key];
     if(v && v.w in c) c[v.w]++;
@@ -1248,6 +1264,43 @@ function onVotes(rows){
   if(mode === "ladder" && S && !$("ladderEnd").classList.contains("hidden")) (justFinished ? showLadderEnd() : showGoatView());
   refreshMashup();
   renderPicker();
+}
+
+/* Reads matchup_counts, a page at a time. About 3,200 small rows, not one row per vote. */
+async function fetchMatchupCounts(){
+  const all = [];
+  const PAGE = 1000;
+  for(let from = 0; ; from += PAGE){
+    const { data, error } = await db.from("matchup_counts")
+      .select("category, matchup_key, fruit, picks")
+      .order("category", { ascending: true })
+      .order("matchup_key", { ascending: true })
+      .order("fruit", { ascending: true })
+      .range(from, from + PAGE - 1);
+    if(error) throw error;
+    all.push(...data);
+    if(data.length < PAGE) break;
+  }
+  return all;
+}
+async function refreshCounts(){
+  if(!db) return;
+  const seq = ++countsSeq;
+  try{
+    const rows = await withTimeout(fetchMatchupCounts(), 10000);
+    if(seq < countsWriteSeq) return;   // started before a pick was confirmed; the newer read will show it
+    const map = new Map();
+    rows.forEach(r => {
+      const k = r.category + "|" + r.matchup_key;
+      if(!map.has(k)) map.set(k, {});
+      map.get(k)[r.fruit] = r.picks;
+    });
+    matchupCounts = map;
+  }catch(e){
+    matchupCounts = null;              // fall back to the votes-based count until a read works again
+    console.warn("matchup counts not loaded", e);
+  }
+  if(lastResult) renderStats(lastResult.winner, lastResult.loser);
 }
 
 /* Reads every vote, a page at a time (Supabase returns at most 1000 rows per request). */
@@ -1299,8 +1352,9 @@ async function connectPilot(){
     uid = null;
   }
   await refreshVotes();
+  await refreshCounts();
   clearInterval(pollTimer);
-  pollTimer = setInterval(refreshVotes, POLL_MS);
+  pollTimer = setInterval(() => { refreshVotes(); refreshCounts(); }, POLL_MS);
   if(lastResult) renderStats(lastResult.winner, lastResult.loser);
 }
 
@@ -1351,7 +1405,8 @@ function writePicks(){
       const { error } = await db.from("votes").insert(rows);
       if(error) throw error;
     }
-  }).catch(e => console.warn("picks not saved", e));
+  }).catch(e => console.warn("picks not saved", e))
+    .then(() => { countsWriteSeq = ++countsSeq; refreshCounts(); });
 }
 
 /* ---------- drawn fruit (placeholder art, no photos needed) ----------
@@ -1753,8 +1808,15 @@ function castVote(side){
   if(Object.keys(myPicks).length === 10) coachEvents.add("tenth");
   coachReadyEvent();
   showOops();
+  pendingVotes.set(key, winner);
   savePick(key, entry).then(ok => {
+    if(ok){
+      pendingVotes.delete(key);
+      countsWriteSeq = ++countsSeq;
+      refreshCounts();
+    }
     if(!ok){
+      pendingVotes.delete(key);
       if(previous === undefined) delete myPicks[key]; else myPicks[key] = previous;
       toast(uid ? "Pick not saved. Check your connection." : "Sign in to save your picks");
       if(lastResult) renderStats(lastResult.winner, lastResult.loser);
