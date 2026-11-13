@@ -798,7 +798,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B165";
+const BUILD = "B166";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1829,6 +1829,11 @@ function castVote(side){
   const joined = readyCats().filter(c => !readyBefore.includes(c.id));
   if(!wasUnlocked && mashupUnlocked()) setTimeout(celebrateUnlock, 300);
   else if(joined.length && mashupUnlocked()) setTimeout(() => toast(`${joined.map(c => c.name).join(" and ")} joined Mashups`), 300);
+  // B166: a Mashups match played from a link opens Mashups here. Continue into Mashups after the match (no unlock card).
+  if(mode === "challenge" && CUR === MASHUP && !mashupOpenedByPlay()){
+    writeStore("goat_mashup_open", true);
+    refreshMashup();
+  }
   lastPick = { key, previous, snapshotS, time: Date.now() };
   lastVoteCoach = { winner, loser, cat: CUR.name };
   coachEvents.add("vote");
@@ -2056,12 +2061,18 @@ function setHidden(c, on){
 }
 function visibleCats(){ const h = hiddenIds(); return CATEGORIES.filter(c => !h.has(c.id)); }
 function readyCats(){ return visibleCats().filter(catReady); }
-function mashupUnlocked(){ return readyCats().length > 0 && readyCats().length >= Math.min(MASHUP_MIN_CATS, visibleCats().length); }
+/* B166: playing a Mashups match (the featured one, or any shared mashup link) opens Mashups in this browser, across every visible category. */
+const FEATURED_MASHUP = { x: "goldenretriever", y: "friedchickensandwich" };
+function mashupOpenedByPlay(){ return readStore("goat_mashup_open") === true; }
+function mashupUnlocked(){
+  if(mashupOpenedByPlay()) return visibleCats().length > 0;
+  return readyCats().length > 0 && readyCats().length >= Math.min(MASHUP_MIN_CATS, visibleCats().length);
+}
 /* Mashups mixes only the categories this player has finished, so it grows as they unlock more. */
 /* A mashup challenge link can name items from categories the player has not finished. Those two stay in the pool for this visit. */
 let challengeItems = [];
 function refreshMashup(){
-  const pool = readyCats().flatMap(c => c.items);
+  const pool = (mashupOpenedByPlay() ? visibleCats() : readyCats()).flatMap(c => c.items);
   MASHUP.items = pool.concat(challengeItems.filter(f => !pool.includes(f)));
   MASHUP.byName = {}; MASHUP.bySlug = {};
   MASHUP.items.forEach(f => { MASHUP.byName[f.n] = f; MASHUP.bySlug[f.s] = f; });
@@ -2428,6 +2439,14 @@ document.querySelectorAll(".pick").forEach(btn => {
 });
 
 function advanceMatch(){
+  if(mode === "challenge" && CUR === MASHUP && mashupOpenedByPlay()){
+    // B166: after a Mashups link match, carry on with a Mashups run across every category.
+    mode = "ladder"; challengePair = null; challengeItems = [];
+    history.replaceState(null, "", location.href.split("#")[0]);
+    refreshMashup();
+    startFreshHere();
+    return;
+  }
   if(mode === "challenge" || mode === "oneoff"){
     // After a challenge, the player is taken into the category of the item they picked.
     const picked = mode === "challenge" && lastWinner ? lastWinner.name : null;
@@ -2565,7 +2584,7 @@ function yoursHTML(){
             <span class="cc-meta">${readyN} of ${MASHUP_MIN_CATS} categories ready (a GOAT or ${MASHUP_PICKS} picks)</span>
           </span>
         </div>`;
-    html = `<p class="ko-sub">${note}</p>` + cards + mashCard;
+    html = `<p class="ko-sub">${note}</p>` + cards + mashCard + featuredMashupHTML();
   } else if(!db || !uid){
     html = `<p class="ko-sub">Sign in to see your stats.</p>`;
     return html;
@@ -2719,7 +2738,23 @@ $("statsIntroOk").addEventListener("click", () => {
   writeStore("goat_stats_intro_seen", true);
   $("statsIntro").classList.add("hidden");
 });
+/* B166: the featured mashup is always playable, locked or not. Opens its challenge link. */
+function featuredMashupHTML(){
+  return `<button class="cat-card featured-mash" data-featured="1" type="button">
+    <span class="cc-e" aria-hidden="true">🆚</span>
+    <span class="cc-body">
+      <b class="display">Featured mashup</b>
+      <span class="cc-meta">Golden Retriever or Fried Chicken Sandwich?</span>
+      <span class="cc-meta">Blind vote. Playing it opens Mashups.</span>
+    </span>
+  </button>`;
+}
 $("statsBody").addEventListener("click", e => {
+  if(e.target.closest("[data-featured]")){
+    location.href = location.pathname + "#vs-mashup-" + FEATURED_MASHUP.x + "-" + FEATURED_MASHUP.y;
+    location.reload();
+    return;
+  }
   const scope = e.target.closest("[data-scope]");
   if(scope){ statsScope = scope.dataset.scope; paintStats(); return; }
   const tab = e.target.closest("[data-tab]");
