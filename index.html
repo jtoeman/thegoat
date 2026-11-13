@@ -231,6 +231,7 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
   color:#1a1200; font-family:Impact,"Haettenschweiler",sans-serif; text-transform:uppercase; letter-spacing:.03em;
   font-size:12px; line-height:1.05; text-align:left; text-shadow:none;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.7), inset 0 -2px 0 rgba(0,0,0,.14);
+  border-radius:13px 13px 0 0;
   clip-path:polygon(0 0,100% 0,100% 72%,calc(100% - 16px) 100%,0 100%);
   overflow-wrap:normal; word-break:normal}
 .tile-goat .tg-name{display:block; min-width:0; white-space:normal}
@@ -262,12 +263,13 @@ section#catWelcome{position:fixed; inset:0; z-index:10; padding:12px}
 .cw-table .v{font-size:16px; font-weight:700}
 .cw-foot{position:relative; z-index:1; flex:none; padding:10px 14px 16px; background:linear-gradient(180deg,rgba(7,10,20,0),rgba(7,10,20,.85) 40%)}
 #cwGo{width:100%}
+.cw-foot .actions-col{gap:8px}
 .cw-foot .start-row{margin:0 0 10px; color:#fff; font-size:14px; text-shadow:0 1px 2px #000; gap:10px}
 .cw-foot .start-row label{gap:8px}
 .cw-foot .start-row select{height:38px; font-size:15px}
 .cw-foot .start-row .btn{min-height:38px; padding:0 14px; width:auto}
 
-#intro,#coach,#catWelcome{position:absolute; inset:0; z-index:10; background:rgba(5,7,14,.8); display:flex; align-items:center; justify-content:center; padding:18px}
+#intro,#coach,#catWelcome,#checkpoint{position:absolute; inset:0; z-index:10; background:rgba(5,7,14,.8); display:flex; align-items:center; justify-content:center; padding:18px}
 #coachActions{margin-top:16px}
 .intro-card{position:relative; width:100%; max-width:360px; padding:26px 20px 20px; text-align:center; overflow:hidden; background:linear-gradient(165deg,#1d2650,#0b1024 70%); border:3px solid #000; border-radius:18px; box-shadow:6px 6px 0 #000, 0 0 0 3px var(--yellow); animation:introPop .5s cubic-bezier(.2,1.35,.4,1) both}
 .intro-band{position:absolute; left:-10%; right:-10%; top:0; height:14px; transform:skewY(-4deg); background:linear-gradient(90deg,#e8303a 0 50%,#2d6fd6 50% 100%); border-bottom:3px solid #000}
@@ -592,17 +594,24 @@ body.home #resetBtn{display:none}
       <section class="overlay hidden" id="ladderEnd"></section>
       <section class="overlay hidden goat-crown" id="goatCrown" aria-live="polite"></section>
 
-      <section class="overlay hidden" id="checkpoint" aria-live="polite">
-        <p class="ko-sub">Checkpoint</p>
-        <p class="ko display" id="cpTitle"></p>
-        <p class="ko-sub" id="cpBody"></p>
-        <p class="ko-sub" id="cpGoats"></p>
-        <p class="ko-sub" id="cpAgree"></p>
-        <div class="actions-col res-foot">
-          <button class="btn primary" id="cpGo"><span>Keep going</span></button>
-          <button class="btn" id="cpFresh"><span>Start fresh in this category</span></button>
-          <button class="btn" id="cpCrown"><span>This is the GOAT</span></button>
-          <button class="btn" id="cpChange"><span>Change category</span></button>
+      <section class="hidden" id="checkpoint" role="dialog" aria-modal="true" aria-label="Checkpoint">
+        <div class="intro-card cw-card">
+          <div class="intro-band" aria-hidden="true"></div>
+          <div class="cw-inner">
+            <div class="cw-hero">
+              <div class="cw-hero-img" id="cpBg" aria-hidden="true"></div>
+              <p class="display intro-title" id="cpTitle"></p>
+            </div>
+            <div class="cw-table" id="cpBody"></div>
+          </div>
+          <div class="cw-foot">
+            <div class="actions-col">
+              <button class="btn primary" id="cpGo"><span>Keep going</span></button>
+              <button class="btn" id="cpFresh"><span>Start fresh in this category</span></button>
+              <button class="btn" id="cpCrown"><span>This is the GOAT</span></button>
+              <button class="btn" id="cpChange"><span>Change category</span></button>
+            </div>
+          </div>
         </div>
         <label class="skip-picker hidden"><input type="checkbox" id="cpShowStats"> <span>Show stats between rounds</span></label>
       </section>
@@ -759,7 +768,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B157";
+const BUILD = "B158";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -2770,20 +2779,41 @@ $("cpCrown").addEventListener("click", crownGoat);
    Every 10 picks in a run, pause and ask: keep going, start fresh in this category, or change category.
    Picks are saved either way. Start fresh keeps this category's rankings and begins a new run. */
 function showCheckpoint(){
-  // Only what matters for the champion: its GOAT count, and how the latest matchup split.
+  // Same card as the category welcome: champion portrait, a short table, and the actions.
+  const champ = S.champ;
   const board = globalBoards()[CUR.id];
-  const g = board && board.crowns[S.champ] ? board.crowns[S.champ].size : 0;
-  $("cpGoats").innerHTML = `<img class='crown-ico' src='assets/goat-crown.png' alt=''> ${g} ${g === 1 ? "GOAT" : "GOATs"} for ${S.champ}`;
-  let agree = "";
-  if(db && statsReady && lastResult && lastResult.winner === S.champ){
+  const g = board && board.crowns[champ] ? board.crowns[champ].size : 0;
+  const item = CUR.byName[champ];
+  $("cpBg").innerHTML = item ? portraitHTML(item) : "";
+  $("cpTitle").textContent = `${S.round} picks in`;
+  const table = $("cpBody");
+  table.replaceChildren();
+  const addRow = (label, fill) => {
+    const k = document.createElement("div");
+    k.className = "k";
+    k.textContent = label;
+    const v = document.createElement("div");
+    v.className = "v";
+    fill(v);
+    table.append(k, v);
+  };
+  addRow("Champion", v => { v.textContent = champ; });
+  addRow("Left in this run", v => { v.textContent = `${S.queue.length} to go`; });
+  addRow(`${CUR.name} GOATs`, v => {
+    const crown = document.createElement("img");
+    crown.className = "crown-ico";
+    crown.src = "assets/goat-crown.png";
+    crown.alt = "";
+    v.append(crown, ` ${g} ${g === 1 ? "GOAT" : "GOATs"}`);
+  });
+  if(db && statsReady && lastResult && lastResult.winner === champ){
     const c = countsFor(keyFor(lastResult.winner, lastResult.loser), lastResult.winner, lastResult.loser);
     const total = c[lastResult.winner] + c[lastResult.loser];
-    agree = total ? `${Math.round(100 * c[lastResult.winner] / total)}% agree with you on the latest matchup (${total} ${total === 1 ? "pick" : "picks"})` : "No picks counted yet on the latest matchup.";
+    addRow("Latest matchup", v => {
+      v.textContent = total ? `${Math.round(100 * c[lastResult.winner] / total)}% agree with you (${total} ${total === 1 ? "pick" : "picks"})` : "No picks counted yet";
+    });
   }
-  $("cpAgree").textContent = agree;
   $("cpGo").querySelector("span").textContent = `Keep going (${S.queue.length})`;
-  $("cpTitle").textContent = `${S.round} picks in`;
-  $("cpBody").textContent = `${CUR.name}: champion ${S.champ}, ${S.queue.length} left in this run.`;
   setCrownLabels();
   $("checkpoint").classList.remove("hidden");
   setHint("Choose how to continue.", false);
