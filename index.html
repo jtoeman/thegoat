@@ -773,7 +773,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B160";
+const BUILD = "B161";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -2002,6 +2002,11 @@ function closePicker(){
   maybeCoach();   // the match tips wait for the picker to close
 }
 /* The current #1 of a category is the first item in its ranking, if any run has finished. */
+/* A tile with a GOAT that has a photo shows the photo, with a dark fade at the bottom for the name. Otherwise the colour and emoji. */
+function goatPhoto(c, top){ const f = top && c.byName && c.byName[top]; return f && f.img ? f.img : null; }
+function tileBg(c, photo){
+  return photo ? `linear-gradient(180deg, rgba(7,10,20,0) 35%, rgba(7,10,20,.88) 100%), url('${photo}') center / cover no-repeat` : c.bg;
+}
 function categoryTop(c){
   const st = c === CUR ? S : readStore(c.ladderKey);
   return (st && Array.isArray(st.ranked) && st.ranked[0]) || null;
@@ -2041,9 +2046,9 @@ function mashupTileHTML(){
   if(mashupUnlocked()){
     const top = categoryTop(MASHUP);
     return `
-    <button class="tile mashup${MASHUP === CUR ? " current" : ""}${top ? " has-goat" : ""}" data-id="mashup" style="background:${MASHUP.bg}">
-      <span class="tile-e" aria-hidden="true">${MASHUP.e}</span>
-      <span class="tile-name display">Mashups (${MASHUP.items.length})</span>
+    <button class="tile mashup${MASHUP === CUR ? " current" : ""}${top ? " has-goat" : ""}" data-id="mashup" style="background:${tileBg(MASHUP, goatPhoto(MASHUP, top))}">
+      ${goatPhoto(MASHUP, top) ? "" : `<span class="tile-e" aria-hidden="true">${MASHUP.e}</span>`}
+      <span class="tile-name display"${goatPhoto(MASHUP, top) ? ' style="margin-top:auto"' : ""}>Mashups (${MASHUP.items.length})</span>
       <span class="tile-n">Every category, shuffled together</span>
       ${top ? `<span class="tile-goat"><span class="tg-name">${top}</span><img class='crown-ico' src='assets/goat-crown.png' alt=''></span>` : ""}
     </button>`;
@@ -2078,10 +2083,11 @@ function renderPicker(){
   const tiles = shown.map(c => {
     const top = categoryTop(c);
     const off = hid.has(c.id);
+    const photo = goatPhoto(c, top);
     return `
-    <button class="tile${c === CUR ? " current" : ""}${off ? " is-hidden" : ""}${top ? " has-goat" : ""}" data-id="${c.id}" style="background:${c.bg}">
-      <span class="tile-e" aria-hidden="true">${c.e}</span>
-      <span class="tile-name display">${c.name} (${c.items.length})</span>
+    <button class="tile${c === CUR ? " current" : ""}${off ? " is-hidden" : ""}${top ? " has-goat" : ""}" data-id="${c.id}" style="background:${tileBg(c, photo)}">
+      ${photo ? "" : `<span class="tile-e" aria-hidden="true">${c.e}</span>`}
+      <span class="tile-name display"${photo ? ' style="margin-top:auto"' : ""}>${c.name} (${c.items.length})</span>
       ${top ? `<span class="tile-goat"><span class="tg-name">${top}</span><img class='crown-ico' src='assets/goat-crown.png' alt=''></span>` : ""}
       ${editing ? `<span class="hide-tag">${off ? "Show" : "Hide"}</span>` : ""}
     </button>`;
