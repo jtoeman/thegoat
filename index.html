@@ -263,6 +263,10 @@ section#catWelcome{position:fixed; inset:0; z-index:10; padding:12px}
 .cw-table .v{font-size:16px; font-weight:700}
 .cw-foot{position:relative; z-index:1; flex:none; padding:10px 14px 16px; background:linear-gradient(180deg,rgba(7,10,20,0),rgba(7,10,20,.85) 40%)}
 #cwGo{width:100%}
+/* Checkpoint: champion tag and the GOAT button sit inside the data table. */
+.cw-table .cp-champ{display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px}
+.cp-tag{display:inline-block; white-space:nowrap; padding:3px 8px 2px; background:linear-gradient(180deg,#fff2a6 0%,#ffd23f 60%,#f2b600 100%); color:#1a1200; font-family:Impact,"Haettenschweiler",sans-serif; font-size:11px; font-weight:400; letter-spacing:.04em; text-transform:uppercase; text-shadow:none; clip-path:polygon(0 0,100% 0,100% 72%,calc(100% - 8px) 100%,0 100%)}
+.cw-table .cp-goat{grid-column:1 / -1; width:100%; margin-top:4px}
 .cw-foot .actions-col{gap:8px}
 .cw-foot .start-row{margin:0 0 10px; color:#fff; font-size:14px; text-shadow:0 1px 2px #000; gap:10px}
 .cw-foot .start-row label{gap:8px}
@@ -549,7 +553,7 @@ body.home #resetBtn{display:none}
         <div class="boot-card">
           <div class="boot-crown" aria-hidden="true"><img class='crown-ico' src='assets/goat-crown.png' alt=''></div>
           <p class="display boot-title">The GOAT</p>
-          <p class="boot-sub">Finding your greatest of all time…</p>
+          <p class="boot-sub">What is Your greatest of all time…</p>
           <div class="boot-bar" aria-hidden="true"><span></span></div>
         </div>
       </section>
@@ -602,13 +606,14 @@ body.home #resetBtn{display:none}
               <div class="cw-hero-img" id="cpBg" aria-hidden="true"></div>
               <p class="display intro-title" id="cpTitle"></p>
             </div>
-            <div class="cw-table" id="cpBody"></div>
+            <div class="cw-table" id="cpBody">
+              <button class="btn cp-goat" id="cpCrown"><span>This is the GOAT</span></button>
+            </div>
           </div>
           <div class="cw-foot">
             <div class="actions-col">
               <button class="btn primary" id="cpGo"><span>Keep going</span></button>
               <button class="btn" id="cpFresh"><span>Start fresh in this category</span></button>
-              <button class="btn" id="cpCrown"><span>This is the GOAT</span></button>
               <button class="btn" id="cpChange"><span>Change category</span></button>
             </div>
           </div>
@@ -768,7 +773,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B159";
+const BUILD = "B160";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1545,12 +1550,8 @@ function renderMatchInner(){
   setHint("Press and drag a fighter toward the rival, or tap to pick.", false);
   // countdown under VS: battles still to fight in this run, this one included (49, 48, 47...)
   const left = mode === "ladder" && S ? S.queue.length : 0;
-  const vsCount = $("vsStreak");
-  vsCount.textContent = left ? `(${left})` : "";
-  // heat: 0.1 at 10 items left, rising to 1 at the last item (the end of the run)
-  const heat = left && left <= 10 ? (11 - left) / 10 : 0;
-  vsCount.style.setProperty("--heat", heat.toFixed(2));
-  vsCount.classList.toggle("hot", heat > 0);
+  $("vsStreak").textContent = "";
+  $("nextBtn").querySelector("span").textContent = left ? `Next matchup (${left})` : "Next matchup";
   updateStatus();
 }
 
@@ -2844,12 +2845,12 @@ function showCheckpoint(){
   // Same card as the category welcome: champion portrait, a short table, and the actions.
   const champ = S.champ;
   const board = globalBoards()[CUR.id];
-  const g = board && board.crowns[champ] ? board.crowns[champ].size : 0;
   const item = CUR.byName[champ];
   $("cpBg").innerHTML = item ? portraitHTML(item) : "";
   $("cpTitle").textContent = `${S.round} picks in`;
   const table = $("cpBody");
-  table.replaceChildren();
+  const goatBtn = $("cpCrown");
+  table.querySelectorAll(".k, .v").forEach(n => n.remove());
   const addRow = (label, fill) => {
     const k = document.createElement("div");
     k.className = "k";
@@ -2857,17 +2858,19 @@ function showCheckpoint(){
     const v = document.createElement("div");
     v.className = "v";
     fill(v);
-    table.append(k, v);
+    table.insertBefore(k, goatBtn);
+    table.insertBefore(v, goatBtn);
   };
-  addRow("Champion", v => { v.textContent = champ; });
-  addRow("Left in this run", v => { v.textContent = `${S.queue.length} to go`; });
-  addRow(`${CUR.name} GOATs`, v => {
-    const crown = document.createElement("img");
-    crown.className = "crown-ico";
-    crown.src = "assets/goat-crown.png";
-    crown.alt = "";
-    v.append(crown, ` ${g} ${g === 1 ? "GOAT" : "GOATs"}`);
+  addRow("Champion", v => {
+    v.classList.add("cp-champ");
+    const name = document.createElement("span");
+    name.textContent = champ;
+    const tag = document.createElement("span");
+    tag.className = "cp-tag";
+    tag.textContent = "Current Champion";
+    v.append(name, tag);
   });
+  addRow("Left in this run", v => { v.textContent = `${S.queue.length} to go`; });
   if(db && statsReady && lastResult && lastResult.winner === champ){
     const c = countsFor(keyFor(lastResult.winner, lastResult.loser), lastResult.winner, lastResult.loser);
     const total = c[lastResult.winner] + c[lastResult.loser];
@@ -2888,12 +2891,14 @@ function passCheckpoint(){
 }
 $("cpGo").addEventListener("click", () => { passCheckpoint(); renderMatch(); });
 $("cpFresh").addEventListener("click", () => {
+  // Keeps this category's rankings. The category card opens with Start with, so the new run's first item can be chosen.
   passCheckpoint();
-  mode = "ladder"; challengePair = null;
-  S = newRunState(S.ranked || [], null, true);
+  mode = "ladder"; challengePair = null; lastResult = null;
+  S = newRunState(S.ranked || [], startPref(CUR), true);
   saveLadder();
   renderMatch();
-  toast("Fresh run started");
+  pendingCatWelcome = true;
+  showCatWelcome();
 });
 $("cpChange").addEventListener("click", () => { passCheckpoint(); renderMatch(); openPicker(); });
 
