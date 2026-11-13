@@ -17,7 +17,9 @@
 <link rel="icon" type="image/png" sizes="32x32" href="assets/goat-crown-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="assets/goat-crown-180.png">
 <style>
-/* Phone-first versus screen. Pinned to the viewport; nothing scrolls. One fixed dark look. */
+/* Phone-first versus screen. Pinned to the viewport; nothing scrolls. One fixed dark look.
+   touch-action: manipulation stops double-tap zoom, which could zoom the fixed layout in and leave it stuck. */
+html, body, *{touch-action:manipulation}
 :root{
   --ink:#070a14; --paper:#ffffff; --yellow:#ffd23f; --blue:#2aa4ff; --orange:#ff6a1a; --red:#ff2a1a; --go:#5cff8a; --mute:#8a93b0; --panel:#0c1224;
   color-scheme:dark;
@@ -772,7 +774,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B162";
+const BUILD = "B163";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
