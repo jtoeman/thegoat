@@ -33,7 +33,7 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
   padding-left:max(12px, env(safe-area-inset-left, 0px));
   padding-right:max(12px, env(safe-area-inset-right, 0px));
 }
-.shell{width:100%; max-width:560px; height:100%; display:flex; flex-direction:column; gap:8px; min-height:0}
+.shell{position:relative; width:100%; max-width:560px; height:100%; display:flex; flex-direction:column; gap:8px; min-height:0}
 
 .topbar{display:flex; align-items:center; gap:6px; height:34px; flex:none; min-width:0}
 .brand{font-size:15px; line-height:1; font-style:italic; text-shadow:3px 3px 0 #000; white-space:nowrap; cursor:pointer}
@@ -478,6 +478,31 @@ body.home #resetBtn{display:none}
 /* B92: hide categories. Edit mode on the picker shows Hide and Show. Hidden boxes are dimmed. */
 .tile.is-hidden{opacity:.45; filter:grayscale(.7)}
 .hide-tag{position:absolute; right:10px; bottom:10px; z-index:2; font-family:Impact,"Haettenschweiler",sans-serif; text-transform:uppercase; letter-spacing:.05em; font-size:12px; line-height:1; padding:4px 8px; background:#000; color:#fff; border:2px solid #fff; transform:skewX(-8deg); pointer-events:none}
+
+/* B150: one result view. A drawer slides down from the top of the shell (over the header) after each pick.
+   Win chance sits on each photo. Next Matchup replaces the names. */
+#result{inset:0 0 auto 0; z-index:6; max-height:none; overflow:visible; padding:14px 14px 14px; gap:8px;
+  border-bottom:3px solid #000; border-radius:0 0 12px 12px; background:rgba(7,10,20,.97);
+  box-shadow:0 12px 24px rgba(0,0,0,.6)}
+.drank{display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-weight:700; font-size:13px; color:#cfd6ea}
+.drank b{color:#fff}
+.goatpill{font-family:Impact,"Haettenschweiler",sans-serif; text-transform:uppercase; letter-spacing:.05em; font-size:13px;
+  background:linear-gradient(90deg,#ffe066,#ffb300); color:#111; border:2px solid #000; box-shadow:2px 2px 0 #000; padding:2px 8px}
+.goatpill.hidden{display:none}
+.drawer-acts{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:8px}
+.drawer-acts .btn{flex:none; height:58px; display:flex; align-items:center; justify-content:center; padding:0}
+.drawer-acts .btn.hidden{display:flex !important; visibility:hidden}
+.drawer-acts svg{width:24px; height:24px}
+.drawer-acts .crown-ico{height:30px; width:auto}
+.pct{position:absolute; top:34%; left:0; right:0; text-align:center; font-family:Impact,"Haettenschweiler",sans-serif;
+  font-size:clamp(44px,15vw,72px); line-height:1; z-index:3; pointer-events:none; opacity:0; transition:opacity .15s;
+  text-shadow:0 4px 0 #000, 0 0 14px rgba(0,0,0,.6)}
+#pctA{color:#3b8cff}
+#pctB{color:#ff4d4d}
+.stage.picked .pct{opacity:1}
+.stage.picked .label{visibility:hidden}
+.next-float{display:none; position:absolute; left:50%; bottom:14px; transform:translateX(-50%); z-index:4; min-width:200px}
+.stage.picked .next-float{display:block}
 </style>
 <script src="https://froobaloo.com/kit/froobaloo.js" defer></script>
 </head>
@@ -493,6 +518,15 @@ body.home #resetBtn{display:none}
       <button class="reset stats-btn display" id="statsBtn"><span><svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="1" y="9" width="3.5" height="6"/><rect x="6.25" y="5" width="3.5" height="10"/><rect x="11.5" y="1" width="3.5" height="14"/></svg>Stats</span></button>
     </div>
 
+    <section class="overlay hidden" id="result" aria-live="polite">
+      <p class="ko display" id="koText"></p>
+      <div class="drank"><span id="drankText"></span><span class="goatpill hidden" id="goatPill">The current GOAT</span></div>
+      <div class="actions drawer-acts">
+        <button class="btn hidden" id="oopsBtn" aria-label="Undo last pick"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="btn" id="shareBtn" aria-label="Share this matchup"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 14v5h14v-5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="btn primary hidden" id="resultCrown" aria-label="Crown the GOAT"><img class='crown-ico' src='assets/goat-crown.png' alt=''></button>
+      </div>
+    </section>
     <div class="start-row hidden" id="startRow">
       <label>Start with <select id="startSel" aria-label="Starting item"></select></label>
       <button class="btn" id="startRand"><span>Random</span></button>
@@ -509,6 +543,7 @@ body.home #resetBtn{display:none}
       </section>
       <section class="fighter" data-side="a">
         <div class="portrait" id="pa"></div>
+        <div class="pct" id="pctA" aria-hidden="true"></div>
         <div class="label">
           <div class="plate" id="na"></div>
           <button class="pick display" data-side="a"><span>Pick</span></button>
@@ -525,6 +560,7 @@ body.home #resetBtn{display:none}
 
       <section class="fighter" data-side="b">
         <div class="portrait" id="pb"></div>
+        <div class="pct" id="pctB" aria-hidden="true"></div>
         <div class="label">
           <div class="plate" id="nb"></div>
           <button class="pick display" data-side="b"><span>Pick</span></button>
@@ -542,29 +578,6 @@ body.home #resetBtn{display:none}
         <button type="button" class="wf-share wf-undo hidden" id="wfUndo" aria-label="Undo last pick"><span>Undo</span></button>
       </div>
 
-      <section class="overlay hidden" id="result" aria-live="polite">
-        <p class="ko display" id="koText"></p>
-        <p class="ko-sub" id="koSub"></p>
-        <div class="overall-label"><span id="overallLabel"></span><span class="tag">Pilot</span></div>
-        <div class="track"><div class="fill" id="overallFill"></div></div>
-        <p class="tally" id="tally"></p>
-        <p class="seed-note hidden" id="seedNote">Sample data: 10 placeholder players fill the counts until 10 real players join. Not real picks.</p>
-        <p class="facts" id="facts"></p>
-        <div class="res-foot">
-        <div class="actions">
-          <button class="btn" id="shareBtn"><span><svg class="ico" viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 14v5h14v-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Challenge a friend</span></button>
-          <button class="btn primary" id="nextBtn"><span>Next matchup</span></button>
-        </div>
-        <div class="actions" style="margin-top:0">
-          <button class="btn hidden" id="oopsBtn"><span>Oops, undo</span></button>
-          <button class="btn" id="randomBtn"><span>Start a new match</span></button>
-        </div>
-        <div class="actions" style="margin-top:0">
-          <button class="btn primary hidden" id="resultCrown"><span>This is the GOAT</span></button>
-        </div>
-        </div>
-        <label class="skip-picker"><input type="checkbox" id="resultSkip"> <span>Don't show this every time</span></label>
-      </section>
 
       <section class="overlay hidden" id="ladderEnd"></section>
       <section class="overlay hidden goat-crown" id="goatCrown" aria-live="polite"></section>
@@ -724,6 +737,7 @@ body.home #resetBtn{display:none}
         <p class="ko-sub picker-note hidden" id="pickerNote"></p>
         </div>
       </section>
+      <button class="btn primary next-float" id="nextBtn"><span>Next matchup</span></button>
     </main>
 
     <p class="hint" id="hint"></p>
@@ -735,7 +749,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B149";
+const BUILD = "B150";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1029,6 +1043,7 @@ let pollTimer = null;
 const POLL_MS = 15000;
 let writeChain = Promise.resolve();
 let lastResult = null;        // {winner, loser} while the result panel is open
+let enterSide = null;         // side where the new entry slides in on the next matchup
 let winCounts = {};           // item name -> times picked as a winner in CUR, all viewers
 let lastWinner = null;        // {cat, name, side}: the last ladder winner and the side ("a" left, "b" right) it stands on
 let lastPick = null;          // {key, previous, snapshotS, time}: the one pick that "Oops" can undo
@@ -1418,11 +1433,12 @@ function renderMatch(){
   maybeCoach();
 }
 function renderMatchInner(){
+  const enter = enterSide; enterSide = null;
   hideOops();
   renderStartRow();
   voted = false;
   lastResult = null;
-  $("result").classList.add("hidden");
+  hideResult();
   $("winFlash").classList.add("hidden");
   $("ladderEnd").classList.add("hidden");
   $("checkpoint").classList.add("hidden");
@@ -1447,6 +1463,7 @@ function renderMatchInner(){
   else current = Math.random() < 0.5 ? {a:y, b:x} : {a:x, b:y};
   setFighter("a", current.a);
   setFighter("b", current.b);
+  playEnter(enter);
   document.querySelectorAll(".pick").forEach(b => b.disabled = false);
   setHint("Press and drag a fighter toward the rival, or tap to pick.", false);
   // countdown under VS: battles still to fight in this run, this one included (49, 48, 47...)
@@ -1460,31 +1477,28 @@ function renderMatchInner(){
   updateStatus();
 }
 
-function renderStats(winner, loser, note){
-  const key = keyFor(winner, loser);
-  $("seedNote").classList.toggle("hidden", !(db && seedActive && CUR.seeded));
+function renderStats(winner, loser){
   $("koText").textContent = `${winner} wins`;
-  $("koSub").textContent = `You picked ${winner} over ${loser}.`;
-  const fill = $("overallFill");
-  // GOATs for the winner: players who have crowned this item in this category.
-  const board = globalBoards()[CUR.id];
-  const g = board && board.crowns[winner] ? board.crowns[winner].size : 0;
-  $("facts").innerHTML = note || `<img class='crown-ico' src='assets/goat-crown.png' alt=''> ${g} ${g === 1 ? "GOAT" : "GOATs"} for ${winner}`;
-  if(!db){
-    $("overallLabel").textContent = "Pilot stats not available here";
-    fill.style.width = "0%";
-    $("tally").textContent = "";
-    return;
-  }
-  // Percent agreement: the share of picks on this matchup that chose the same winner as you.
-  const c = countsFor(key, winner, loser);
-  const total = c[winner] + c[loser];
-  const pct = total ? Math.round(100 * c[winner] / total) : 0;
-  const ready = statsReady && total > 0;
-  $("overallLabel").textContent = !statsReady ? (statsError ? "Stats unavailable right now" : "Counting picks…")
-    : total ? `${pct}% agree with you` : "No picks counted yet";
-  requestAnimationFrame(() => requestAnimationFrame(() => { fill.style.width = (ready ? pct : 0) + "%"; }));
-  $("tally").textContent = ready ? `${total} ${total === 1 ? "pick" : "picks"} on this matchup${total < SAMPLE_MIN ? ", small sample" : ""}` : "";
+  const b = globalBoards()[CUR.id] || { wins: {}, crowns: {} };
+  $("drankText").innerHTML = `Rank <b>#${rankOf(winner, b)}</b> of ${CUR.items.length}`;
+  $("goatPill").classList.toggle("hidden", currentGoatOf(b) !== winner);
+  // Win chance on each photo: the share of picks on this matchup that chose each fighter.
+  const c = countsFor(keyFor(winner, loser), winner, loser);
+  const total = c[current.a] + c[current.b];
+  const ready = !!db && statsReady && total > 0;
+  $("pctA").textContent = ready ? Math.round(100 * c[current.a] / total) + "%" : "";
+  $("pctB").textContent = ready ? Math.round(100 * c[current.b] / total) + "%" : "";
+}
+/* Rank: 1 + the number of items in this category with more wins across all players. */
+function rankOf(name, b){
+  const w = b.wins[name] || 0;
+  return 1 + CUR.items.filter(i => (b.wins[i.n] || 0) > w).length;
+}
+/* The current GOAT is the item with the most players who crowned it, if any. */
+function currentGoatOf(b){
+  let best = null, most = 0;
+  Object.keys(b.crowns || {}).forEach(n => { const g = b.crowns[n] ? b.crowns[n].size : 0; if(g > most){ most = g; best = n; } });
+  return best;
 }
 
 /* Minimum picks on a matchup before its crowd split is shown as a percentage. */
@@ -1492,14 +1506,45 @@ const SAMPLE_MIN = 20;
 function showResult(winner, loser){
   animateStats();
   lastResult = { winner, loser };
-  $("result").style.transition = "";
-  $("result").style.transform = "";
+  clearTimeout(hideResult._t);
   renderStats(winner, loser);
-  $("result").classList.remove("hidden");
+  const el = $("result");
+  el.classList.remove("closing", "hidden");
+  // Slide down from the top: start above the shell, then move to rest on the next frame.
+  el.style.transition = "none";
+  el.style.transform = "translateY(-100%)";
+  void el.offsetHeight;
+  el.style.transition = "transform .2s ease-out";
+  el.style.transform = "none";
+  $("stage").classList.add("picked");
   setCrownLabels();
   $("resultCrown").classList.toggle("hidden", !(mode === "ladder" && S && S.queue.length));
-  setHint("Swipe left or right, or press Space, for the next round.", false);
   updateStatus();
+}
+/* Hides the drawer. Instant for category changes and resets; otherwise it slides up and the new entry slides in. */
+function hideResult(instant){
+  const el = $("result");
+  $("stage").classList.remove("picked");
+  clearTimeout(hideResult._t);
+  const reset = () => { el.classList.add("hidden"); el.classList.remove("closing"); el.style.transition = ""; el.style.transform = ""; };
+  if(instant){ reset(); return; }
+  if(el.classList.contains("hidden") || el.classList.contains("closing")) return;
+  el.classList.add("closing");
+  el.style.transition = "transform .2s ease-in";
+  el.style.transform = "translateY(-100%)";
+  hideResult._t = setTimeout(reset, 200);
+}
+function isResultOpen(){
+  const el = $("result");
+  return !el.classList.contains("hidden") && !el.classList.contains("closing");
+}
+/* The new entry slides in from the side the loser left. */
+function playEnter(side){
+  if(!side) return;
+  const el = document.querySelector(`.fighter[data-side="${side}"]`);
+  if(!el || !el.animate) return;
+  const dx = side === "a" ? -40 : 40;
+  el.animate([{ transform: `translateX(${dx}px)`, opacity: 0 }, { transform: "translateX(0)", opacity: 1 }], { duration: 180, easing: "ease-out" });
 }
 
 /* Run end: the ranking. Edit lets you move a ranked item up or down with the arrow buttons.
@@ -1695,7 +1740,8 @@ function castVote(side){
     c.classList.add(c.dataset.side === side ? "won" : "lost");
   });
   document.querySelectorAll(".pick").forEach(b => b.disabled = true);
-  if(skipResult) showWinnerFlash(winner, loser); else showResult(winner, loser);
+  enterSide = side === "a" ? "b" : "a";
+  showResult(winner, loser);
 }
 
 /* Skip-the-result mode: "Winner!" pops, holds, fades, then the next matchup loads. `voted` stays true
@@ -1968,7 +2014,8 @@ function setCategory(cat){
   challengePair = null;
   lastResult = null;
   justFinished = false;
-  ["result","ladderEnd","statsPanel","checkpoint"].forEach(id => $(id).classList.add("hidden"));
+  hideResult(true);
+  ["ladderEnd","statsPanel","checkpoint"].forEach(id => $(id).classList.add("hidden"));
   hideOops();
   history.replaceState(null, "", location.href.split("#")[0]);
   recomputeWins();
@@ -2308,10 +2355,9 @@ function startRandomMatch(){
   do { b = items[Math.floor(Math.random() * items.length)].n; } while(b === a);
   mode = "oneoff";
   challengePair = [a, b];
-  $("result").classList.add("hidden");
+  hideResult();
   renderMatch();
 }
-$("randomBtn").addEventListener("click", openPicker);   // the button opens the category picker
 
 /* ---------- your stats ---------- */
 function othersCounts(key, x, y){
@@ -2562,7 +2608,8 @@ $("statsClose").addEventListener("click", () => $("statsPanel").classList.add("h
 /* Crown buttons name the current champion, e.g. "Cherry is the GOAT". */
 function setCrownLabels(){
   const label = S && S.champ ? `${S.champ} is the GOAT <img class='crown-ico' src='assets/goat-crown.png' alt=''>` : "This is the GOAT <img class='crown-ico' src='assets/goat-crown.png' alt=''>";
-  $("resultCrown").querySelector("span").innerHTML = label;
+  $("resultCrown").innerHTML = "<img class='crown-ico' src='assets/goat-crown.png' alt=''>";
+  $("resultCrown").setAttribute("aria-label", S && S.champ ? `Crown ${S.champ} the GOAT` : "Crown the GOAT");
   $("cpCrown").querySelector("span").innerHTML = label;
 }
 
@@ -2692,7 +2739,8 @@ async function crownGoat(){
   if(!S.ranked.includes(champ)) S.ranked.push(champ);
   S.queue = [];
   saveLadder();
-  ["statsPanel", "checkpoint", "resetPanel", "resetItems", "result"].forEach(id => $(id).classList.add("hidden"));
+  hideResult(true);
+  ["statsPanel", "checkpoint", "resetPanel", "resetItems"].forEach(id => $(id).classList.add("hidden"));
   showGoatCrown(champ);
 }
 $("resultCrown").addEventListener("click", crownGoat);
@@ -2855,7 +2903,7 @@ document.addEventListener("keydown", e => {
   const open = ["picker", "statsPanel", "statsIntro", "resetPanel", "dialog", "shareSheet", "checkpoint", "ladderEnd", "intro", "coach", "catWelcome"]
     .some(id => !$(id).classList.contains("hidden"));
   if(open) return;
-  const resultOpen = !$("result").classList.contains("hidden");
+  const resultOpen = isResultOpen();
   if(resultOpen){
     if(e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === " "){
       e.preventDefault();
@@ -2875,32 +2923,19 @@ document.addEventListener("keydown", e => {
   const SWIPE = 80;
   const OPEN_PANELS = ["picker", "statsPanel", "statsIntro", "resetPanel", "dialog", "shareSheet", "checkpoint", "ladderEnd", "intro", "coach", "catWelcome"];
   let g = null;
-  const resultEl = () => $("result");
   const modalOpen = () => OPEN_PANELS.some(id => !$(id).classList.contains("hidden"));
   stage.addEventListener("pointerdown", e => {
     g = null;
     if(e.target.closest("button")) return;
-    if(modalOpen() || resultEl().classList.contains("hidden")) return;
-    g = { x: e.clientX, dx: 0, w: stage.getBoundingClientRect().width };
-    resultEl().style.transition = "none";
+    if(modalOpen() || !isResultOpen()) return;
+    g = { x: e.clientX, dx: 0 };
   });
-  stage.addEventListener("pointermove", e => {
-    if(!g) return;
-    g.dx = e.clientX - g.x;
-    resultEl().style.transform = `translate(${g.dx}px, -50%)`;
-  });
+  stage.addEventListener("pointermove", e => { if(g) g.dx = e.clientX - g.x; });
   const release = () => {
     if(!g) return;
-    const { dx, w } = g;
+    const { dx } = g;
     g = null;
-    const el = resultEl();
-    el.style.transition = "transform .25s ease";
-    if(Math.abs(dx) > SWIPE){
-      el.style.transform = `translate(${dx < 0 ? -w - 60 : w + 60}px, -50%)`;
-      setTimeout(() => $("nextBtn").click(), 250);
-    } else {
-      el.style.transform = "translate(0, -50%)";
-    }
+    if(Math.abs(dx) > SWIPE && isResultOpen()) $("nextBtn").click();
   };
   stage.addEventListener("pointerup", release);
   stage.addEventListener("pointercancel", release);
@@ -2912,16 +2947,13 @@ document.addEventListener("keydown", e => {
 let skipResult = readStore("goat_result_skip") === true;
 function setSkipResult(on){
   skipResult = on; writeStore("goat_result_skip", on);
-  $("resultSkip").checked = on;
   $("cpShowStats").checked = !on;
   $("statsIntroHide").checked = on;
   $("matchShowStats").checked = !on;
 }
-$("resultSkip").checked = skipResult;
 $("cpShowStats").checked = !skipResult;
 $("statsIntroHide").checked = skipResult;
 $("matchShowStats").checked = !skipResult;
-$("resultSkip").addEventListener("change", e => setSkipResult(e.target.checked));
 $("cpShowStats").addEventListener("change", e => setSkipResult(!e.target.checked));
 $("statsIntroHide").addEventListener("change", e => setSkipResult(e.target.checked));
 $("matchShowStats").addEventListener("change", e => setSkipResult(!e.target.checked));
