@@ -220,7 +220,7 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .tile-e{font-size:44px; line-height:1; filter:drop-shadow(0 3px 2px rgba(0,0,0,.4))}
 .tile-name{display:block; font-size:22px; line-height:1.05; text-shadow:2px 2px 0 #000; overflow-wrap:normal; word-break:normal}
 .tile-n{font-size:12px; opacity:.92; text-shadow:1px 1px 0 #000}
-.tile.current{outline:4px solid var(--yellow); outline-offset:3px}
+.tile.current{box-shadow:inset 0 0 0 4px var(--yellow), 4px 4px 0 #000}
 .tile.mashup{grid-column:1 / -1}
 .tile.locked{filter:grayscale(1); opacity:.6; cursor:not-allowed; box-shadow:none}
 .tile.current:hover::after{content:"Now playing"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; border-radius:13px; background:rgba(7,10,20,.72); color:#fff; font:22px/1 Impact,"Arial Narrow",system-ui,sans-serif; text-transform:uppercase; text-shadow:2px 2px 0 #000}
@@ -751,7 +751,7 @@ body.home #resetBtn{display:none}
     </main>
 
     <p class="hint" id="hint"></p>
-    <p class="foot"><label class="foot-stats"><input type="checkbox" id="matchShowStats"> <span>Stats</span></label><froobaloo-badge></froobaloo-badge><span class="build" id="build"></span><button type="button" class="foot-help" id="aboutBtn" aria-label="About The GOAT"><span>?</span></button></p>
+    <p class="foot"><label class="foot-stats"><input type="checkbox" id="matchShowStats"> <span>Auto</span></label><froobaloo-badge></froobaloo-badge><span class="build" id="build"></span><button type="button" class="foot-help" id="aboutBtn" aria-label="About The GOAT"><span>?</span></button></p>
   </div>
 </div>
 
@@ -759,7 +759,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B156";
+const BUILD = "B157";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1054,6 +1054,8 @@ const POLL_MS = 15000;
 let writeChain = Promise.resolve();
 let lastResult = null;        // {winner, loser} while the result panel is open
 let enterSide = null;         // side where the new entry slides in on the next matchup
+let autoOn = false;           // Auto: advance to the next matchup 2 seconds after a pick
+let autoTimer = null;
 let winCounts = {};           // item name -> times picked as a winner in CUR, all viewers
 let lastWinner = null;        // {cat, name, side}: the last ladder winner and the side ("a" left, "b" right) it stands on
 let lastPick = null;          // {key, previous, snapshotS, time}: the one pick that "Oops" can undo
@@ -1532,12 +1534,15 @@ function showResult(winner, loser){
   setCrownLabels();
   $("resultCrown").classList.toggle("hidden", !(mode === "ladder" && S && S.queue.length));
   updateStatus();
+  clearTimeout(autoTimer);
+  if(autoOn) autoTimer = setTimeout(() => { if(isResultOpen()) $("nextBtn").click(); }, 2000);
 }
 /* Hides the drawer. Instant for category changes and resets; otherwise it slides up and the new entry slides in. */
 function hideResult(instant){
   const el = $("result");
   $("stage").classList.remove("picked");
   clearTimeout(hideResult._t);
+  clearTimeout(autoTimer);
   const reset = () => { el.classList.add("hidden"); el.classList.remove("closing"); el.style.transition = ""; el.style.transform = ""; };
   if(instant){ reset(); return; }
   if(el.classList.contains("hidden") || el.classList.contains("closing")) return;
@@ -1701,7 +1706,7 @@ $("ladderEnd").addEventListener("click", e => {
 
 /* ---------- actions ---------- */
 function castVote(side){
-  if(voted) return;
+  if(voted){ if(isResultOpen()) $("nextBtn").click(); return; }   // after a pick, a tap on either image means Next matchup
   voted = true;
   buzz(18);
   const winner = current[side];
@@ -2246,6 +2251,8 @@ document.querySelectorAll(".fighter").forEach(card => {
   };
 
   card.addEventListener("pointerdown", e => {
+    // After a pick, pressing either image is the same as Next matchup. Acts on press, so it stays fast.
+    if(voted && !e.target.closest("button") && isResultOpen()){ $("nextBtn").click(); return; }
     if(voted || e.target.closest("button")) return;
     active = true; moved = false; wasReady = false;
     sx = e.clientX; sy = e.clientY;
@@ -2962,14 +2969,16 @@ function setSkipResult(on){
   skipResult = on; writeStore("goat_result_skip", on);
   $("cpShowStats").checked = !on;
   $("statsIntroHide").checked = on;
-  $("matchShowStats").checked = !on;
 }
 $("cpShowStats").checked = !skipResult;
 $("statsIntroHide").checked = skipResult;
-$("matchShowStats").checked = !skipResult;
 $("cpShowStats").addEventListener("change", e => setSkipResult(!e.target.checked));
 $("statsIntroHide").addEventListener("change", e => setSkipResult(e.target.checked));
-$("matchShowStats").addEventListener("change", e => setSkipResult(!e.target.checked));
+/* Auto: after a pick, the next matchup comes up on its own after 2 seconds. Saved per browser. */
+function setAuto(on){ autoOn = on; writeStore("goat_auto", on); $("matchShowStats").checked = on; }
+autoOn = readStore("goat_auto") === true;
+$("matchShowStats").checked = autoOn;
+$("matchShowStats").addEventListener("change", e => setAuto(e.target.checked));
 
 function init(){
   $("boot").classList.add("hidden");   // the game is ready: drop the loading card
