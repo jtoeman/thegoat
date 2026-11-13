@@ -215,15 +215,7 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .win-flash[data-side="right"] .wf-badge{align-self:flex-end}
 @media (prefers-reduced-motion: reduce){ .wf-title,.wf-name{animation:none} }
 .tiles{flex:1 1 auto; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:12px; padding:10px 10px 12px}
-.tile-grid{flex:1 0 auto; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); grid-auto-rows:minmax(150px,1fr); gap:12px; align-content:stretch}
-/* Desktop: the picker widens and the boxes sit in one row of equal width. */
-@media (min-width:760px){
-  .intro-card.picker-card{width:min(640px, calc(100vw - 64px)); max-width:640px; height:auto; max-height:calc(100dvh - 48px)}
-  .tile-grid{grid-template-columns:repeat(2,minmax(0,1fr)); grid-auto-rows:150px; align-content:start; flex:0 0 auto}
-  .tile-grid .tile{min-width:0; height:100%}
-  /* Mashups is a short band across the full width, not a tall box */
-  .tile-grid .tile.mashup{grid-column:1 / -1; height:auto; min-height:150px}
-}
+.tile-grid{flex:1 1 auto; min-height:0; overflow-y:auto; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); grid-auto-rows:minmax(150px,1fr); gap:12px; align-content:stretch}
 .tile{position:relative; min-height:150px; padding:14px 12px; display:flex; flex-direction:column; justify-content:space-between; text-align:left; color:#fff; border:3px solid #000; border-radius:16px; box-shadow:4px 4px 0 #000; cursor:pointer; font-family:system-ui,-apple-system,Arial,sans-serif}
 .tile-e{font-size:44px; line-height:1; filter:drop-shadow(0 3px 2px rgba(0,0,0,.4))}
 .tile-name{display:block; font-size:22px; line-height:1.05; text-shadow:2px 2px 0 #000; overflow-wrap:normal; word-break:normal}
@@ -232,9 +224,19 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .tile.mashup{grid-column:1 / -1}
 .tile.locked{filter:grayscale(1); opacity:.6; cursor:not-allowed; box-shadow:none}
 .tile.current:hover::after{content:"Now playing"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; border-radius:13px; background:rgba(7,10,20,.72); color:#fff; font:22px/1 Impact,"Arial Narrow",system-ui,sans-serif; text-transform:uppercase; text-shadow:2px 2px 0 #000}
-.tile-goat{position:absolute; right:10px; top:10px; max-width:60%; font-size:12px; line-height:1.2; text-align:right; text-shadow:1px 1px 0 #000; overflow-wrap:normal; word-break:normal; display:flex; flex-direction:column; align-items:flex-end; gap:3px}
+/* GOAT tab: a gold tab tucked into the top corner, with a folded flap under its left edge */
+.tile-goat{position:absolute; top:0; right:0; max-width:58%; display:flex; flex-direction:column; align-items:flex-end; gap:2px;
+  padding:7px 8px 5px 11px; background:linear-gradient(180deg,#fff3a6 0%,#ffd23f 50%,#e3a300 100%);
+  color:#1a1200; font-family:Impact,"Haettenschweiler",sans-serif; text-transform:uppercase; letter-spacing:.03em;
+  font-size:11px; line-height:1.05; text-align:right; text-shadow:none;
+  border:3px solid #000; border-top:0; border-right:0; border-bottom-left-radius:10px;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.75), inset 0 -3px 0 rgba(0,0,0,.22), -3px 3px 0 rgba(0,0,0,.45);
+  overflow-wrap:normal; word-break:normal}
+.tile-goat::before{content:""; position:absolute; left:-3px; bottom:-12px; width:0; height:0;
+  border-top:12px solid #7a5600; border-left:12px solid transparent}
 .tile-goat .tg-name{display:block; white-space:normal}
 .tile-goat .tg-crown{display:block; line-height:1}
+.tile-goat .tg-crown img{height:16px; width:auto; display:block; margin-left:auto}
 /* Welcome modal: a card centered over the category screen */
 .boot{position:absolute; inset:0; z-index:12; display:flex; align-items:center; justify-content:center; background:radial-gradient(circle at 50% 35%,#1d2650,#070a14 70%); padding:18px}
 .boot.hidden{display:none}
@@ -759,7 +761,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B154";
+const BUILD = "B155";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
