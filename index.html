@@ -251,6 +251,7 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 #hint{display:none}
 /* Category welcome: a photo hero, a borderless info table, the category picker, and Let's go pinned at the bottom. */
 section#catWelcome{position:fixed; inset:0; z-index:10; padding:12px}
+section#checkpoint{position:fixed; inset:0; z-index:50; padding:12px}
 .intro-card.cw-card{width:min(360px, calc(100vw - 24px)); max-width:360px; height:auto; max-height:min(calc(100dvh - 24px), 820px); padding:0; display:flex; flex-direction:column; text-align:center; min-height:0}
 .cw-inner{position:relative; z-index:1; flex:1 1 auto; min-height:0; overflow-y:auto; padding:14px 14px 8px; display:flex; flex-direction:column; gap:12px}
 .cw-hero{position:relative; flex:none; height:min(240px, 34dvh); border-radius:12px; overflow:hidden; border:2px solid rgba(255,255,255,.12); background:#0b1024}
@@ -263,9 +264,7 @@ section#catWelcome{position:fixed; inset:0; z-index:10; padding:12px}
 .cw-table .v{font-size:16px; font-weight:700}
 .cw-foot{position:relative; z-index:1; flex:none; padding:10px 14px 16px; background:linear-gradient(180deg,rgba(7,10,20,0),rgba(7,10,20,.85) 40%)}
 #cwGo{width:100%}
-/* Checkpoint: champion tag and the GOAT button sit inside the data table. */
-.cw-table .cp-champ{display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px}
-.cp-tag{display:inline-block; white-space:nowrap; padding:3px 8px 2px; background:linear-gradient(180deg,#fff2a6 0%,#ffd23f 60%,#f2b600 100%); color:#1a1200; font-family:Impact,"Haettenschweiler",sans-serif; font-size:11px; font-weight:400; letter-spacing:.04em; text-transform:uppercase; text-shadow:none; clip-path:polygon(0 0,100% 0,100% 72%,calc(100% - 8px) 100%,0 100%)}
+/* Checkpoint: the GOAT button sits inside the data table. */
 .cw-table .cp-goat{grid-column:1 / -1; width:100%; margin-top:4px}
 .cw-foot .actions-col{gap:8px}
 .cw-foot .start-row{margin:0 0 10px; color:#fff; font-size:14px; text-shadow:0 1px 2px #000; gap:10px}
@@ -773,7 +772,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B161";
+const BUILD = "B162";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -2867,15 +2866,7 @@ function showCheckpoint(){
     table.insertBefore(k, goatBtn);
     table.insertBefore(v, goatBtn);
   };
-  addRow("Champion", v => {
-    v.classList.add("cp-champ");
-    const name = document.createElement("span");
-    name.textContent = champ;
-    const tag = document.createElement("span");
-    tag.className = "cp-tag";
-    tag.textContent = "Current Champion";
-    v.append(name, tag);
-  });
+  addRow("Current Champion", v => { v.textContent = champ; });
   addRow("Left in this run", v => { v.textContent = `${S.queue.length} to go`; });
   if(db && statsReady && lastResult && lastResult.winner === champ){
     const c = countsFor(keyFor(lastResult.winner, lastResult.loser), lastResult.winner, lastResult.loser);
