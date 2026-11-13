@@ -255,6 +255,10 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 /* Category welcome: a photo hero, a borderless info table, the category picker, and Let's go pinned at the bottom. */
 section#catWelcome{position:fixed; inset:0; z-index:10; padding:12px}
 section#checkpoint{position:fixed; inset:0; z-index:50; padding:12px}
+section#unlock{position:fixed; inset:0; z-index:60; padding:12px}
+.unlock-hero{background:linear-gradient(180deg,#fff2a6 0%,#ffd23f 60%,#f2b600 100%); border-radius:12px; box-shadow:inset 0 -3px 0 rgba(0,0,0,.18); padding:26px 14px; text-align:center}
+.unlock-title{margin:0; color:#1a1200; text-shadow:none; font-size:44px; line-height:1}
+.unlock-copy{grid-column:1 / -1; margin:0; font-size:15px; line-height:1.4}
 .intro-card.cw-card{width:min(360px, calc(100vw - 24px)); max-width:360px; height:auto; max-height:min(calc(100dvh - 24px), 820px); padding:0; display:flex; flex-direction:column; text-align:center; min-height:0}
 .cw-inner{position:relative; z-index:1; flex:1 1 auto; min-height:0; overflow-y:auto; padding:14px 14px 8px; display:flex; flex-direction:column; gap:12px}
 .cw-hero{position:relative; flex:none; height:min(240px, 34dvh); border-radius:12px; overflow:hidden; border:2px solid rgba(255,255,255,.12); background:#0b1024}
@@ -275,7 +279,7 @@ section#checkpoint{position:fixed; inset:0; z-index:50; padding:12px}
 .cw-foot .start-row select{height:38px; font-size:15px}
 .cw-foot .start-row .btn{min-height:38px; padding:0 14px; width:auto}
 
-#intro,#coach,#catWelcome,#checkpoint{position:absolute; inset:0; z-index:10; background:rgba(5,7,14,.8); display:flex; align-items:center; justify-content:center; padding:18px}
+#intro,#coach,#catWelcome,#checkpoint,#unlock{position:absolute; inset:0; z-index:10; background:rgba(5,7,14,.8); display:flex; align-items:center; justify-content:center; padding:18px}
 #coachActions{margin-top:16px}
 .intro-card{position:relative; width:100%; max-width:360px; padding:26px 20px 20px; text-align:center; overflow:hidden; background:linear-gradient(165deg,#1d2650,#0b1024 70%); border:3px solid #000; border-radius:18px; box-shadow:6px 6px 0 #000, 0 0 0 3px var(--yellow); animation:introPop .5s cubic-bezier(.2,1.35,.4,1) both}
 .intro-band{position:absolute; left:-10%; right:-10%; top:0; height:14px; transform:skewY(-4deg); background:linear-gradient(90deg,#e8303a 0 50%,#2d6fd6 50% 100%); border-bottom:3px solid #000}
@@ -622,6 +626,25 @@ body.home #resetBtn{display:none}
         </div>
         <label class="skip-picker hidden"><input type="checkbox" id="cpShowStats"> <span>Show stats between rounds</span></label>
       </section>
+      <section class="hidden" id="unlock" role="dialog" aria-modal="true" aria-label="Mashups unlocked">
+        <div class="intro-card cw-card">
+          <div class="intro-band" aria-hidden="true"></div>
+          <div class="cw-inner">
+            <div class="unlock-hero">
+              <p class="display unlock-title">Mashups unlocked</p>
+            </div>
+            <div class="cw-table">
+              <p class="unlock-copy">Fighters from every category you've finished now face off against each other.</p>
+            </div>
+          </div>
+          <div class="cw-foot">
+            <div class="actions-col">
+              <button class="btn primary" id="unlockPlay"><span>Play Mashups now</span></button>
+              <button class="btn" id="unlockLater"><span>Later</span></button>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <section class="overlay hidden" id="statsPanel" aria-live="polite">
         <p class="ko display">Your stats</p>
@@ -775,7 +798,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B164";
+const BUILD = "B165";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1154,9 +1177,10 @@ function toastAction(msg, label, fn, ms){
   clearTimeout(toast._t);
   toast._t = setTimeout(() => t.classList.add("hidden"), ms || 2200);
 }
-function celebrateUnlock(){
-  toastAction("Mashups unlocked!", "Play now", () => { setCategory(MASHUP); closePicker(); }, 9000);
-}
+/* Unlock card: the largest message in the game, so it is not missed. */
+function celebrateUnlock(){ $("unlock").classList.remove("hidden"); }
+$("unlockPlay").addEventListener("click", () => { $("unlock").classList.add("hidden"); setCategory(MASHUP); closePicker(); });
+$("unlockLater").addEventListener("click", () => $("unlock").classList.add("hidden"));
 function toast(msg){
   const t = $("toast");
   t.textContent = msg;
@@ -2014,15 +2038,13 @@ function categoryTop(c){
   return (st && Array.isArray(st.ranked) && st.ranked[0]) || null;
 }
 /* Distinct items this viewer has voted on in one category. */
-function categoryVotedItems(c){
-  const seen = new Set();
-  Object.keys(myPicks).forEach(k => { const p = parseKey(k); if(p.cat === c.id){ seen.add(p.x); seen.add(p.y); } });
-  return seen.size;
-}
+/* Picks this player has made in a category: one per matchup, the latest one counts. */
+function categoryPicks(c){ return Object.keys(myPicks).filter(k => parseKey(k).cat === c.id).length; }
 const MASHUP_MIN_CATS = 3;   // Mashups opens once a player is ready in this many categories
-/* A category is ready for you when you have crowned a GOAT in it, or voted on at least 10 of its items. */
+const MASHUP_PICKS = 5;      // picks in one category that make it ready (crowning a GOAT in it always does)
+/* A category is ready for you when you have crowned a GOAT in it, or made at least MASHUP_PICKS picks in it. */
 function hasMyGoat(c){ return Object.keys(myPicks).some(k => { const p = parseKey(k); return p.cat === c.id && myPicks[k] && myPicks[k].g; }); }
-function catReady(c){ return hasMyGoat(c) || categoryVotedItems(c) >= 10; }
+function catReady(c){ return hasMyGoat(c) || categoryPicks(c) >= MASHUP_PICKS; }
 /* B92: categories a player has hidden. Hidden ones leave the picker, Mashups and the stats home list. Saved per browser. */
 function hiddenIds(){ const v = readStore("goat_hidden_cats"); return new Set(Array.isArray(v) ? v : []); }
 function isHidden(c){ return hiddenIds().has(c.id); }
@@ -2055,12 +2077,12 @@ function mashupTileHTML(){
       ${top ? `<span class="tile-goat"><span class="tg-name">${top}</span><img class='crown-ico' src='assets/goat-crown.png' alt=''></span>` : ""}
     </button>`;
   }
-  const prog = visibleCats().map(c => `${c.name} ${hasMyGoat(c) ? "<img class='crown-ico' src='assets/goat-crown.png' alt=''> GOAT" : `${Math.min(categoryVotedItems(c), 10)}/10`}`).join(" · ");
+  const prog = visibleCats().map(c => `${c.name} ${hasMyGoat(c) ? "<img class='crown-ico' src='assets/goat-crown.png' alt=''> GOAT" : `${Math.min(categoryPicks(c), MASHUP_PICKS)}/${MASHUP_PICKS}`}`).join(" · ");
   return `
     <button class="tile mashup locked" data-id="mashup" aria-disabled="true" style="background:#3a3f4d">
       <span class="tile-e" aria-hidden="true">🔒</span>
       <span class="tile-name display">Mashups</span>
-      <span class="tile-n">Locked. Crown a GOAT or vote on 10 items in any ${MASHUP_MIN_CATS} categories to open it.</span>
+      <span class="tile-n">Locked. Make ${MASHUP_PICKS} picks in any ${MASHUP_MIN_CATS} categories (or crown a GOAT) to open it.</span>
       <span class="tile-n">${prog}</span>
     </button>`;
 }
@@ -2134,7 +2156,7 @@ $("introGo").addEventListener("click", () => {
 /* ---------- contextual coach ----------
    One short tip at a time, shown when the player reaches that moment. Each tip is seen once (goat_coach). */
 let lastVoteCoach = null;
-const COACH_OPEN = ["statsPanel","statsIntro","resetPanel","dialog","shareSheet","checkpoint","ladderEnd","intro","result","goatCrown","coach","catWelcome"];
+const COACH_OPEN = ["statsPanel","statsIntro","resetPanel","dialog","shareSheet","checkpoint","ladderEnd","intro","result","goatCrown","coach","catWelcome","unlock"];
 function coachSeen(){ return readStore("goat_coach") || {}; }
 function markCoach(id){ const s = coachSeen(); s[id] = true; writeStore("goat_coach", s); }
 function myGoatInfo(){
@@ -2171,6 +2193,10 @@ function coachSteps(){
       actions: [
         { label: "Share my pick", primary: true, run: lastVoteCoach ? share(`I just picked ${lastVoteCoach.winner} over ${lastVoteCoach.loser} in ${lastVoteCoach.cat}. Who would you pick?`) : share("I'm voting on The GOAT. Who's your pick?") },
         { label: "Keep playing" }] },
+    { id: "mashupIntro", event: "vote", when: () => !mashupUnlocked(),
+      title: "Mashups come later",
+      body: [`Once you make ${MASHUP_PICKS} picks in ${MASHUP_MIN_CATS} categories, Mashups opens. There, fighters from different categories face off. It is locked in the picker until then.`],
+      actions: [{ label: "Got it" }] },
     { id: "checkin10", event: "tenth", when: () => true,
       title: "10 picks in",
       body: ["Your picks are helping set the crowd's favorites. Want to see how the board is shaping up?"],
@@ -2183,7 +2209,7 @@ function coachSteps(){
         { label: "Keep playing" }] },
     { id: "mashups", event: "ready", when: () => !mashupUnlocked(),
       title: "Mashups are close",
-      body: [`You are ready in ${readyCats().length} of ${MASHUP_MIN_CATS} categories. Get a GOAT or 10 votes in ${MASHUP_MIN_CATS} categories to unlock Mashups, where fighters from different categories face off.`],
+      body: [`You are ready in ${readyCats().length} of ${MASHUP_MIN_CATS} categories. Make ${MASHUP_PICKS} picks in ${MASHUP_MIN_CATS} categories (or crown a GOAT in them) to unlock Mashups.`],
       actions: [{ label: "Got it" }] }
   ];
 }
@@ -2292,7 +2318,7 @@ $("tiles").addEventListener("click", e => {
     return;
   }
   if(b.dataset.id === "mashup"){
-    if(!mashupUnlocked()){ toast("Mashups open after 10 voted items in any 4 categories."); return; }
+    if(!mashupUnlocked()){ toast(`Mashups open after ${MASHUP_PICKS} picks in any ${MASHUP_MIN_CATS} categories.`); return; }
     closePicker();
     if(CUR === MASHUP && S && !S.queue.length) startFreshHere(); else setCategory(MASHUP);
     return;
@@ -2502,17 +2528,17 @@ function yoursHTML(){
     const done = readyCats().length;
     const note = mashupUnlocked()
       ? "Mashups are open. Tap a category to play it."
-      : `Mashups open once you crown a GOAT or vote on 10 items in any ${MASHUP_MIN_CATS} categories: ${done} of ${MASHUP_MIN_CATS} ready.`;
+      : `Mashups open once you make ${MASHUP_PICKS} picks in any ${MASHUP_MIN_CATS} categories (or crown a GOAT in them): ${done} of ${MASHUP_MIN_CATS} ready.`;
     const cards = visibleCats().map(c => {
-      const n = Math.min(categoryVotedItems(c), 10);
+      const n = Math.min(categoryPicks(c), MASHUP_PICKS);
       const top = categoryTop(c);
       return `<button class="cat-card" data-cat="${c.id}" type="button">
         <span class="cc-e" aria-hidden="true">${c.e}</span>
         <span class="cc-body">
           <b class="display">${c.name}</b>
           <span class="cc-meta">${matchupWord(matchupCount(c))}${top ? " · <img class='crown-ico' src='assets/goat-crown.png' alt=''> " + top : ""}</span>
-          <span class="prog"><span class="prog-fill" data-w="${n * 10}"></span></span>
-          <span class="cc-meta">${n} of 10 items voted</span>
+          <span class="prog"><span class="prog-fill" data-w="${Math.round(100 * n / MASHUP_PICKS)}"></span></span>
+          <span class="cc-meta">${n} of ${MASHUP_PICKS} picks</span>
         </span>
       </button>`;
     }).join("");
@@ -2536,7 +2562,7 @@ function yoursHTML(){
             <b class="display">Mashups</b>
             <span class="cc-meta">${matchupWord(mCount)} so far</span>
             <span class="prog"><span class="prog-fill" data-w="${Math.min(100, Math.round(100 * readyN / MASHUP_MIN_CATS))}"></span></span>
-            <span class="cc-meta">${readyN} of ${MASHUP_MIN_CATS} categories ready (a GOAT or 10 votes)</span>
+            <span class="cc-meta">${readyN} of ${MASHUP_MIN_CATS} categories ready (a GOAT or ${MASHUP_PICKS} picks)</span>
           </span>
         </div>`;
     html = `<p class="ko-sub">${note}</p>` + cards + mashCard;
