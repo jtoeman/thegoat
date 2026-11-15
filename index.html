@@ -632,10 +632,10 @@ body.home #resetBtn{display:none}
           <div class="intro-band" aria-hidden="true"></div>
           <div class="cw-inner">
             <div class="unlock-hero">
-              <p class="display unlock-title">Mashups unlocked</p>
+              <p class="display unlock-title" id="unlockTitle">Mashups unlocked</p>
             </div>
             <div class="cw-table">
-              <p class="unlock-copy">Fighters from every category you've finished now face off against each other.</p>
+              <p class="unlock-copy" id="unlockCopy">Fighters from every category you've finished now face off against each other.</p>
             </div>
           </div>
           <div class="cw-foot">
@@ -799,7 +799,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B167";
+const BUILD = "B168";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1179,7 +1179,13 @@ function toastAction(msg, label, fn, ms){
   toast._t = setTimeout(() => t.classList.add("hidden"), ms || 2200);
 }
 /* Unlock card: the largest message in the game, so it is not missed. */
-function celebrateUnlock(){ $("unlock").classList.remove("hidden"); }
+/* B168: the Mashups card, centered over the game. Used for the first unlock and for a category joining Mashups later. Its Play button opens Mashups. */
+function showMashupCard(title, copy){
+  $("unlockTitle").textContent = title;
+  $("unlockCopy").textContent = copy;
+  $("unlock").classList.remove("hidden");
+}
+function celebrateUnlock(){ showMashupCard("Mashups unlocked", "Fighters from every category you've finished now face off against each other."); }
 $("unlockPlay").addEventListener("click", () => { $("unlock").classList.add("hidden"); setCategory(MASHUP); closePicker(); });
 $("unlockLater").addEventListener("click", () => $("unlock").classList.add("hidden"));
 function toast(msg){
@@ -1829,7 +1835,10 @@ function castVote(side){
   refreshMashup();
   const joined = readyCats().filter(c => !readyBefore.includes(c.id));
   if(!wasUnlocked && mashupUnlocked()) setTimeout(celebrateUnlock, 300);
-  else if(joined.length && mashupUnlocked()) setTimeout(() => toast(`${joined.map(c => c.name).join(" and ")} joined Mashups`), 300);
+  else if(joined.length && mashupUnlocked()){
+    const names = joined.map(c => c.name).join(" and ");
+    setTimeout(() => showMashupCard(`${names} joined Mashups`, `Fighters from ${names} are now in Mashups. Play them now?`), 300);
+  }
   // B166: a Mashups match played from a link opens Mashups here. Continue into Mashups after the match (no unlock card).
   if(mode === "challenge" && CUR === MASHUP && !mashupOpenedByPlay()){
     writeStore("goat_mashup_open", true);
