@@ -19,6 +19,8 @@ export default {
         return Response.redirect(`${url.origin}${prefix}/${url.search}`, 301);
       }
       url.pathname = url.pathname.slice(prefix.length) || "/";
+      // /goat/arcade opens the game shell in Arcade mode (the page reads the path).
+      if (url.pathname === "/arcade") url.pathname = "/";
       // Photos use relative paths (assets/...). On a profile page (/goat/u/<name>) the browser resolves them under /u/,
       // so serve those files from the site root instead of the game shell.
       if (url.pathname.startsWith("/u/assets/")) url.pathname = url.pathname.slice(2);
@@ -27,6 +29,7 @@ export default {
       return env.ASSETS.fetch(new Request(url, request));
     }
 
+    if (url.pathname === "/arcade") return env.ASSETS.fetch(new Request(new URL("/", url), request));
     return env.ASSETS.fetch(request);
   }
 };
