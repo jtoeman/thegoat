@@ -289,7 +289,9 @@ section#unlock,section#arcadeEnd{position:fixed; inset:0; z-index:60; padding:12
 .cw-foot .start-row select{height:38px; font-size:15px}
 .cw-foot .start-row .btn{min-height:38px; padding:0 14px; width:auto}
 
-#intro,#coach,#catWelcome,#checkpoint,#unlock,#arcadeWelcome,#arcadeEnd{position:absolute; inset:0; z-index:10; background:rgba(5,7,14,.8); display:flex; align-items:center; justify-content:center; padding:18px}
+#intro,#coach,#catWelcome,#checkpoint,#unlock,#arcadeWelcome,#arcadeEnd,#tokenModal{position:absolute; inset:0; z-index:10; background:rgba(5,7,14,.8); display:flex; align-items:center; justify-content:center; padding:18px}
+.token-chip{margin:6px 0 0; font-size:15px; font-weight:800; color:var(--yellow); text-shadow:2px 2px 0 #000}
+.token-chip.hidden{display:none}
 #coachActions{margin-top:16px}
 .intro-card{position:relative; width:100%; max-width:360px; padding:26px 20px 20px; text-align:center; overflow:hidden; background:linear-gradient(165deg,#1d2650,#0b1024 70%); border:3px solid #000; border-radius:18px; box-shadow:6px 6px 0 #000, 0 0 0 3px var(--yellow); animation:introPop .5s cubic-bezier(.2,1.35,.4,1) both}
 .intro-band{position:absolute; left:-10%; right:-10%; top:0; height:14px; transform:skewY(-4deg); background:linear-gradient(90deg,#e8303a 0 50%,#2d6fd6 50% 100%); border-bottom:3px solid #000}
@@ -698,6 +700,34 @@ body.arcade .stage.picked .arcade-tagline{display:none}
         </div>
       </section>
 
+      <section class="hidden" id="tokenModal" role="dialog" aria-modal="true" aria-label="Not enough tokens">
+        <div class="intro-card cw-card">
+          <div class="intro-band" aria-hidden="true"></div>
+          <div class="cw-inner">
+            <div class="unlock-hero">
+              <p class="display unlock-title">Not enough tokens</p>
+            </div>
+            <div class="cw-table">
+              <p class="unlock-copy" id="tokenNeed"></p>
+              <p class="unlock-copy">How to earn tokens:</p>
+              <ul class="unlock-copy" style="text-align:left; padding-left:18px; margin:8px 0 0">
+                <li>+1 for every rank pick.</li>
+                <li>+10 when you crown a GOAT that is in its category's top 5.</li>
+                <li>+10 the first time you rank in a category.</li>
+                <li>+10 the first time you open Mashups.</li>
+                <li>+1 for every 10th Mashups vote, and +50 for a Mashups GOAT.</li>
+                <li>+1 when someone plays your challenge link.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="cw-foot">
+            <div class="actions-col">
+              <button class="btn primary" id="tokenOk"><span>Got it</span></button>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section class="hidden" id="arcadeWelcome" role="dialog" aria-modal="true" aria-label="Welcome to Arcade Mode">
         <div class="intro-card cw-card">
           <div class="intro-band" aria-hidden="true"></div>
@@ -878,6 +908,7 @@ body.arcade .stage.picked .arcade-tagline{display:none}
           <div class="intro-band" aria-hidden="true"></div>
         <p class="display picker-brand">The GOAT</p>
         <p class="ko display picker-title">Choose a category</p>
+        <p class="token-chip hidden" id="tokenChip" aria-live="polite"></p>
         <div class="tiles" id="tiles"></div>
         <div class="actions" id="pickerActions">
           <button class="btn" id="pickerEdit"><span>Edit</span></button>
@@ -899,7 +930,7 @@ body.arcade .stage.picked .arcade-tagline{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B176";
+const BUILD = "B177";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1500,10 +1531,95 @@ async function connectPilot(){
   }
   await refreshVotes();
   await refreshCounts();
+  if(uid){
+    await refreshTokens();
+    if(CUR === MASHUP) earnTokens(["first_mashup", "first_mashup"]);
+  }
   clearInterval(pollTimer);
   pollTimer = setInterval(() => { refreshVotes(); refreshCounts(); }, POLL_MS);
   if(lastResult) renderStats(lastResult.winner, lastResult.loser);
 }
+
+/* ---------- tokens ----------
+   Earned by playing and kept on the server (table token_ledger). The server sets the amount for each reason and
+   never grants the same ref twice, so a repeat call is harmless. Arcade spends ARCADE_COST per game.
+   Signed-out viewers have no tokens. */
+const ARCADE_COST = 10;
+let tokenBalance = null;        // null until the server has answered
+let challengeOrigin = null;     // uid of the player whose challenge link this is, if any
+let challengeRaw = null;        // the challenge's items, e.g. "apple-banana"
+let challengeCredited = false;  // the origin is credited at most once per page load
+function renderTokens(){
+  const chip = $("tokenChip");
+  if(!chip) return;
+  chip.classList.toggle("hidden", tokenBalance === null);
+  chip.textContent = `🪙 ${tokenBalance || 0} ${tokenBalance === 1 ? "token" : "tokens"}`;
+}
+async function refreshTokens(){
+  if(!db || !uid) return;
+  try{
+    const { data, error } = await db.rpc("my_tokens");
+    if(error) throw error;
+    tokenBalance = data || 0;
+  }catch(e){ console.warn("tokens not loaded", e); }
+  renderTokens();
+}
+/* Each grant is [reason, ref]. The total shows as one "+X Tokens" message. */
+async function earnTokens(...grants){
+  if(!db || !uid) return 0;
+  let total = 0;
+  for(const [reason, ref] of grants){
+    try{
+      const { data, error } = await db.rpc("earn_tokens", { p_reason: reason, p_ref: ref });
+      if(error) throw error;
+      total += data || 0;
+    }catch(e){ console.warn("token not granted", reason, e); }
+  }
+  if(total > 0){
+    tokenBalance = (tokenBalance || 0) + total;
+    renderTokens();
+    toast(`+${total} ${total === 1 ? "Token" : "Tokens"}`);
+  }
+  return total;
+}
+/* A challenge link played by someone other than its owner credits the owner once. */
+async function creditChallenge(){
+  if(challengeCredited || !db || !uid || !challengeOrigin || challengeOrigin === uid || !challengeRaw) return;
+  challengeCredited = true;
+  try{ await db.rpc("challenge_bonus", { p_origin: challengeOrigin, p_pair: challengeRaw }); }
+  catch(e){ console.warn("challenge bonus not sent", e); }
+}
+/* True when the crowned item is among the category's five most-crowned items, counting this crown. */
+function isTopFiveGoat(cat, name){
+  const b = globalBoards()[cat.id] || { crowns: {} };
+  const count = n => (b.crowns[n] ? b.crowns[n].size : 0);
+  const mine = count(name) + (b.crowns[name] && b.crowns[name].has(uid) ? 0 : 1);
+  return cat.items.filter(i => i.n !== name && count(i.n) > mine).length < 5;
+}
+/* Arcade costs ARCADE_COST tokens per game. True when the server took them. */
+async function spendForArcade(){
+  if(!db || !uid){ toast("Arcade needs a connection to check your tokens."); return false; }
+  try{
+    const ref = "arcade:" + crypto.randomUUID();
+    const { data, error } = await db.rpc("spend_tokens", { p_amount: ARCADE_COST, p_ref: ref });
+    if(error) throw error;
+    await refreshTokens();
+    if(data !== true){ showTokenModal(); return false; }
+    return true;
+  }catch(e){
+    console.warn("arcade tokens not spent", e);
+    toast("Could not check your tokens. Try again.");
+    return false;
+  }
+}
+function showTokenModal(){
+  $("tokenNeed").textContent = `Arcade costs ${ARCADE_COST} tokens per game. You have ${tokenBalance || 0}.`;
+  $("tokenModal").classList.remove("hidden");
+}
+$("tokenOk").addEventListener("click", () => {
+  $("tokenModal").classList.add("hidden");
+  if(mode !== "arcade") openPicker();
+});
 
 /* Converts this viewer's picks (keyed as in myPicks) into rows for the votes table. */
 function pickRows(picks){
@@ -1941,6 +2057,7 @@ function castVote(side){
   const key = keyFor(winner, loser);
   const entry = Object.assign({ w: winner }, DEVICE, { t: Date.now() });
   const previous = myPicks[key];
+  const firstInCat = CUR !== MASHUP && countPicks((k, p) => p.cat === CUR.id) === 0;
   const readyBefore = readyCats().map(c => c.id);
   const wasUnlocked = mashupUnlocked();
   myPicks[key] = entry;
@@ -1968,6 +2085,11 @@ function castVote(side){
       pendingVotes.delete(key);
       countsWriteSeq = ++countsSeq;
       refreshCounts();
+      const grants = CUR === MASHUP
+        ? [["mashup_vote", null]]
+        : [["rank_play", crypto.randomUUID()]].concat(firstInCat ? [["first_category", CUR.id]] : []);
+      earnTokens(...grants);
+      if(mode === "challenge" && challengeOrigin) creditChallenge();
     }
     if(!ok){
       pendingVotes.delete(key);
@@ -2058,7 +2180,8 @@ $("shareClose").addEventListener("click", () => {
    Fruit: #vs-apple-banana. Other categories: #vs-dogs-beagle-pug. */
 function challengeUrl(x, y){
   const head = CUR.id === "fruit" ? "" : CUR.id + "-";
-  return SITE_URL + "#vs-" + head + CUR.byName[x].s + "-" + CUR.byName[y].s;
+  // The owner's id follows a dot, so a friend who plays the link credits the owner with a token.
+  return SITE_URL + "#vs-" + head + CUR.byName[x].s + "-" + CUR.byName[y].s + (uid ? "." + uid : "");
 }
 /* Category links: #cat-<id> opens that category. Mashups is #cat-mashup. */
 function catUrl(){ return SITE_URL + "#cat-" + (CUR === MASHUP ? "mashup" : CUR.id); }
@@ -2165,7 +2288,15 @@ function buildArcadeRounds(){
   const names = new Set();
   CATEGORIES.forEach(c => c.items.forEach(f => names.add(f.n)));
   const total = ([a, b]) => { const r = (matchupCounts && matchupCounts.get("mashup|" + pairKey(a, b))) || {}; return (r[a] || 0) + (r[b] || 0); };
-  const pool = ARCADE_FAKE_KEYS.map(k => k.split("__")).filter(([a, b]) => names.has(a) && names.has(b));
+  // Real Mashups matchups join the pool once they have ARCADE_MIN_PICKS picks.
+  const keys = new Set(ARCADE_FAKE_KEYS);
+  if(matchupCounts) for(const [k, row] of matchupCounts){
+    if(!k.startsWith("mashup|")) continue;
+    const pk = k.slice(7);
+    if(keys.has(pk)) continue;
+    if(Object.values(row).reduce((s, n) => s + n, 0) >= ARCADE_MIN_PICKS) keys.add(pk);
+  }
+  const pool = [...keys].map(k => k.split("__")).filter(([a, b]) => names.has(a) && names.has(b));
   const top = shuffleList(pool).sort((x, y) => total(y) - total(x)).slice(0, 60);
   const used = new Set(), pairs = [];
   for(const [a, b] of top){
@@ -2199,12 +2330,17 @@ function showArcadeWelcome(){
   $("arcadeWelcome").classList.remove("hidden");
   $("arcadeStart").focus();
 }
-function startArcade(){
+/* Starts a game: needs enough fighters, then spends ARCADE_COST tokens. Short of tokens, the warning modal shows instead. */
+async function startArcade(){
   const pairs = buildArcadeRounds();
-  if(pairs.length >= ARCADE_ROUNDS && !/\/u\//.test(location.pathname) && !/\/arcade\/?$/.test(location.pathname)){
+  if(pairs.length < ARCADE_ROUNDS){ toast("Arcade needs more fighters loaded. Try again in a moment."); return; }
+  if(!await spendForArcade()) return;
+  beginArcade(pairs);
+}
+function beginArcade(pairs){
+  if(!/\/u\//.test(location.pathname) && !/\/arcade\/?$/.test(location.pathname)){
     try{ history.replaceState(null, "", location.pathname.replace(/\/+$/, "") + "/arcade"); }catch(e){}
   }
-  if(pairs.length < ARCADE_ROUNDS){ toast("Arcade needs more fighters loaded. Try again in a moment."); return; }
   arcade = { round: 0, score: 0, pairs, log: [], deadline: 0, timer: null, revealed: false, done: false, taglines: shuffleList(ARCADE_TAGLINES) };
   mode = "arcade";
   document.body.classList.add("arcade");
@@ -2381,6 +2517,7 @@ function openPicker(){
   if(mode === "arcade"){ arcadeLeave(); renderMatch(); }
   placeTiles();
   renderPicker();
+  renderTokens();
   document.body.classList.add("home");
   $("picker").classList.remove("hidden");
   maybeCoach();
@@ -2515,7 +2652,10 @@ function setCategory(cat){
   hideOops();
   history.replaceState(null, "", location.href.split("#")[0]);
   recomputeWins();
-  if(cat === MASHUP) refreshMashup();
+  if(cat === MASHUP){
+    refreshMashup();
+    earnTokens(["first_mashup", "first_mashup"]);   // the server grants this once per player
+  }
   // A saved run with nothing in it (for example, saved before Mashups had items) starts fresh instead.
   S = loadLadder(cat);
   if(!S || (!S.champ && !S.queue.length && !S.ranked.length)) S = freshRun();
@@ -3285,6 +3425,8 @@ async function crownGoat(){
   recomputeWins();
   writePicks();
   hideOops();
+  if(CUR === MASHUP) earnTokens(["mashup_goat", "mg:" + champ]);
+  else if(isTopFiveGoat(CUR, champ)) earnTokens(["top5_goat", "top5:" + CUR.id + ":" + champ]);
   if(!S.ranked.includes(champ)) S.ranked.push(champ);
   S.queue = [];
   saveLadder();
@@ -3551,6 +3693,9 @@ function init(){
   if(/\/arcade\/?$/.test(location.pathname)) openArcadeWhenReady();
   // challenge links: #vs-apple-banana (fruit) or #vs-dogs-beagle-pug. Tolerant of stray characters after the link.
   const raw = (location.hash.match(/#vs-([a-z-]+)/i) || [])[1];
+  const origin = (location.hash.match(/#vs-[a-z-]+\.([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i) || [])[1];
+  challengeOrigin = origin ? origin.toLowerCase() : null;
+  challengeRaw = raw ? raw.toLowerCase() : null;
   let challenge = null;
   if(raw){
     const t = raw.toLowerCase().split("-").filter(Boolean);
