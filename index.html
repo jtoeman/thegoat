@@ -900,7 +900,7 @@ body.arcade .stage.picked .arcade-tagline{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B174";
+const BUILD = "B175";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -2260,17 +2260,17 @@ function arcadeGuess(side){
     wrong: "The crowd picked the other fighter.",
     tie: "Dead heat. No point.",
     thin: `Too few picks to call. This matchup needs ${ARCADE_MIN_PICKS}.`,
-    time: "Time's up. No point."
+    time: "Pick within 10 seconds or no points!"
   }[result];
-  showArcadeResult(result === "right", reason, ca, cb);
+  showArcadeResult(result === "right", reason, ca, cb, result === "time" ? "TIME'S UP" : null);
 }
 function clearArcadeCount(){
   const el = $("vsStreak");
   el.textContent = ""; el.style.fontSize = ""; el.classList.remove("arcade-count");
 }
 /* The result drawer, the same as Rank mode: CORRECT! or INCORRECT, the photo percentages, the running score, Next round (n/10) and Quit game. */
-function showArcadeResult(right, reason, ca, cb){
-  $("koText").textContent = right ? "CORRECT!" : "INCORRECT";
+function showArcadeResult(right, reason, ca, cb, title){
+  $("koText").textContent = title || (right ? "CORRECT!" : "INCORRECT");
   requestAnimationFrame(fitNames);
   $("drankText").textContent = reason;
   $("goatPill").classList.add("hidden");
@@ -3522,8 +3522,13 @@ $("matchShowStats").addEventListener("change", e => setAuto(e.target.checked));
 
 /* Photo versions. A photo is cached by its URL, so replacing the file under the same name is not enough:
    browsers and the CDN keep the old copy. Bump the number here when a photo file is replaced; the page then asks for a new URL. */
-const PHOTO_VERSION = { "assets/dogs/shiba-inu.jpg": 2 };
-CATEGORIES.forEach(c => c.items.forEach(f => { if(f.img && PHOTO_VERSION[f.img]) f.img += "?v=" + PHOTO_VERSION[f.img]; }));
+const PHOTO_VERSION = {};
+/* Photos served from the images host instead of the repo. */
+const PHOTO_HOST = { "assets/dogs/shiba-inu.jpg": "https://images.froobaloo.com/dogs/shiba-inu.jpg" };
+CATEGORIES.forEach(c => c.items.forEach(f => {
+  if(f.img && PHOTO_HOST[f.img]) f.img = PHOTO_HOST[f.img];
+  else if(f.img && PHOTO_VERSION[f.img]) f.img += "?v=" + PHOTO_VERSION[f.img];
+}));
 
 function init(){
   $("boot").classList.add("hidden");   // the game is ready: drop the loading card
