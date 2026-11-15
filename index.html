@@ -235,7 +235,6 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .tile.arcade .tile-n, .tile.mashup .tile-n{font-size:12px; line-height:1.25; flex-basis:100%}
 /* The locked Mashups progress line is in the stats home card; on this short tile it would overflow. */
 .tile.mashup.locked .tile-n + .tile-n{display:none}
-body.arcade .foot-stats{display:none}
 .tile.locked{filter:grayscale(1); opacity:.6; cursor:not-allowed; box-shadow:none}
 .tile.current:hover::after{content:"Now playing"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; border-radius:13px; background:rgba(7,10,20,.72); color:#fff; font:22px/1 Impact,"Arial Narrow",system-ui,sans-serif; text-transform:uppercase; text-shadow:2px 2px 0 #000}
 /* GOAT band: a slim gold strip across the top of the tile. Name on the left, crown on the right, a slanted end. */
@@ -900,7 +899,7 @@ body.arcade .stage.picked .arcade-tagline{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B175";
+const BUILD = "B176";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1146,6 +1145,7 @@ function applyWords(indexText, tabTexts){
     cat.items.forEach(f => { f.s = f.n.toLowerCase().replace(/[^a-z]/g, ""); f.art = cat.art; cat.byName[f.n] = f; cat.bySlug[f.s] = f; });
     CATEGORIES.push(cat);
   });
+  applyPhotoOverrides();
   refreshMashup();
 }
 async function loadWords(){
@@ -2207,7 +2207,7 @@ function startArcade(){
   if(pairs.length < ARCADE_ROUNDS){ toast("Arcade needs more fighters loaded. Try again in a moment."); return; }
   arcade = { round: 0, score: 0, pairs, log: [], deadline: 0, timer: null, revealed: false, done: false, taglines: shuffleList(ARCADE_TAGLINES) };
   mode = "arcade";
-  document.body.classList.add("arcade");   // Arcade has no Auto option
+  document.body.classList.add("arcade");
   $("catLabel").textContent = ARCADE_TITLE;
   arcadeRound();
 }
@@ -2288,6 +2288,8 @@ function showArcadeResult(right, reason, ca, cb, title){
   const last = arcade.round + 1 >= arcade.pairs.length;
   $("nextBtn").querySelector("span").textContent = last ? "See final score" : `Next round (${arcade.round + 2}/${arcade.pairs.length})`;
   clearArcadeCount();
+  clearTimeout(autoTimer);
+  if(autoOn) autoTimer = setTimeout(() => { if(isResultOpen()) $("nextBtn").click(); }, 2000);   // Auto, as in Rank mode
   const el = $("result");
   el.classList.remove("closing", "hidden");
   el.style.transition = "none";
@@ -2618,7 +2620,11 @@ function showCatWelcome(){
     .sort((a, b) => goatsOf(b) - goatsOf(a))[0] || null;
   const mine = countPicks((k, p) => p.cat === CUR.id);
   $("cwTitle").textContent = CUR.name;
-  $("cwBg").innerHTML = goat && CUR.byName[goat] ? portraitHTML(CUR.byName[goat]) : "";
+  // With no GOAT yet, the hero shows one of the category's current options at random (photo first when there is one).
+  const withPhoto = CUR.items.filter(i => i.img);
+  const pool = withPhoto.length ? withPhoto : CUR.items;
+  const featured = goat && CUR.byName[goat] ? CUR.byName[goat] : pool[Math.floor(Math.random() * pool.length)];
+  $("cwBg").innerHTML = featured ? portraitHTML(featured) : "";
   const table = $("cwBody");
   table.replaceChildren();
   const addRow = (label, fill) => {
@@ -3525,10 +3531,14 @@ $("matchShowStats").addEventListener("change", e => setAuto(e.target.checked));
 const PHOTO_VERSION = {};
 /* Photos served from the images host instead of the repo. */
 const PHOTO_HOST = { "assets/dogs/shiba-inu.jpg": "https://images.froobaloo.com/dogs/shiba-inu.jpg" };
-CATEGORIES.forEach(c => c.items.forEach(f => {
-  if(f.img && PHOTO_HOST[f.img]) f.img = PHOTO_HOST[f.img];
-  else if(f.img && PHOTO_VERSION[f.img]) f.img += "?v=" + PHOTO_VERSION[f.img];
-}));
+/* Runs after the words are loaded from the sheet too, since the sheet replaces CATEGORIES. */
+function applyPhotoOverrides(){
+  CATEGORIES.forEach(c => c.items.forEach(f => {
+    if(f.img && PHOTO_HOST[f.img]) f.img = PHOTO_HOST[f.img];
+    else if(f.img && PHOTO_VERSION[f.img] && !/\?v=/.test(f.img)) f.img += "?v=" + PHOTO_VERSION[f.img];
+  }));
+}
+applyPhotoOverrides();
 
 function init(){
   $("boot").classList.add("hidden");   // the game is ready: drop the loading card
