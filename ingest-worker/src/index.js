@@ -1,5 +1,5 @@
 /**
- * GOAT image ingest Worker, build B19.
+ * GOAT image ingest Worker, build B20.
  *
  * Routes:
  *   GET  /health            build number, no auth
@@ -20,7 +20,8 @@
  * Public URLs come from the R2 custom domain. Crops and resizes happen at delivery, so this Worker stores originals only.
  */
 
-const BUILD = "B19";
+const BUILD = "B20";
+const CACHE_CONTROL = "public, max-age=3600"; // browsers revalidate within an hour; the edge is purged on every write
 const USER_AGENT = "GOAT-image-pipeline/B19 (The GOAT prototype; image ingest)";
 const MAX_BYTES = 15 * 1024 * 1024;
 const KEY_PART = /^[a-z0-9]+(-[a-z0-9]+)*$/;
@@ -128,6 +129,19 @@ async function buildCatalog() {
 
 /* ---------- ingest ---------- */
 
+/* Purge the CDN copies of both URLs so a replaced image shows up at once.
+   Needs two secrets: PURGE_TOKEN (API token with Zone > Cache Purge > Purge) and PURGE_ZONE_ID (the froobaloo.com zone). */
+async function purgeEdge(env, urls) {
+  if (!env.PURGE_TOKEN || !env.PURGE_ZONE_ID) return { purged: false, reason: "PURGE_TOKEN or PURGE_ZONE_ID not set" };
+  const res = await fetch(`https://api.cloudflare.com/client/v4/zones/${env.PURGE_ZONE_ID}/purge_cache`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${env.PURGE_TOKEN}`, "content-type": "application/json" },
+    body: JSON.stringify({ files: urls }),
+  });
+  const data = await res.json().catch(() => ({}));
+  return data.success ? { purged: true, urls } : { purged: false, reason: `HTTP ${res.status}` };
+}
+
 async function store(env, { category, slug, bytes, contentType, meta }) {
   const base = `${category}/${slug}`;
   const sidecar = {
@@ -144,11 +158,13 @@ async function store(env, { category, slug, bytes, contentType, meta }) {
     bytes: bytes.byteLength,
     ingested_at: new Date().toISOString(),
   };
-  await env.IMAGES.put(`${base}.jpg`, bytes, { httpMetadata: { contentType } });
+  await env.IMAGES.put(`${base}.jpg`, bytes, { httpMetadata: { contentType, cacheControl: CACHE_CONTROL } });
   await env.IMAGES.put(`${base}.json`, JSON.stringify(sidecar, null, 2), {
-    httpMetadata: { contentType: "application/json" },
+    httpMetadata: { contentType: "application/json", cacheControl: CACHE_CONTROL },
   });
-  return { key: `${base}.jpg`, bytes: bytes.byteLength, sidecar: `${base}.json` };
+  const urls = [`${IMAGE_BASE}${base}.jpg`, `${IMAGE_BASE}${base}.json`];
+  const purge = await purgeEdge(env, urls).catch(e => ({ purged: false, reason: String(e.message || e) }));
+  return { key: `${base}.jpg`, bytes: bytes.byteLength, sidecar: `${base}.json`, purge };
 }
 
 const clean = v => (typeof v === "string" && v.trim() !== "" ? v.trim() : null);
