@@ -73,14 +73,10 @@ function slugFor(word, category){
 let catalogProblems = [];
 
 /* Every category on the Categories tab is listed. A tab that fails to load keeps its last saved names. */
-const CATALOG_TTL = 10 * 60 * 1000; // reuse a fresh copy for 10 minutes, so opening the form does not re-read the sheet
-
-async function loadCatalog(){
-  const saved = await chrome.storage.local.get(["goatCatalog", "goatWordsCache", "goatCatalogAt"]);
+/* Downloads the full catalog (Worker first, then the sheet directly) and saves it on this device. */
+async function refreshCatalog(){
+  const saved = await chrome.storage.local.get(["goatWordsCache"]);
   const wordsCache = saved.goatWordsCache || {};
-  if(saved.goatCatalog && saved.goatCatalogAt && Date.now() - saved.goatCatalogAt < CATALOG_TTL){
-    return saved.goatCatalog;
-  }
   // One request: the Worker reads the sheet once and caches it for everyone (needs the B19 Worker deployed).
   try{
     const r = await fetch(WORKER + "/catalog", { cache: "no-store" });
@@ -128,18 +124,46 @@ async function loadCatalog(){
   return cats;
 }
 
+/* Opens with the saved copy on this device. Only downloads when nothing is saved yet. */
+async function getCatalog(){
+  const saved = (await chrome.storage.local.get("goatCatalog")).goatCatalog;
+  if(Array.isArray(saved) && saved.length) return saved;
+  return refreshCatalog();
+}
+
 async function fillCategories(){
-  catalog = (await loadCatalog()).filter(c => c.id !== UNCATEGORIZED);
+  catalog = (await getCatalog()).filter(c => c.id !== UNCATEGORIZED);
+  const last = (await chrome.storage.local.get("lastCategory")).lastCategory;
+  renderCategories(last);
+  if(!catalog.length) setMsg("Could not load the categories. Click Refresh Categories to try again. Images will go to Uncategorized.", "err");
+}
+
+function renderCategories(preferred){
   const opts = catalog.map(c => `<option value="${c.id}">${c.name}</option>`);
   opts.push(`<option value="${UNCATEGORIZED}">Uncategorized</option>`, `<option value="${NEW}">+ New category…</option>`);
   $("category").innerHTML = opts.join("");
-  const last = (await chrome.storage.local.get("lastCategory")).lastCategory;
-  const known = last === UNCATEGORIZED || catalog.some(c => c.id === last);
-  $("category").value = known ? last : (catalog[0] ? catalog[0].id : UNCATEGORIZED);
-  if(!catalog.length) setMsg("Could not load the categories from the sheet. Images will go to Uncategorized.", "err");
-  else if(catalogProblems.length) setMsg("Could not refresh " + catalogProblems.join("; ") + ". Showing the last saved names for those.", "err");
+  const known = preferred === UNCATEGORIZED || preferred === NEW || catalog.some(c => c.id === preferred);
+  $("category").value = known ? preferred : (catalog[0] ? catalog[0].id : UNCATEGORIZED);
   onCategoryChange();
 }
+
+/* The Refresh Categories button: the only place that downloads the full list on demand. */
+$("refreshCats").addEventListener("click", async () => {
+  const keep = $("category").value;
+  $("refreshCats").disabled = true;
+  setMsg("Refreshing categories…");
+  catalogProblems = [];
+  try{
+    catalog = (await refreshCatalog()).filter(c => c.id !== UNCATEGORIZED);
+    renderCategories(keep);
+    if(catalogProblems.length) setMsg("Refreshed, but could not refresh " + catalogProblems.join("; ") + ". Showing the last saved names for those.", "err");
+    else setMsg(`Categories refreshed (${catalog.length}).`, "ok");
+  }catch(e){
+    setMsg("Refresh failed: " + e.message, "err");
+  }finally{
+    $("refreshCats").disabled = false;
+  }
+});
 
 function wordsIn(id){ const c = catalog.find(c => c.id === id); return c ? c.words : []; }
 
@@ -270,7 +294,7 @@ function init(){
   $("cardImgA").src = src;
   $("cardImgB").src = src;
   $("source_page").value = params.get("page") || "";
-  $("foot").textContent = "EXT6 · v0.6.4 · " + (src.startsWith("https://") ? "ready" : "not an https image: cannot add");
+  $("foot").textContent = "EXT6 · v0.7.0 · " + (src.startsWith("https://") ? "ready" : "not an https image: cannot add");
   fillCategories();
 }
 
