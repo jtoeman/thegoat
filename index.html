@@ -554,8 +554,18 @@ body.arcade #catBtn .chev{display:none}
 body.arcade #catLabel{font-size:17px}
 /* Countdown under VS */
 #vsStreak.arcade-count{white-space:nowrap; line-height:1; font-family:Impact,"Haettenschweiler",sans-serif; color:var(--yellow); text-shadow:0 4px 0 #000, 0 0 16px rgba(255,210,63,.45)}
+/* Tagline over the photos in Arcade. Pointer-free, so it never blocks a tap. */
+.arcade-tagline{display:none; position:absolute; left:50%; top:13%; transform:translateX(-50%) rotate(-4deg); z-index:5; pointer-events:none; white-space:nowrap; font-size:clamp(20px,6.4vw,30px); line-height:1; color:#fff; padding:8px 16px 9px; background:linear-gradient(90deg,#e8303a,#2d6fd6); border:3px solid #000; box-shadow:4px 4px 0 #000; text-shadow:2px 2px 0 #000; text-transform:uppercase; letter-spacing:.04em}
+body.arcade .arcade-tagline{display:block}
+body.arcade .stage.picked .arcade-tagline{display:none}
+/* Arcade end card: verdict and stats */
+.arcade-verdict{grid-column:1 / -1; margin:10px 0 0; text-align:center; font-size:22px; line-height:1.1; color:var(--yellow); text-shadow:2px 2px 0 #000}
+.ar-stats{display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin:8px 0 2px}
+.ar-stat{background:#0b1024; border:2px solid #2a3558; border-radius:8px; padding:8px 4px; text-align:center}
+.ar-stat b{display:block; font-family:Impact,"Haettenschweiler",sans-serif; font-size:24px; line-height:1.1; color:#fff; font-weight:normal}
+.ar-stat span{display:block; margin-top:3px; font-size:10px; line-height:1.2; text-transform:uppercase; letter-spacing:.06em; color:#aab4d4}
 /* Round summary: thumbnails for all ten rounds. Blue inner border = called right. */
-.ar-grid{display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin:12px 0 0; width:100%}
+.ar-grid{grid-column:1 / -1; display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin:12px 0 0; width:100%}
 .ar-thumb{position:relative; aspect-ratio:1 / 1.15; display:flex; flex-direction:column; background:#0b1024; border:3px solid #2a3558; border-radius:6px; overflow:hidden; opacity:.75}
 .ar-thumb.right{border-color:#2f8cff; box-shadow:inset 0 0 0 2px #2f8cff; opacity:1}
 .ar-halves{flex:1; display:flex; min-height:0}
@@ -621,6 +631,7 @@ body.arcade #catLabel{font-size:17px}
         <line class="red" x1="59" y1="0" x2="45" y2="100"/>
       </svg>
       <div class="vs display" aria-hidden="true">VS<span class="vs-streak" id="vsStreak"></span></div>
+      <div class="arcade-tagline display" id="arcadeTagline" aria-hidden="true"></div>
 
       <section class="fighter" data-side="b">
         <div class="portrait" id="pb"></div>
@@ -722,13 +733,14 @@ body.arcade #catLabel{font-size:17px}
             </div>
             <div class="cw-table">
               <p class="display" id="arcadeEndScore" style="font-size:40px; margin:0; text-align:center"></p>
-              <p class="unlock-copy" id="arcadeEndCopy"></p>
+              <p class="arcade-verdict display" id="arcadeVerdict"></p>
               <div class="ar-grid" id="arcadeRounds" aria-label="Your ten rounds"></div>
             </div>
           </div>
           <div class="cw-foot">
             <div class="actions-col">
               <button class="btn primary" id="arcadePlayAgain"><span>Play again</span></button>
+              <div class="ar-stats" id="arcadeStats" aria-label="Your arcade stats"></div>
               <button class="btn" id="arcadeBack"><span>Back to categories</span></button>
             </div>
           </div>
@@ -888,7 +900,7 @@ body.arcade #catLabel{font-size:17px}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B173";
+const BUILD = "B174";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -2132,7 +2144,8 @@ function placeTiles(){
 const ARCADE_ROUNDS = 10;
 const ARCADE_SECS = 10;
 const ARCADE_MIN_PICKS = 3;
-const ARCADE_TITLE = "🕹️ The Goat - ARCADE MODE!";   // a matchup needs this many crowd picks before a guess can score
+const ARCADE_TITLE = "🕹️ The Goat - ARCADE MODE!";
+const ARCADE_TAGLINES = ["What Did the Crowd Pick?", "Which Is More Popular?", "Read the Crowd!", "Guess the People's Pick", "Who Did Everyone Choose?", "Crowd Favorite?"];   // a matchup needs this many crowd picks before a guess can score
 let arcade = null;            // {round, score, pairs, log, deadline, timer, revealed, done}
 function arcadeBest(){
   const list = readStore("goat_arcade_history");
@@ -2192,7 +2205,7 @@ function startArcade(){
     try{ history.replaceState(null, "", location.pathname.replace(/\/+$/, "") + "/arcade"); }catch(e){}
   }
   if(pairs.length < ARCADE_ROUNDS){ toast("Arcade needs more fighters loaded. Try again in a moment."); return; }
-  arcade = { round: 0, score: 0, pairs, log: [], deadline: 0, timer: null, revealed: false, done: false };
+  arcade = { round: 0, score: 0, pairs, log: [], deadline: 0, timer: null, revealed: false, done: false, taglines: shuffleList(ARCADE_TAGLINES) };
   mode = "arcade";
   document.body.classList.add("arcade");   // Arcade has no Auto option
   $("catLabel").textContent = ARCADE_TITLE;
@@ -2202,6 +2215,7 @@ function arcadeRound(){
   if(!arcade) return;
   if(arcade.round >= arcade.pairs.length) return arcadeEnd();
   arcade.revealed = false;
+  $("arcadeTagline").textContent = arcade.taglines[arcade.round % arcade.taglines.length];
   const [a, b] = arcade.pairs[arcade.round];
   current = { a, b };
   setArcadeFighter("a", a);
@@ -2261,6 +2275,13 @@ function showArcadeResult(right, reason, ca, cb){
   $("drankText").textContent = reason;
   $("goatPill").classList.add("hidden");
   $("arcadeTallyN").textContent = arcade.score;
+  // The crowd's loser greys out, the crowd's winner brightens: the same effect as Rank mode.
+  document.querySelectorAll(".fighter").forEach(c => c.classList.remove("won", "lost"));
+  if(ca !== cb){
+    const winSide = ca > cb ? "a" : "b", loseSide = ca > cb ? "b" : "a";
+    document.querySelector(`.fighter[data-side="${winSide}"]`).classList.add("won");
+    document.querySelector(`.fighter[data-side="${loseSide}"]`).classList.add("lost");
+  }
   const total = ca + cb;
   $("pctA").textContent = total ? Math.round(100 * ca / total) + "%" : "";
   $("pctB").textContent = total ? Math.round(100 * cb / total) + "%" : "";
@@ -2291,13 +2312,46 @@ function arcadeThumbHTML(name){
   if((f.art || CUR.art) === "letter") return `<span class="ar-letter">${f.code || f.n[0]}</span>`;
   return fruitSVG(f);
 }
+/* Stats over saved games. Every game stores its score, rounds and best run of right calls. */
+function arcadeStatsOf(games){
+  if(!games.length) return null;
+  const scores = games.map(g => g.score || 0);
+  const rounds = games.reduce((t, g) => t + (g.rounds || 10), 0);
+  const right = scores.reduce((t, x) => t + x, 0);
+  const streaks = games.map(g => g.streak).filter(x => typeof x === "number");
+  return {
+    played: games.length,
+    avg: (right / games.length).toFixed(1),
+    accuracy: Math.round(100 * right / rounds) + "%",
+    best: Math.max(...scores),
+    worst: Math.min(...scores),
+    streak: streaks.length ? Math.max(...streaks) : "–"
+  };
+}
+function arcadeVerdict(score, total){
+  if(score === total) return "Perfect read!";
+  if(score >= 8) return "Crowd whisperer";
+  if(score >= 6) return "Sharp eye";
+  if(score >= 4) return "Mixed signals";
+  return "Going against the crowd";
+}
 function arcadeEnd(){
   clearInterval(arcade.timer);
   arcade.done = true;
   const list = readStore("goat_arcade_history");
   const games = Array.isArray(list) ? list : [];
-  games.push({ score: arcade.score, t: Date.now() });
+  const prevBest = arcadeBest();
+  let streak = 0, run = 0;
+  arcade.log.forEach(r => { run = r.result === "right" ? run + 1 : 0; streak = Math.max(streak, run); });
+  games.push({ score: arcade.score, rounds: arcade.pairs.length, streak, t: Date.now() });
   writeStore("goat_arcade_history", games.slice(-200));
+  const newBest = games.length > 1 && arcade.score > prevBest;
+  $("arcadeVerdict").textContent = arcadeVerdict(arcade.score, arcade.pairs.length) + (newBest ? " · New personal best!" : "");
+  const st = arcadeStatsOf(games);
+  $("arcadeStats").innerHTML = [
+    ["Games played", st.played], ["Average score", st.avg], ["Accuracy", st.accuracy],
+    ["Best game", `${st.best}/${arcade.pairs.length}`], ["Worst game", `${st.worst}/${arcade.pairs.length}`], ["Best run of right calls", st.streak]
+  ].map(([k, v]) => `<div class="ar-stat"><b>${v}</b><span>${k}</span></div>`).join("");
   track("Arcade Finished", { score: arcade.score, rounds: arcade.pairs.length });
   hideResult(true);
   $("arcadeEndScore").textContent = `${arcade.score} / ${arcade.pairs.length}`;
@@ -2306,7 +2360,6 @@ function arcadeEnd(){
       <div class="ar-halves"><div class="ar-half">${arcadeThumbHTML(r.a)}</div><div class="ar-half">${arcadeThumbHTML(r.b)}</div></div>
       <div class="ar-num">${i + 1}</div>
     </div>`).join("");
-  $("arcadeEndCopy").textContent = `Best: ${arcadeBest()} · Games played: ${games.length}`;
   $("arcadeEnd").classList.remove("hidden");
 }
 /* Leaves Arcade (to the category page or to another category). The score of an unfinished game is not kept. */
@@ -3466,6 +3519,11 @@ function setAuto(on){ autoOn = on; writeStore("goat_auto", on); $("matchShowStat
 autoOn = readStore("goat_auto") === true;
 $("matchShowStats").checked = autoOn;
 $("matchShowStats").addEventListener("change", e => setAuto(e.target.checked));
+
+/* Photo versions. A photo is cached by its URL, so replacing the file under the same name is not enough:
+   browsers and the CDN keep the old copy. Bump the number here when a photo file is replaced; the page then asks for a new URL. */
+const PHOTO_VERSION = { "assets/dogs/shiba-inu.jpg": 2 };
+CATEGORIES.forEach(c => c.items.forEach(f => { if(f.img && PHOTO_VERSION[f.img]) f.img += "?v=" + PHOTO_VERSION[f.img]; }));
 
 function init(){
   $("boot").classList.add("hidden");   // the game is ready: drop the loading card
