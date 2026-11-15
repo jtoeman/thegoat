@@ -545,6 +545,27 @@ body.arcade #shareBtn, body.arcade #oopsBtn, body.arcade #resultCrown{display:no
 body.arcade #nextBtn{bottom:70px}
 .arcade-quit{display:none; position:absolute; left:50%; bottom:14px; transform:translateX(-50%); z-index:4; min-width:200px; background:#5b6378; color:#fff}
 body.arcade .stage.picked .arcade-quit{display:block}
+/* Arcade: the drawer is inset so the sides of both photos stay visible */
+body.arcade #result{inset:0 26px auto 26px; border-left:3px solid #000; border-right:3px solid #000; border-radius:0 0 14px 14px}
+/* Arcade header: "The Goat - ARCADE MODE!" with the joystick. No brand, category menu or Stats button. */
+body.arcade #brand, body.arcade #statsBtn{display:none !important}
+body.arcade #catBtn{pointer-events:none; flex:1 1 auto; justify-content:center}
+body.arcade #catBtn .chev{display:none}
+body.arcade #catLabel{font-size:17px}
+/* Countdown under VS */
+#vsStreak.arcade-count{white-space:nowrap; line-height:1; font-family:Impact,"Haettenschweiler",sans-serif; color:var(--yellow); text-shadow:0 4px 0 #000, 0 0 16px rgba(255,210,63,.45)}
+/* Round summary: thumbnails for all ten rounds. Blue inner border = called right. */
+.ar-grid{display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin:12px 0 0; width:100%}
+.ar-thumb{position:relative; aspect-ratio:1 / 1.15; display:flex; flex-direction:column; background:#0b1024; border:3px solid #2a3558; border-radius:6px; overflow:hidden; opacity:.75}
+.ar-thumb.right{border-color:#2f8cff; box-shadow:inset 0 0 0 2px #2f8cff; opacity:1}
+.ar-halves{flex:1; display:flex; min-height:0}
+.ar-half{flex:1; display:flex; align-items:center; justify-content:center; overflow:hidden; min-width:0}
+.ar-half img{width:100%; height:100%; object-fit:cover; display:block}
+.ar-half svg{width:80%; height:80%}
+.ar-letter{font-family:Impact,sans-serif; font-size:22px; color:#fff; text-shadow:0 2px 0 #000}
+.ar-glyph{font-size:22px; line-height:1}
+.ar-num{font-family:Impact,sans-serif; font-size:11px; line-height:1; text-align:center; padding:3px 0; background:#05070e; color:#e8ecf8}
+.ar-thumb.right .ar-num{background:#2f8cff; color:#fff}
 </style>
 <script src="https://froobaloo.com/kit/froobaloo.js" defer></script>
 </head>
@@ -702,6 +723,7 @@ body.arcade .stage.picked .arcade-quit{display:block}
             <div class="cw-table">
               <p class="display" id="arcadeEndScore" style="font-size:40px; margin:0; text-align:center"></p>
               <p class="unlock-copy" id="arcadeEndCopy"></p>
+              <div class="ar-grid" id="arcadeRounds" aria-label="Your ten rounds"></div>
             </div>
           </div>
           <div class="cw-foot">
@@ -866,7 +888,7 @@ body.arcade .stage.picked .arcade-quit{display:block}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B172";
+const BUILD = "B173";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -2109,7 +2131,8 @@ function placeTiles(){
    A guess is not a vote: it never goes into myPicks or the votes table. Scores stay in this browser. */
 const ARCADE_ROUNDS = 10;
 const ARCADE_SECS = 10;
-const ARCADE_MIN_PICKS = 3;   // a matchup needs this many crowd picks before a guess can score
+const ARCADE_MIN_PICKS = 3;
+const ARCADE_TITLE = "🕹️ The Goat - ARCADE MODE!";   // a matchup needs this many crowd picks before a guess can score
 let arcade = null;            // {round, score, pairs, log, deadline, timer, revealed, done}
 function arcadeBest(){
   const list = readStore("goat_arcade_history");
@@ -2172,7 +2195,7 @@ function startArcade(){
   arcade = { round: 0, score: 0, pairs, log: [], deadline: 0, timer: null, revealed: false, done: false };
   mode = "arcade";
   document.body.classList.add("arcade");   // Arcade has no Auto option
-  $("catLabel").textContent = "Arcade";
+  $("catLabel").textContent = ARCADE_TITLE;
   arcadeRound();
 }
 function arcadeRound(){
@@ -2185,7 +2208,7 @@ function arcadeRound(){
   setArcadeFighter("b", b);
   hideResult(true);
   resetFighterVisuals();
-  $("catLabel").textContent = `Arcade · ${arcade.score} pts`;
+  $("catLabel").textContent = ARCADE_TITLE;
   arcade.deadline = Date.now() + ARCADE_SECS * 1000;
   clearInterval(arcade.timer);
   arcade.timer = setInterval(arcadeTick, 200);
@@ -2195,7 +2218,11 @@ function arcadeTick(){
   if(!arcade) return;
   const left = Math.max(0, Math.ceil((arcade.deadline - Date.now()) / 1000));
   $("roundLabel").textContent = `${arcade.round + 1}/${arcade.pairs.length}`;
-  $("vsStreak").textContent = `${left}s`;
+  const el = $("vsStreak");
+  el.classList.add("arcade-count");
+  const size = { 5: 80, 4: 98, 3: 118, 2: 140 };
+  if(left === 1){ el.textContent = "CHOOSE NOW!"; el.style.fontSize = "38px"; }
+  else { el.textContent = String(left); el.style.fontSize = (size[left] || 64) + "px"; }
   if(left <= 0 && !arcade.revealed) arcadeGuess(null);
 }
 function arcadeGuess(side){
@@ -2223,6 +2250,10 @@ function arcadeGuess(side){
   }[result];
   showArcadeResult(result === "right", reason, ca, cb);
 }
+function clearArcadeCount(){
+  const el = $("vsStreak");
+  el.textContent = ""; el.style.fontSize = ""; el.classList.remove("arcade-count");
+}
 /* The result drawer, the same as Rank mode: CORRECT! or INCORRECT, the photo percentages, the running score, Next round (n/10) and Quit game. */
 function showArcadeResult(right, reason, ca, cb){
   $("koText").textContent = right ? "CORRECT!" : "INCORRECT";
@@ -2235,7 +2266,7 @@ function showArcadeResult(right, reason, ca, cb){
   $("pctB").textContent = total ? Math.round(100 * cb / total) + "%" : "";
   const last = arcade.round + 1 >= arcade.pairs.length;
   $("nextBtn").querySelector("span").textContent = last ? "See final score" : `Next round (${arcade.round + 2}/${arcade.pairs.length})`;
-  $("vsStreak").textContent = "";
+  clearArcadeCount();
   const el = $("result");
   el.classList.remove("closing", "hidden");
   el.style.transition = "none";
@@ -2251,6 +2282,15 @@ function arcadeNext(){
   arcade.round++;
   arcadeRound();
 }
+/* A small picture of one fighter for the round summary. */
+function arcadeThumbHTML(name){
+  const f = CATEGORIES.map(c => c.byName[name]).find(Boolean);
+  if(!f) return "";
+  if(f.img) return `<img src="${f.img}" alt="">`;
+  if(f.e) return `<span class="ar-glyph">${f.e}</span>`;
+  if((f.art || CUR.art) === "letter") return `<span class="ar-letter">${f.code || f.n[0]}</span>`;
+  return fruitSVG(f);
+}
 function arcadeEnd(){
   clearInterval(arcade.timer);
   arcade.done = true;
@@ -2261,6 +2301,11 @@ function arcadeEnd(){
   track("Arcade Finished", { score: arcade.score, rounds: arcade.pairs.length });
   hideResult(true);
   $("arcadeEndScore").textContent = `${arcade.score} / ${arcade.pairs.length}`;
+  $("arcadeRounds").innerHTML = arcade.log.map((r, i) => `
+    <div class="ar-thumb${r.result === "right" ? " right" : ""}" title="Round ${i + 1}: ${r.a} vs ${r.b}">
+      <div class="ar-halves"><div class="ar-half">${arcadeThumbHTML(r.a)}</div><div class="ar-half">${arcadeThumbHTML(r.b)}</div></div>
+      <div class="ar-num">${i + 1}</div>
+    </div>`).join("");
   $("arcadeEndCopy").textContent = `Best: ${arcadeBest()} · Games played: ${games.length}`;
   $("arcadeEnd").classList.remove("hidden");
 }
@@ -2270,7 +2315,7 @@ function arcadeLeave(){
   arcade = null;
   mode = "ladder";
   document.body.classList.remove("arcade");
-  $("vsStreak").textContent = "";
+  clearArcadeCount();
   $("arcadeWelcome").classList.add("hidden");
   hideResult(true);
   if(/\/arcade\/?$/.test(location.pathname)){ try{ history.replaceState(null, "", location.pathname.replace(/\/arcade\/?$/, "/")); }catch(e){} }
