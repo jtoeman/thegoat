@@ -219,7 +219,7 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .win-flash[data-side="right"] .wf-badge{align-self:flex-end}
 @media (prefers-reduced-motion: reduce){ .wf-title,.wf-name{animation:none} }
 .tiles{flex:1 1 auto; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:12px; padding:10px 10px 12px}
-.tile-grid{flex:1 1 auto; min-height:0; overflow-y:auto; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); grid-auto-rows:minmax(170px,1fr); gap:12px; align-content:stretch}
+.tile-grid{flex:1 1 auto; min-height:0; overflow-y:auto; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); grid-auto-rows:auto; gap:12px; align-content:start}
 .tile{position:relative; min-height:150px; padding:14px 12px; display:flex; flex-direction:column; justify-content:space-between; text-align:left; color:#fff; border:3px solid #000; border-radius:16px; box-shadow:4px 4px 0 #000; cursor:pointer; font-family:system-ui,-apple-system,Arial,sans-serif}
 .tile-e{font-size:44px; line-height:1; filter:drop-shadow(0 3px 2px rgba(0,0,0,.4))}
 .tile-name{display:block; font-size:22px; line-height:1.05; text-shadow:2px 2px 0 #000; overflow-wrap:normal; word-break:normal}
@@ -227,6 +227,14 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .tile.current{box-shadow:inset 0 0 0 4px var(--yellow), 4px 4px 0 #000}
 .tile.mashup{grid-column:1 / -1}
 .tile.arcade{grid-column:1 / -1}
+/* B170: Arcade and Mashups are full-width rows at two-thirds of the category tile height. */
+.tile:not(.arcade):not(.mashup){min-height:170px}
+.tile.arcade, .tile.mashup{height:110px; min-height:0; flex-direction:row; flex-wrap:wrap; align-content:center; align-items:center; justify-content:flex-start; gap:4px 14px; padding:10px 14px}
+.tile.arcade .tile-e, .tile.mashup .tile-e{font-size:40px; line-height:1; flex:none}
+.tile.arcade .tile-name, .tile.mashup .tile-name{font-size:20px; margin-top:0; flex:none}
+.tile.arcade .tile-n, .tile.mashup .tile-n{font-size:12px; line-height:1.25; flex-basis:100%}
+/* The locked Mashups progress line is in the stats home card; on this short tile it would overflow. */
+.tile.mashup.locked .tile-n + .tile-n{display:none}
 body.arcade .foot-stats{display:none}
 .tile.locked{filter:grayscale(1); opacity:.6; cursor:not-allowed; box-shadow:none}
 .tile.current:hover::after{content:"Now playing"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; border-radius:13px; background:rgba(7,10,20,.72); color:#fff; font:22px/1 Impact,"Arial Narrow",system-ui,sans-serif; text-transform:uppercase; text-shadow:2px 2px 0 #000}
@@ -840,7 +848,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B169";
+const BUILD = "B170";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -2089,8 +2097,7 @@ function arcadeTileHTML(){
     <button class="tile arcade" data-id="arcade" style="background:linear-gradient(135deg,#14d2c0,#1a8fd8)">
       <span class="tile-e" aria-hidden="true">🕹️</span>
       <span class="tile-name display">Arcade</span>
-      <span class="tile-n">Guess the crowd. 10 rounds, 10 seconds each. Free to play.</span>
-      <span class="tile-n">Your best: ${arcadeBest()}</span>
+      <span class="tile-n">Guess the crowd. 10 rounds, 10 seconds each. Free to play. Your best: ${arcadeBest()}</span>
     </button>`;
 }
 /* Popularity: total picks each fighter has won, across every category's matchups the page has read. */
