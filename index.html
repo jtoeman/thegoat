@@ -226,6 +226,8 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .tile-n{font-size:12px; opacity:.92; text-shadow:1px 1px 0 #000}
 .tile.current{box-shadow:inset 0 0 0 4px var(--yellow), 4px 4px 0 #000}
 .tile.mashup{grid-column:1 / -1}
+.tile.arcade{grid-column:1 / -1}
+body.arcade .foot-stats{display:none}
 .tile.locked{filter:grayscale(1); opacity:.6; cursor:not-allowed; box-shadow:none}
 .tile.current:hover::after{content:"Now playing"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; border-radius:13px; background:rgba(7,10,20,.72); color:#fff; font:22px/1 Impact,"Arial Narrow",system-ui,sans-serif; text-transform:uppercase; text-shadow:2px 2px 0 #000}
 /* GOAT band: a slim gold strip across the top of the tile. Name on the left, crown on the right, a slanted end. */
@@ -256,7 +258,7 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 /* Category welcome: a photo hero, a borderless info table, the category picker, and Let's go pinned at the bottom. */
 section#catWelcome{position:fixed; inset:0; z-index:10; padding:12px}
 section#checkpoint{position:fixed; inset:0; z-index:50; padding:12px}
-section#unlock{position:fixed; inset:0; z-index:60; padding:12px}
+section#unlock,section#arcadeReveal,section#arcadeEnd{position:fixed; inset:0; z-index:60; padding:12px}
 .unlock-hero{background:linear-gradient(180deg,#fff2a6 0%,#ffd23f 60%,#f2b600 100%); border-radius:12px; box-shadow:inset 0 -3px 0 rgba(0,0,0,.18); padding:26px 14px; text-align:center}
 .unlock-title{margin:0; color:#1a1200; text-shadow:none; font-size:44px; line-height:1}
 .unlock-copy{grid-column:1 / -1; margin:0; font-size:15px; line-height:1.4}
@@ -647,6 +649,45 @@ body.home #resetBtn{display:none}
         </div>
       </section>
 
+      <section class="hidden" id="arcadeReveal" role="dialog" aria-modal="true" aria-label="Arcade guess result">
+        <div class="intro-card cw-card">
+          <div class="intro-band" aria-hidden="true"></div>
+          <div class="cw-inner">
+            <div class="unlock-hero">
+              <p class="display unlock-title" id="arcadeTitle">Correct</p>
+            </div>
+            <div class="cw-table">
+              <p class="unlock-copy" id="arcadeCopy"></p>
+            </div>
+          </div>
+          <div class="cw-foot">
+            <div class="actions-col">
+              <button class="btn primary" id="arcadeNext"><span>Next round</span></button>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section class="hidden" id="arcadeEnd" role="dialog" aria-modal="true" aria-label="Arcade game over">
+        <div class="intro-card cw-card">
+          <div class="intro-band" aria-hidden="true"></div>
+          <div class="cw-inner">
+            <div class="unlock-hero">
+              <p class="display unlock-title">Game over</p>
+            </div>
+            <div class="cw-table">
+              <p class="display" id="arcadeEndScore" style="font-size:40px; margin:0; text-align:center"></p>
+              <p class="unlock-copy" id="arcadeEndCopy"></p>
+            </div>
+          </div>
+          <div class="cw-foot">
+            <div class="actions-col">
+              <button class="btn primary" id="arcadePlayAgain"><span>Play again</span></button>
+              <button class="btn" id="arcadeBack"><span>Back to categories</span></button>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section class="overlay hidden" id="statsPanel" aria-live="polite">
         <p class="ko display">Your stats</p>
         <div id="statsBody" class="rows"></div>
@@ -799,7 +840,7 @@ body.home #resetBtn{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B168";
+const BUILD = "B169";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1188,6 +1229,9 @@ function showMashupCard(title, copy){
 function celebrateUnlock(){ showMashupCard("Mashups unlocked", "Fighters from every category you've finished now face off against each other."); }
 $("unlockPlay").addEventListener("click", () => { $("unlock").classList.add("hidden"); setCategory(MASHUP); closePicker(); });
 $("unlockLater").addEventListener("click", () => $("unlock").classList.add("hidden"));
+$("arcadeNext").addEventListener("click", arcadeNext);
+$("arcadePlayAgain").addEventListener("click", () => { $("arcadeEnd").classList.add("hidden"); startArcade(); });
+$("arcadeBack").addEventListener("click", () => { $("arcadeEnd").classList.add("hidden"); openPicker(); });
 function toast(msg){
   const t = $("toast");
   t.textContent = msg;
@@ -1496,6 +1540,7 @@ function setFighter(side, name){
   $("n" + side).innerHTML = `<span>${f.n}</span>`;
 }
 function updateStatus(){
+  if(mode === "arcade") return;
   if(mode === "oneoff"){ $("roundLabel").textContent = "1v1"; return; }
   if(mode === "challenge"){ $("roundLabel").textContent = "VS"; return; }
   $("roundLabel").textContent = `R${S.round + 1}`;
@@ -1533,6 +1578,7 @@ function pickChallenger(){
   return S.queue[0];
 }
 function renderMatch(){
+  if(mode === "arcade") return;
   try{
     if(mode === "ladder" && S){
       const bad = !CUR.byName[S.champ] || S.queue.some(n => !CUR.byName[n]);
@@ -1804,6 +1850,7 @@ $("ladderEnd").addEventListener("click", e => {
 
 /* ---------- actions ---------- */
 function castVote(side){
+  if(mode === "arcade"){ arcadeGuess(side); return; }
   if(voted){ if(isResultOpen()) $("nextBtn").click(); return; }   // after a pick, a tap on either image means Next matchup
   voted = true;
   buzz(18);
@@ -2026,7 +2073,157 @@ function disarmReset(){
 function placeTiles(){
   $("pickerCard").insertBefore($("tiles"), $("pickerActions"));
 }
+/* ---------- Arcade (B169) ----------
+   Ten rounds of cross-category pairs. Each round, the player guesses which fighter the crowd picked more often in that matchup.
+   A guess is not a vote: it never goes into myPicks or the votes table. Scores stay in this browser. */
+const ARCADE_ROUNDS = 10;
+const ARCADE_SECS = 10;
+const ARCADE_MIN_PICKS = 3;   // a matchup needs this many crowd picks before a guess can score
+let arcade = null;            // {round, score, pairs, log, deadline, timer, revealed, done}
+function arcadeBest(){
+  const list = readStore("goat_arcade_history");
+  return Array.isArray(list) && list.length ? Math.max(...list.map(g => g.score || 0)) : 0;
+}
+function arcadeTileHTML(){
+  return `
+    <button class="tile arcade" data-id="arcade" style="background:linear-gradient(135deg,#14d2c0,#1a8fd8)">
+      <span class="tile-e" aria-hidden="true">🕹️</span>
+      <span class="tile-name display">Arcade</span>
+      <span class="tile-n">Guess the crowd. 10 rounds, 10 seconds each. Free to play.</span>
+      <span class="tile-n">Your best: ${arcadeBest()}</span>
+    </button>`;
+}
+/* Popularity: total picks each fighter has won, across every category's matchups the page has read. */
+function fighterPopularity(){
+  const pop = {};
+  if(matchupCounts) matchupCounts.forEach(row => Object.keys(row).forEach(n => { pop[n] = (pop[n] || 0) + (row[n] || 0); }));
+  return pop;
+}
+/* Pairs from the most popular fighters, two from different categories, no fighter twice in one game. */
+function buildArcadeRounds(){
+  const pop = fighterPopularity();
+  const all = [];
+  CATEGORIES.forEach(c => c.items.forEach(f => all.push(f.n)));
+  const ranked = shuffleList(all).sort((a, b) => (pop[b] || 0) - (pop[a] || 0));
+  const pairsFrom = list => {
+    const used = new Set(), pairs = [];
+    for(const a of list){
+      if(pairs.length >= ARCADE_ROUNDS) break;
+      if(used.has(a)) continue;
+      const ca = categoryOfName(a);
+      const b = list.find(n => !used.has(n) && n !== a && categoryOfName(n) !== ca);
+      if(!b) continue;
+      used.add(a); used.add(b); pairs.push([a, b]);
+    }
+    return pairs;
+  };
+  const pairs = pairsFrom(ranked.slice(0, 60));
+  return pairs.length >= ARCADE_ROUNDS ? pairs : pairsFrom(ranked);
+}
+/* Crowd picks for a mashup matchup, from the matchup_counts read. Null when the read has not loaded. */
+function crowdSplit(a, b){
+  const row = (matchupCounts && matchupCounts.get("mashup|" + pairKey(a, b))) || {};
+  return { ca: row[a] || 0, cb: row[b] || 0 };
+}
+function setArcadeFighter(side, name){
+  const f = [...CATEGORIES.map(c => c.byName[name])].find(Boolean);
+  if(!f) return;
+  const portrait = $("p" + side);
+  portrait.style.setProperty("--c", f.c);
+  portrait.innerHTML = portraitHTML(f);
+  $("n" + side).innerHTML = `<span>${f.n}</span>`;
+}
+function startArcade(){
+  const pairs = buildArcadeRounds();
+  if(pairs.length < ARCADE_ROUNDS){ toast("Arcade needs more fighters loaded. Try again in a moment."); return; }
+  arcade = { round: 0, score: 0, pairs, log: [], deadline: 0, timer: null, revealed: false, done: false };
+  mode = "arcade";
+  document.body.classList.add("arcade");   // Arcade has no Auto option
+  $("catLabel").textContent = "Arcade";
+  arcadeRound();
+}
+function arcadeRound(){
+  if(!arcade) return;
+  if(arcade.round >= arcade.pairs.length) return arcadeEnd();
+  arcade.revealed = false;
+  const [a, b] = arcade.pairs[arcade.round];
+  current = { a, b };
+  setArcadeFighter("a", a);
+  setArcadeFighter("b", b);
+  $("arcadeReveal").classList.add("hidden");
+  resetFighterVisuals();
+  $("catLabel").textContent = `Arcade · ${arcade.score} pts`;
+  arcade.deadline = Date.now() + ARCADE_SECS * 1000;
+  clearInterval(arcade.timer);
+  arcade.timer = setInterval(arcadeTick, 200);
+  arcadeTick();
+}
+function arcadeTick(){
+  if(!arcade) return;
+  const left = Math.max(0, Math.ceil((arcade.deadline - Date.now()) / 1000));
+  $("roundLabel").textContent = `${arcade.round + 1}/${arcade.pairs.length} · ${left}s`;
+  if(left <= 0 && !arcade.revealed) arcadeGuess(null);
+}
+function arcadeGuess(side){
+  if(!arcade || arcade.done) return;
+  if(arcade.revealed){ arcadeNext(); return; }
+  clearInterval(arcade.timer);
+  arcade.revealed = true;
+  const [a, b] = arcade.pairs[arcade.round];
+  const { ca, cb } = crowdSplit(a, b);
+  const guess = side ? current[side] : null;
+  let result, winner = null;
+  if(!guess) result = "time";
+  else if(ca + cb < ARCADE_MIN_PICKS) result = "thin";
+  else if(ca === cb) result = "tie";
+  else { winner = ca > cb ? a : b; result = guess === winner ? "right" : "wrong"; }
+  const points = result === "right" ? 1 : 0;
+  arcade.score += points;
+  arcade.log.push({ a, b, guess, winner, ca, cb, result, points });
+  const copy = {
+    right: ["Correct! +1", "You called the crowd's pick."],
+    wrong: ["Not this one", "The crowd picked the other fighter."],
+    tie: ["Dead heat", "The crowd split evenly. No point."],
+    thin: ["Too few picks to call", `This matchup needs ${ARCADE_MIN_PICKS} picks before a guess can score.`],
+    time: ["Time's up", "No guess in 10 seconds. No point."]
+  }[result];
+  const split = ca + cb ? `${a}: ${ca} · ${b}: ${cb} picks` : "No picks in this matchup yet";
+  $("arcadeTitle").textContent = copy[0];
+  $("arcadeCopy").textContent = `${copy[1]} ${split}.`;
+  $("arcadeNext").querySelector("span").textContent = arcade.round + 1 >= arcade.pairs.length ? "See score" : "Next round";
+  $("catLabel").textContent = `Arcade · ${arcade.score} pts`;
+  $("arcadeReveal").classList.remove("hidden");
+}
+function arcadeNext(){
+  if(!arcade || arcade.done || !arcade.revealed) return;
+  $("arcadeReveal").classList.add("hidden");
+  arcade.round++;
+  arcadeRound();
+}
+function arcadeEnd(){
+  clearInterval(arcade.timer);
+  arcade.done = true;
+  const list = readStore("goat_arcade_history");
+  const games = Array.isArray(list) ? list : [];
+  games.push({ score: arcade.score, t: Date.now() });
+  writeStore("goat_arcade_history", games.slice(-200));
+  track("Arcade Finished", { score: arcade.score, rounds: arcade.pairs.length });
+  $("arcadeEndScore").textContent = `${arcade.score} / ${arcade.pairs.length}`;
+  $("arcadeEndCopy").textContent = `Best: ${arcadeBest()} · Games played: ${games.length}`;
+  $("arcadeEnd").classList.remove("hidden");
+}
+/* Leaves Arcade (to the category page or to another category). The score of an unfinished game is not kept. */
+function arcadeLeave(){
+  if(arcade) clearInterval(arcade.timer);
+  arcade = null;
+  mode = "ladder";
+  document.body.classList.remove("arcade");
+  $("arcadeReveal").classList.add("hidden");
+  $("arcadeEnd").classList.add("hidden");
+  if(CUR) $("catLabel").textContent = CUR.name;
+}
 function openPicker(){
+  if(mode === "arcade"){ arcadeLeave(); renderMatch(); }
   placeTiles();
   renderPicker();
   document.body.classList.add("home");
@@ -2138,7 +2335,9 @@ function renderPicker(){
     </button>`;
   });
   // Mashups is always the 5th entry (or last, if there are fewer than 5 categories showing).
-  tiles.splice(Math.min(4, tiles.length), 0, mashupTileHTML());
+  // Layout: two categories, Arcade (full width), two categories, Mashups (full width), the rest.
+  tiles.splice(Math.min(2, tiles.length), 0, arcadeTileHTML());
+  tiles.splice(Math.min(5, tiles.length), 0, mashupTileHTML());
   $("tiles").innerHTML = `<div class="tile-grid">${tiles.join("")}</div>`;
   requestAnimationFrame(fitNames);
   $("pickerNote").textContent = editing ? "Hidden categories leave the picker and Mashups. Tap a box to hide or show it." : "";
@@ -2146,6 +2345,7 @@ function renderPicker(){
 }
 function setCategory(cat){
   if(cat === CUR) return;
+  if(mode === "arcade") arcadeLeave();
   if(S) saveLadder();
   CUR = cat;
   S = null;
@@ -2344,6 +2544,7 @@ $("tiles").addEventListener("click", e => {
     if(c){ setHidden(c, !isHidden(c)); renderPicker(); }
     return;
   }
+  if(b.dataset.id === "arcade"){ closePicker(); startArcade(); return; }
   if(b.dataset.id === "mashup"){
     if(!mashupUnlocked()){ toast(`Mashups open after ${MASHUP_PICKS} picks in any ${MASHUP_MIN_CATS} categories.`); return; }
     closePicker();
@@ -2455,6 +2656,7 @@ document.querySelectorAll(".pick").forEach(btn => {
 });
 
 function advanceMatch(){
+  if(mode === "arcade"){ arcadeNext(); return; }
   if(mode === "challenge" && CUR === MASHUP && mashupOpenedByPlay()){
     // B166: after a Mashups link match, carry on with a Mashups run across every category.
     mode = "ladder"; challengePair = null; challengeItems = [];
