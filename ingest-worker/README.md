@@ -1,4 +1,4 @@
-# GOAT image ingest Worker (B20)
+# GOAT image ingest Worker (B21)
 
 Deploy from this folder (keeps the INGEST_TOKEN secret already set):
 
@@ -19,3 +19,7 @@ Two secrets, set once (they survive later deploys):
     npx wrangler secret put PURGE_ZONE_ID   # the froobaloo.com zone ID (Overview page, right-hand side)
 
 Without them the Worker still saves images, and the response says "purged": false.
+
+## B21: purge endpoint
+POST /purge with the bearer token and { "keys": ["dogs/beagle.jpg", "dogs/beagle.json"] } purges those URLs from the CDN.
+Use it after any write that did not go through /ingest (for example, a direct R2 upload). Keys are limited to category/slug.jpg or .json.

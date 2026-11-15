@@ -246,8 +246,14 @@ async function send(p){
       await chrome.storage.local.set({ lastCategory: p.category });
       hideConflict();
       const note = wordsIn(p.category).some(w => w.slug === p.slug) ? "" : " (new name: add it to the sheet for the game to show it)";
-      setMsg(`Added ${p.category}/${p.slug}.jpg${note}`, "ok");
-      setTimeout(() => window.close(), 1500);
+      // The Worker purges the CDN copies on every write. If that failed, say so and keep the window open.
+      const purge = data.purge || {};
+      if(purge.purged){
+        setMsg(`Added ${p.category}/${p.slug}.jpg${note}. CDN refreshed.`, "ok");
+        setTimeout(() => window.close(), 1500);
+      } else {
+        setMsg(`Added ${p.category}/${p.slug}.jpg${note}, but the CDN was not refreshed (${purge.reason || "unknown"}). The old image may show for up to an hour.`, "err");
+      }
     } else {
       setMsg("Not added: " + (data.error || ("HTTP " + res.status)), "err");
     }
@@ -264,7 +270,7 @@ function init(){
   $("cardImgA").src = src;
   $("cardImgB").src = src;
   $("source_page").value = params.get("page") || "";
-  $("foot").textContent = "EXT6 · v0.6.3 · " + (src.startsWith("https://") ? "ready" : "not an https image: cannot add");
+  $("foot").textContent = "EXT6 · v0.6.4 · " + (src.startsWith("https://") ? "ready" : "not an https image: cannot add");
   fillCategories();
 }
 

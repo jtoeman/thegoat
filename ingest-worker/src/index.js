@@ -1,5 +1,8 @@
 /**
- * GOAT image ingest Worker, build B20.
+ * GOAT image ingest Worker, build B21.
+ *
+ * POST /purge takes { keys: ["dogs/beagle.jpg", ...] } (max 50) and purges those URLs from the CDN.
+ * Use it after any write that did not go through /ingest, such as a direct R2 upload.
  *
  * Routes:
  *   GET  /health            build number, no auth
@@ -20,7 +23,7 @@
  * Public URLs come from the R2 custom domain. Crops and resizes happen at delivery, so this Worker stores originals only.
  */
 
-const BUILD = "B20";
+const BUILD = "B21";
 const CACHE_CONTROL = "public, max-age=3600"; // browsers revalidate within an hour; the edge is purged on every write
 const USER_AGENT = "GOAT-image-pipeline/B19 (The GOAT prototype; image ingest)";
 const MAX_BYTES = 15 * 1024 * 1024;
@@ -142,6 +145,9 @@ async function purgeEdge(env, urls) {
   return data.success ? { purged: true, urls } : { purged: false, reason: `HTTP ${res.status}` };
 }
 
+/* Keys like "dogs/beagle.jpg" become public URLs. Anything else is refused, so this cannot purge arbitrary sites. */
+const KEY_FILE = /^[a-z0-9]+(-[a-z0-9]+)*\/[a-z0-9]+(-[a-z0-9]+)*\.(jpg|json)$/;
+
 async function store(env, { category, slug, bytes, contentType, meta }) {
   const base = `${category}/${slug}`;
   const sidecar = {
@@ -248,6 +254,17 @@ export default {
         return text(categories.map(c => `${c.id}|${c.name}`).join("\n"));
       }
       if (request.method === "POST" && url.pathname === "/ingest") return await ingest(request, env);
+      if (request.method === "POST" && url.pathname === "/purge") {
+        if (!isAuthorized(request, env)) return json({ ok: false, build: BUILD, error: "unauthorized" }, 401);
+        const body = await request.json().catch(() => null);
+        const keys = body && Array.isArray(body.keys) ? body.keys : null;
+        if (!keys || keys.length === 0 || keys.length > 50) return json({ ok: false, build: BUILD, error: "send keys: 1 to 50 entries" }, 400);
+        if (!keys.every(k => typeof k === "string" && KEY_FILE.test(k))) {
+          return json({ ok: false, build: BUILD, error: "each key must look like category/slug.jpg or category/slug.json" }, 400);
+        }
+        const purge = await purgeEdge(env, keys.map(k => IMAGE_BASE + k));
+        return json({ ok: purge.purged, build: BUILD, purge }, purge.purged ? 200 : 502);
+      }
       return json({ ok: false, build: BUILD, error: "not found" }, 404);
     } catch (err) {
       return json({ ok: false, build: BUILD, error: String((err && err.message) || err) }, 500);
