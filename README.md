@@ -16,7 +16,11 @@ The `ingest-images` workflow (`.github/workflows/ingest-images.yml`) then:
 2. Uploads the image and a sidecar JSON to the `goat-images` R2 bucket, served at `https://images.froobaloo.com/<category>/<name>.<ext>`.
 3. Removes the inbox copy in a follow-up commit.
 
-Needs repo secrets `CLOUDFLARE_API_TOKEN` (R2 edit permission) and `CLOUDFLARE_ACCOUNT_ID`. `ingest/`, `scripts/` and `.github/` are excluded from the Worker's static assets in `.assetsignore`.
+Needs repo secrets `CLOUDFLARE_API_TOKEN` (R2 edit permission) and `CLOUDFLARE_ACCOUNT_ID`. `ingest/`, `scripts/`, `archive/` and `.github/` are excluded from the Worker's static assets in `.assetsignore`.
+
+### R2 is the source of truth
+
+Files uploaded or replaced directly in R2 are the live versions. The `mirror-r2` workflow (`.github/workflows/mirror-r2.yml`) runs hourly and copies the whole `goat-images` bucket into `archive/r2/`, downloading only objects whose etag changed and removing any that were deleted from R2. `archive/r2-manifest.tsv` records the last mirrored state. The workflow never writes to R2, so the repo follows R2, not the other way round. Ingest pushes still go to R2 as described above.
 
 ## Word workbook
 

@@ -1,0 +1,104 @@
+name: mirror-r2
+
+# R2 (goat-images) is the live source. Anything uploaded, replaced or deleted
+# directly in R2 is copied into archive/r2/ here on the next run, so the repo
+# always follows R2. This workflow never writes to R2.
+#
+# archive/r2-manifest.tsv holds "<key><TAB><etag>" for each object as of the last
+# mirror. Only objects whose etag changed are downloaded.
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mirror-r2
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: List R2 objects
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          export LC_ALL=C
+          api="https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT/r2/buckets/goat-images/objects"
+          : > remote.tsv
+          cursor=""
+          while :; do
+            url="$api?per_page=1000"
+            if [ -n "$cursor" ]; then
+              url="$url&cursor=$(jq -rn --arg c "$cursor" '$c|@uri')"
+            fi
+            curl -fsS -H "Authorization: Bearer $CF_TOKEN" "$url" > page.json
+            jq -r '.result[]? | [.key, .etag] | @tsv' page.json >> remote.tsv
+            if [ "$(jq -r '.result_info.is_truncated // false' page.json)" != "true" ]; then
+              break
+            fi
+            cursor=$(jq -r '.result_info.cursor' page.json)
+          done
+          sort -o remote.tsv remote.tsv
+          echo "R2 objects: $(wc -l < remote.tsv)"
+
+      - name: Mirror changes into archive
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          export LC_ALL=C
+          api="https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT/r2/buckets/goat-images/objects"
+          mkdir -p archive/r2
+          touch archive/r2-manifest.tsv
+          sort archive/r2-manifest.tsv > old.tsv
+
+          # New or changed objects: lines in R2 that are not identical in the manifest
+          comm -13 old.tsv remote.tsv > changed.tsv
+          downloaded=0
+          while IFS=$'\t' read -r key etag; do
+            [ -z "$key" ] && continue
+            dest="archive/r2/$key"
+            mkdir -p "$(dirname "$dest")"
+            enc=$(jq -rn --arg k "$key" '$k|@uri')
+            curl -fsS -H "Authorization: Bearer $CF_TOKEN" "$api/$enc" -o "$dest"
+            downloaded=$((downloaded + 1))
+          done < changed.tsv
+
+          # Objects deleted from R2 (compare keys only, so changed etags are not removed)
+          cut -f1 old.tsv | sort > oldkeys.txt
+          cut -f1 remote.tsv | sort > remkeys.txt
+          comm -23 oldkeys.txt remkeys.txt > gone.txt
+          removed=0
+          while IFS= read -r key; do
+            [ -z "$key" ] && continue
+            rm -f "archive/r2/$key"
+            removed=$((removed + 1))
+          done < gone.txt
+
+          cp remote.tsv archive/r2-manifest.tsv
+          echo "downloaded=$downloaded removed=$removed"
+
+      - name: Commit and push
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A archive
+          if git diff --cached --quiet; then
+            echo "No R2 changes since last mirror"
+            exit 0
+          fi
+          n=$(git diff --cached --name-only | wc -l)
+          git commit -m "Mirror R2 goat-images into archive ($n files changed) [skip ci]"
+          git pull --rebase -q origin main
+          git push -q origin HEAD:main
