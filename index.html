@@ -740,15 +740,15 @@ body.arcade .stage.picked .arcade-tagline{display:none}
           <div class="intro-band" aria-hidden="true"></div>
           <div class="cw-inner">
             <div class="unlock-hero">
-              <p class="display unlock-title">Can you guess the crowd fave’s?</p>
+              <p class="display unlock-title">Ready?</p>
             </div>
             <div class="cw-table">
-
+              <p class="unlock-copy">Can you guess the crowd fave’s?</p>
             </div>
           </div>
           <div class="cw-foot">
             <div class="actions-col">
-              <button class="btn primary" id="arcadeStart"><span>Let's play</span></button>
+              <button class="btn primary" id="arcadeStart"><span>Play now <span class="arcade-cost" id="arcadeCost">🪙 10</span></span></button>
             </div>
           </div>
         </div>
@@ -930,7 +930,7 @@ body.arcade .stage.picked .arcade-tagline{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B183";
+const BUILD = "B184";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1326,7 +1326,7 @@ $("arcadeStart").addEventListener("click", () => {
   writeStore("goat_arcade_intro_seen", true);
   startArcade();
 });
-$("arcadePlayAgain").addEventListener("click", () => { $("arcadeEnd").classList.add("hidden"); startArcade(); });
+$("arcadePlayAgain").addEventListener("click", () => { $("arcadeEnd").classList.add("hidden"); showArcadeWelcome(); });
 $("arcadeBack").addEventListener("click", () => { $("arcadeEnd").classList.add("hidden"); openPicker(); });
 function toast(msg){
   const t = $("toast");
@@ -2386,10 +2386,11 @@ function setArcadeFighter(side, name){
 function openArcadeWhenReady(tries = 0){
   if(!statsReady && !statsError && tries < 30){ setTimeout(() => openArcadeWhenReady(tries + 1), 200); return; }
   closePicker();
-  if(arcadeIntroSeen()) startArcade(); else showArcadeWelcome();
+  showArcadeWelcome();
 }
 function arcadeIntroSeen(){ return !!readStore("goat_arcade_intro_seen"); }
 function showArcadeWelcome(){
+  $("arcadeCost").textContent = `🪙 ${ARCADE_COST}`;
   $("arcadeWelcome").classList.remove("hidden");
   $("arcadeStart").focus();
 }
@@ -2943,7 +2944,7 @@ $("tiles").addEventListener("click", e => {
   }
   if(b.dataset.id === "arcade"){
     closePicker();
-    if(arcadeIntroSeen()) startArcade(); else showArcadeWelcome();
+    showArcadeWelcome();
     return;
   }
   if(b.dataset.id === "mashup"){
@@ -3231,7 +3232,7 @@ function yoursHTML(){
     const pct = counted ? Math.round(100 * agree / counted) : null;
     const allWins = Object.entries(allTime).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
     const favourite = allWins.length ? `${allWins[0][0]} (${allWins[0][1]})` : "none yet";
-    const myTopNow = S && S.ranked && S.ranked[0] ? S.ranked[0] : "not ranked yet";
+    const myTopNow = categoryTop(CUR) || (S && S.ranked && S.ranked[0]) || "not ranked yet";
     const source = statsTab === "all" ? allTime : session;
     const entries = Object.entries(source).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
     const max = entries.length ? entries[0][1] : 1;
