@@ -1,0 +1,13 @@
+{
+  "key": "pizza/fresh-tomatoes.jpg",
+  "source_url": null,
+  "original_width": 864,
+  "original_height": 1080,
+  "original_bytes": 121713,
+  "width": 864,
+  "height": 1080,
+  "bytes": 121713,
+  "resized": false,
+  "rule": "long edge over 1200 px or file over 500 KB -> 1080 px wide JPEG, quality 80",
+  "ingested_at": "2026-11-15T19:53:05+00:00"
+}

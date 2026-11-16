@@ -1,0 +1,13 @@
+{
+  "key": "pizza/salami.jpg",
+  "source_url": null,
+  "original_width": 365,
+  "original_height": 547,
+  "original_bytes": 56139,
+  "width": 365,
+  "height": 547,
+  "bytes": 56139,
+  "resized": false,
+  "rule": "long edge over 1200 px or file over 500 KB -> 1080 px wide JPEG, quality 80",
+  "ingested_at": "2026-11-15T19:54:27+00:00"
+}

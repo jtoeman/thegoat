@@ -1,0 +1,14 @@
+{
+  "category": "test",
+  "slug": "first-test",
+  "build": "B18",
+  "override": false,
+  "license": "Attribution-Share Alike 2.0 Generic",
+  "author": "challiyan",
+  "title": null,
+  "source_page": "https://commons.wikimedia.org/wiki/File:Mangosteen.jpg",
+  "source_url": "https://upload.wikimedia.org/wikipedia/commons/a/ae/Mangosteen.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original",
+  "content_type": "image/jpeg",
+  "bytes": 4435533,
+  "ingested_at": "2026-11-04T02:46:48.314Z"
+}

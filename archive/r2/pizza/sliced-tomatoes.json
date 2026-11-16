@@ -1,0 +1,14 @@
+{
+  "category": "pizza",
+  "slug": "sliced-tomatoes",
+  "build": "B19",
+  "override": false,
+  "license": "Own asset (assumed)",
+  "author": null,
+  "title": "Sliced Tomatoes",
+  "source_page": "https://www.google.com/search?q=sliced+tomatoes&sca_esv=c9ae7b741e23e944&udm=2&tbs=sur:cl,isz:l&sxsrf=AKL5yDiXrKYDUA4gSr0Qy5wOl0_bc1O6Qg:1794584089461&source=lnt&sa=X&ved=2ahUKEwjqwq_ZooWYAxV8lSsGHaKIMbQQpwV6BAgKEAY&biw=1598&bih=934&dpr=1.25#ip=1&sv=CAMSYBoyKhBlLXp5ZjRqcUlnYnZfNmRNMg56eWY0anFJZ2J2XzZkTToOa3Y5cFNHSHc0Vko2Rk0gBCokCg5PUzQzSVE1SUZ1NFhxTRIQZS16eWY0anFJZ2J2XzZkTRgAMAFQAhgHINWC8pILSggQAhgBIAIoAQ",
+  "source_url": "https://www.thecountrycook.net/wp-content/uploads/2023/01/Fried-Red-Tomatoes-2-scaled.jpg",
+  "content_type": "image/jpeg",
+  "bytes": 71610,
+  "ingested_at": "2026-11-13T15:36:27.039Z"
+}

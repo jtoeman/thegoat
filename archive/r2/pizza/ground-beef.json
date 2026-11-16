@@ -1,0 +1,14 @@
+{
+  "category": "pizza",
+  "slug": "ground-beef",
+  "build": "B21",
+  "override": false,
+  "license": "Own asset (assumed)",
+  "author": null,
+  "title": "Ground Beef",
+  "source_page": "https://unsplash.com/photos/brown-and-white-pizza-on-white-ceramic-plate-nDlXtnzsD5o",
+  "source_url": "https://images.unsplash.com/photo-1600693449340-65ed7161727d?q=80&w=627&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+  "content_type": "image/jpeg",
+  "bytes": 226326,
+  "ingested_at": "2026-11-15T23:21:13.599Z"
+}

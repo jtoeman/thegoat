@@ -1,0 +1,13 @@
+{
+  "key": "pokemon/squirtle.jpg",
+  "source_url": null,
+  "original_width": 906,
+  "original_height": 906,
+  "original_bytes": 135476,
+  "width": 906,
+  "height": 906,
+  "bytes": 135476,
+  "resized": false,
+  "rule": "long edge over 1200 px or file over 500 KB -> 1080 px wide JPEG, quality 80",
+  "ingested_at": "2026-11-06T22:02:15+00:00"
+}

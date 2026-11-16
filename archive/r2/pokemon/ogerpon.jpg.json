@@ -1,0 +1,13 @@
+{
+  "key": "pokemon/ogerpon.jpg",
+  "source_url": null,
+  "original_width": 2908,
+  "original_height": 2908,
+  "original_bytes": 898460,
+  "width": 1080,
+  "height": 1080,
+  "bytes": 86166,
+  "resized": true,
+  "rule": "long edge over 1200 px or file over 500 KB -> 1080 px wide JPEG, quality 80",
+  "ingested_at": "2026-11-06T22:01:11+00:00"
+}

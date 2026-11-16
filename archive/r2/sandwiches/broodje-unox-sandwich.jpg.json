@@ -1,0 +1,13 @@
+{
+  "key": "sandwiches/broodje-unox-sandwich.jpg",
+  "source_url": null,
+  "original_width": 480,
+  "original_height": 640,
+  "original_bytes": 29091,
+  "width": 480,
+  "height": 640,
+  "bytes": 29091,
+  "resized": false,
+  "rule": "long edge over 1200 px or file over 500 KB -> 1080 px wide JPEG, quality 80",
+  "ingested_at": "2026-11-06T21:50:21+00:00"
+}

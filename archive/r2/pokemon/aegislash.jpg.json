@@ -1,0 +1,13 @@
+{
+  "key": "pokemon/aegislash.jpg",
+  "source_url": null,
+  "original_width": 772,
+  "original_height": 722,
+  "original_bytes": 105288,
+  "width": 772,
+  "height": 722,
+  "bytes": 105288,
+  "resized": false,
+  "rule": "long edge over 1200 px or file over 500 KB -> 1080 px wide JPEG, quality 80",
+  "ingested_at": "2026-11-06T21:58:28+00:00"
+}

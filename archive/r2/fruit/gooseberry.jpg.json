@@ -1,0 +1,13 @@
+{
+  "key": "fruit/gooseberry.jpg",
+  "source_url": null,
+  "original_width": 1080,
+  "original_height": 1631,
+  "original_bytes": 135753,
+  "width": 1080,
+  "height": 1631,
+  "bytes": 135693,
+  "resized": true,
+  "rule": "long edge over 1200 px or file over 500 KB -> 1080 px wide JPEG, quality 80",
+  "ingested_at": "2026-11-06T22:41:15+00:00"
+}

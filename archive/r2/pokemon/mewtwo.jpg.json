@@ -1,0 +1,13 @@
+{
+  "key": "pokemon/mewtwo.jpg",
+  "source_url": null,
+  "original_width": 1280,
+  "original_height": 1280,
+  "original_bytes": 183808,
+  "width": 1080,
+  "height": 1080,
+  "bytes": 68708,
+  "resized": true,
+  "rule": "long edge over 1200 px or file over 500 KB -> 1080 px wide JPEG, quality 80",
+  "ingested_at": "2026-11-06T22:00:56+00:00"
+}

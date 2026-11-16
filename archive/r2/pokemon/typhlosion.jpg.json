@@ -1,0 +1,13 @@
+{
+  "key": "pokemon/typhlosion.jpg",
+  "source_url": null,
+  "original_width": 1280,
+  "original_height": 1280,
+  "original_bytes": 189644,
+  "width": 1080,
+  "height": 1080,
+  "bytes": 68452,
+  "resized": true,
+  "rule": "long edge over 1200 px or file over 500 KB -> 1080 px wide JPEG, quality 80",
+  "ingested_at": "2026-11-06T22:02:49+00:00"
+}

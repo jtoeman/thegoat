@@ -1,0 +1,13 @@
+{
+  "key": "pizza/ground-beef.jpg",
+  "source_url": null,
+  "original_width": 627,
+  "original_height": 1115,
+  "original_bytes": 226326,
+  "width": 627,
+  "height": 1115,
+  "bytes": 226326,
+  "resized": false,
+  "rule": "long edge over 1200 px or file over 500 KB -> 1080 px wide JPEG, quality 80",
+  "ingested_at": "2026-11-16T00:09:12+00:00"
+}

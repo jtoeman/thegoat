@@ -1,0 +1,13 @@
+{
+  "key": "pokemon/magikarp.jpg",
+  "source_url": null,
+  "original_width": 673,
+  "original_height": 673,
+  "original_bytes": 98923,
+  "width": 673,
+  "height": 673,
+  "bytes": 98923,
+  "resized": false,
+  "rule": "long edge over 1200 px or file over 500 KB -> 1080 px wide JPEG, quality 80",
+  "ingested_at": "2026-11-06T22:00:35+00:00"
+}

@@ -1,0 +1,13 @@
+{
+  "key": "cars/ram-1500.jpg",
+  "source_url": null,
+  "original_width": 1080,
+  "original_height": 1350,
+  "original_bytes": 262693,
+  "width": 1080,
+  "height": 1350,
+  "bytes": 262557,
+  "resized": true,
+  "rule": "long edge over 1200 px or file over 500 KB -> 1080 px wide JPEG, quality 80",
+  "ingested_at": "2026-11-07T18:43:06+00:00"
+}

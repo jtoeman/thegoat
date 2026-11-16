@@ -1,0 +1,14 @@
+{
+  "category": "cars",
+  "slug": "acura-mdx",
+  "build": "B21",
+  "override": false,
+  "license": "Own asset (assumed)",
+  "author": null,
+  "title": "Acura MDX",
+  "source_page": "https://www.google.com/search?q=2026+acura+mdx+portrait&tbnid=UeHwc_aBztKYwM&tbnh=0&tbnw=0&sca_esv=47c941f17c9ef00a&cs=1&udm=2&biw=1597&bih=1166&tbs=sur%3Acl&sxsrf=AKL5yDhEP6CHAGHt6rQnfcKMEF8HIl3VTA%3A1794787079943&ei=B0f6asmPOfaf5NoP49uO8Ao&ved=2ahUKEwiJr-PylouYAxX2D1kFHeOtA64Q4dUDegQIBhAN&uact=5&oq=2026+acura+mdx+portrait&gs_lp=Egtnd3Mtd2l6LWltZyIXMjAyNiBhY3VyYSBtZHggcG9ydHJhaXRI7A9Q0wJY9A5wAXgAkAEAmAG7AaABkwaqAQM2LjK4AQPIAQD4AQGYAgSgAs4CwgINEAAYgAQYigUYQxixA8ICBRAAGIAEwgIKEAAYgAQYigUYQ8ICBBAAGB7CAgYQABgIGB6YAwCIBgGSBwMzLjGgB5cOsgcDMi4xuAfJAsIHBTAuMy4xyAcKgAgB&sclient=gws-wiz-img#sv=CAMSXhoyKhBlLUlSbS0yeUZCZVhfR19NMg5JUm0tMnlGQmVYX0dfTToOd0RacXJ2WkhFcGRQU00gBCokCg5CQ0w0bEhxSWxvTVJ2TRIQZS1JUm0tMnlGQmVYX0dfTRgAMAEYByDZube7CkoIEAIYASACKAE",
+  "source_url": "https://d2gi48aq63bhjc.cloudfront.net/simpl/2026/acura/mdx/mlp/exterior.jpg",
+  "content_type": "image/jpeg",
+  "bytes": 166853,
+  "ingested_at": "2026-11-15T23:59:42.397Z"
+}

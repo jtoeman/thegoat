@@ -1,0 +1,13 @@
+{
+  "key": "states/kentucky.jpg",
+  "source_url": null,
+  "original_width": 1080,
+  "original_height": 1440,
+  "original_bytes": 181618,
+  "width": 1080,
+  "height": 1440,
+  "bytes": 181592,
+  "resized": true,
+  "rule": "long edge over 1200 px or file over 500 KB -> 1080 px wide JPEG, quality 80",
+  "ingested_at": "2026-11-06T22:53:31+00:00"
+}

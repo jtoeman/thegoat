@@ -1,0 +1,13 @@
+{
+  "key": "sandwiches/pastrami-on-rye.jpg",
+  "source_url": null,
+  "original_width": 1080,
+  "original_height": 1334,
+  "original_bytes": 224794,
+  "width": 1080,
+  "height": 1334,
+  "bytes": 224487,
+  "resized": true,
+  "rule": "long edge over 1200 px or file over 500 KB -> 1080 px wide JPEG, quality 80",
+  "ingested_at": "2026-11-06T21:50:46+00:00"
+}

@@ -1,0 +1,13 @@
+{
+  "key": "pizza/bbq-chicken.jpg",
+  "source_url": null,
+  "original_width": 783,
+  "original_height": 1080,
+  "original_bytes": 267655,
+  "width": 783,
+  "height": 1080,
+  "bytes": 267655,
+  "resized": false,
+  "rule": "long edge over 1200 px or file over 500 KB -> 1080 px wide JPEG, quality 80",
+  "ingested_at": "2026-11-15T19:52:35+00:00"
+}

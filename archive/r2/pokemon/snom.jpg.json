@@ -1,0 +1,13 @@
+{
+  "key": "pokemon/snom.jpg",
+  "source_url": null,
+  "original_width": 600,
+  "original_height": 600,
+  "original_bytes": 48289,
+  "width": 600,
+  "height": 600,
+  "bytes": 48289,
+  "resized": false,
+  "rule": "long edge over 1200 px or file over 500 KB -> 1080 px wide JPEG, quality 80",
+  "ingested_at": "2026-11-06T22:02:06+00:00"
+}

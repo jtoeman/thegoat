@@ -1,0 +1,13 @@
+{
+  "key": "pokemon/tinkaton.jpg",
+  "source_url": null,
+  "original_width": 534,
+  "original_height": 534,
+  "original_bytes": 73660,
+  "width": 534,
+  "height": 534,
+  "bytes": 73660,
+  "resized": false,
+  "rule": "long edge over 1200 px or file over 500 KB -> 1080 px wide JPEG, quality 80",
+  "ingested_at": "2026-11-06T22:02:35+00:00"
+}

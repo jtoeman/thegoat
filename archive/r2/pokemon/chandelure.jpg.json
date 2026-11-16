@@ -1,0 +1,13 @@
+{
+  "key": "pokemon/chandelure.jpg",
+  "source_url": null,
+  "original_width": 679,
+  "original_height": 679,
+  "original_bytes": 83255,
+  "width": 679,
+  "height": 679,
+  "bytes": 83255,
+  "resized": false,
+  "rule": "long edge over 1200 px or file over 500 KB -> 1080 px wide JPEG, quality 80",
+  "ingested_at": "2026-11-06T21:58:46+00:00"
+}

@@ -1,0 +1,13 @@
+{
+  "key": "pizza/arugula.jpg",
+  "source_url": null,
+  "original_width": 687,
+  "original_height": 1031,
+  "original_bytes": 197822,
+  "width": 687,
+  "height": 1031,
+  "bytes": 197822,
+  "resized": false,
+  "rule": "long edge over 1200 px or file over 500 KB -> 1080 px wide JPEG, quality 80",
+  "ingested_at": "2026-11-16T00:09:02+00:00"
+}

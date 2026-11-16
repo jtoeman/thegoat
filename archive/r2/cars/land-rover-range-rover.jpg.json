@@ -1,0 +1,13 @@
+{
+  "key": "cars/land-rover-range-rover.jpg",
+  "source_url": null,
+  "original_width": 1080,
+  "original_height": 1350,
+  "original_bytes": 126428,
+  "width": 1080,
+  "height": 1350,
+  "bytes": 126422,
+  "resized": true,
+  "rule": "long edge over 1200 px or file over 500 KB -> 1080 px wide JPEG, quality 80",
+  "ingested_at": "2026-11-07T18:42:52+00:00"
+}

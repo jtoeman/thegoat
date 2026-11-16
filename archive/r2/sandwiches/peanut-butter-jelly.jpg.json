@@ -1,0 +1,13 @@
+{
+  "key": "sandwiches/peanut-butter-jelly.jpg",
+  "source_url": null,
+  "original_width": 1080,
+  "original_height": 1624,
+  "original_bytes": 217538,
+  "width": 1080,
+  "height": 1624,
+  "bytes": 217311,
+  "resized": true,
+  "rule": "long edge over 1200 px or file over 500 KB -> 1080 px wide JPEG, quality 80",
+  "ingested_at": "2026-11-06T21:50:50+00:00"
+}

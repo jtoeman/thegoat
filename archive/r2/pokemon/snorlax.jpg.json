@@ -1,0 +1,13 @@
+{
+  "key": "pokemon/snorlax.jpg",
+  "source_url": null,
+  "original_width": 1280,
+  "original_height": 1280,
+  "original_bytes": 198732,
+  "width": 1080,
+  "height": 1080,
+  "bytes": 68026,
+  "resized": true,
+  "rule": "long edge over 1200 px or file over 500 KB -> 1080 px wide JPEG, quality 80",
+  "ingested_at": "2026-11-06T22:02:11+00:00"
+}

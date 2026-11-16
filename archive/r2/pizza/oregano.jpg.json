@@ -1,0 +1,13 @@
+{
+  "key": "pizza/oregano.jpg",
+  "source_url": null,
+  "original_width": 720,
+  "original_height": 1080,
+  "original_bytes": 118935,
+  "width": 720,
+  "height": 1080,
+  "bytes": 118935,
+  "resized": false,
+  "rule": "long edge over 1200 px or file over 500 KB -> 1080 px wide JPEG, quality 80",
+  "ingested_at": "2026-11-15T19:53:54+00:00"
+}

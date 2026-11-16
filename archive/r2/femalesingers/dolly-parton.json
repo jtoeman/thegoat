@@ -1,0 +1,14 @@
+{
+  "category": "femalesingers",
+  "slug": "dolly-parton",
+  "build": "B18",
+  "override": false,
+  "license": "Own asset (assumed)",
+  "author": null,
+  "title": "Dolly Parton",
+  "source_page": "https://en.wikipedia.org/wiki/Dolly_Parton#/media/File:Young-Dolly-Parton_(higher_quality_scan)_(cropped).jpg",
+  "source_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8c/Young-Dolly-Parton_%28higher_quality_scan%29_%28cropped%29.jpg/1280px-Young-Dolly-Parton_%28higher_quality_scan%29_%28cropped%29.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "content_type": "image/jpeg",
+  "bytes": 459360,
+  "ingested_at": "2026-11-10T16:59:45.509Z"
+}

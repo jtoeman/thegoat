@@ -1,0 +1,13 @@
+{
+  "key": "pokemon/staraptor.jpg",
+  "source_url": null,
+  "original_width": 823,
+  "original_height": 823,
+  "original_bytes": 108408,
+  "width": 823,
+  "height": 823,
+  "bytes": 108408,
+  "resized": false,
+  "rule": "long edge over 1200 px or file over 500 KB -> 1080 px wide JPEG, quality 80",
+  "ingested_at": "2026-11-06T22:02:20+00:00"
+}

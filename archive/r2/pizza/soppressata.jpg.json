@@ -1,0 +1,13 @@
+{
+  "key": "pizza/soppressata.jpg",
+  "source_url": null,
+  "original_width": 720,
+  "original_height": 1080,
+  "original_bytes": 76358,
+  "width": 720,
+  "height": 1080,
+  "bytes": 76358,
+  "resized": false,
+  "rule": "long edge over 1200 px or file over 500 KB -> 1080 px wide JPEG, quality 80",
+  "ingested_at": "2026-11-15T19:54:38+00:00"
+}
