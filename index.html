@@ -224,7 +224,7 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
 .tile-e{font-size:44px; line-height:1; filter:drop-shadow(0 3px 2px rgba(0,0,0,.4))}
 .tile-name{display:block; font-size:22px; line-height:1.05; text-shadow:2px 2px 0 #000; overflow-wrap:normal; word-break:normal}
 .tile-n{font-size:12px; opacity:.92; text-shadow:1px 1px 0 #000}
-.tile-tokens{display:block; margin-top:6px; font-family:Impact,"Arial Narrow",sans-serif; text-transform:uppercase; letter-spacing:.04em; font-size:16px; color:var(--yellow); text-shadow:2px 2px 0 #000}
+.tile-tokens{display:inline-block; margin-left:8px; font-size:16px; line-height:1; color:var(--yellow); text-shadow:2px 2px 0 #000; vertical-align:middle}
 .tile-tokens:empty{display:none}
 .tile.current{box-shadow:inset 0 0 0 4px var(--yellow), 4px 4px 0 #000}
 .tile.mashup{grid-column:1 / -1}
@@ -709,7 +709,7 @@ body.arcade .stage.picked .arcade-tagline{display:none}
           <div class="intro-band" aria-hidden="true"></div>
           <div class="cw-inner">
             <div class="unlock-hero">
-              <p class="display unlock-title">Not enough tokens</p>
+              <p class="display unlock-title">Out of tokens!</p>
             </div>
             <div class="cw-table">
               <p class="unlock-copy" id="tokenNeed"></p>
@@ -732,20 +732,20 @@ body.arcade .stage.picked .arcade-tagline{display:none}
         </div>
       </section>
 
-      <section class="hidden" id="arcadeWelcome" role="dialog" aria-modal="true" aria-label="Welcome to Arcade Mode">
+      <section class="hidden" id="arcadeWelcome" role="dialog" aria-modal="true" aria-label="Welcome to the Arcade">
         <div class="intro-card cw-card">
           <div class="intro-band" aria-hidden="true"></div>
           <div class="cw-inner">
             <div class="unlock-hero">
-              <p class="display unlock-title">Welcome to Arcade Mode</p>
+              <p class="display unlock-title">Welcome to the Arcade!</p>
             </div>
             <div class="cw-table">
-              <p class="unlock-copy">Two fighters face off. You guess which one the crowd picked more often in that matchup.</p>
+              <p class="unlock-copy">Can you guess the crowd fave's? Two fighters face off. Call which one the crowd picked more often.</p>
               <ul class="unlock-copy" style="text-align:left; padding-left:18px; margin:8px 0 0">
-                <li>10 rounds, 10 seconds each.</li>
-                <li>+1 point for each correct call.</li>
-                <li>Matchups need 3 crowd picks before a guess can score.</li>
-                <li>Guesses are not votes. They never change the counts.</li>
+                <li>10 rounds, 10 seconds a pop.</li>
+                <li>+1 point for every crowd read you nail.</li>
+                <li>A matchup needs 3 crowd picks before it can score.</li>
+                <li>Your calls are not votes. They never change the counts.</li>
                 <li>Scores are kept in this browser only.</li>
               </ul>
             </div>
@@ -933,7 +933,7 @@ body.arcade .stage.picked .arcade-tagline{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B180";
+const BUILD = "B181";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1567,9 +1567,9 @@ let tokenBalance = null;        // null until the server has answered
 let challengeOrigin = null;     // uid of the player whose challenge link this is, if any
 let challengeRaw = null;        // the challenge's items, e.g. "apple-banana"
 let challengeCredited = false;  // the origin is credited at most once per page load
-/* The balance shows inside the Arcade tile, since Arcade is what it pays for. Empty until it is known. */
+/* The balance shows beside ARCADE on its tile: the coin and the number only. Empty until it is known. */
 function tokenLabel(){
-  return tokenBalance === null ? "" : `🪙 ${tokenBalance || 0} ${tokenBalance === 1 ? "token" : "tokens"}`;
+  return tokenBalance === null ? "" : `🪙 ${tokenBalance || 0}`;
 }
 function renderTokens(){
   document.querySelectorAll(".tile-tokens").forEach(el => { el.textContent = tokenLabel(); });
@@ -1632,7 +1632,7 @@ async function spendForArcade(){
   }
 }
 function showTokenModal(){
-  $("tokenNeed").textContent = `Arcade costs ${ARCADE_COST} tokens per game. You have ${tokenBalance || 0}.`;
+  $("tokenNeed").textContent = `Arcade costs ${ARCADE_COST} tokens a game. You have ${tokenBalance || 0}.`;
   $("tokenModal").classList.remove("hidden");
 }
 $("tokenOk").addEventListener("click", () => {
@@ -2304,7 +2304,7 @@ const ARCADE_ROUNDS = 10;
 const ARCADE_SECS = 10;
 const ARCADE_MIN_PICKS = 3;
 const ARCADE_TITLE = "🕹️ The Goat - ARCADE MODE!";
-const ARCADE_TAGLINES = ["What Did the Crowd Pick?", "Which Is More Popular?", "Read the Crowd!", "Guess the People's Pick", "Who Did Everyone Choose?", "Crowd Favorite?"];   // a matchup needs this many crowd picks before a guess can score
+const ARCADE_TAGLINES = ["Can You Guess the Crowd Fave's?", "Crowd Fave or Flop?", "Read the Room!", "Name the People's Pick!", "Who Did Everybody Pick?", "Who Stole the Crowd?"];   // a matchup needs this many crowd picks before a guess can score
 let arcade = null;            // {round, score, pairs, log, deadline, timer, revealed, done}
 function arcadeBest(){
   const list = readStore("goat_arcade_history");
@@ -2314,9 +2314,8 @@ function arcadeTileHTML(){
   return `
     <button class="tile arcade" data-id="arcade" style="background:linear-gradient(135deg,#14d2c0,#1a8fd8)">
       <span class="tile-e" aria-hidden="true">🕹️</span>
-      <span class="tile-name display">Arcade</span>
-      <span class="tile-n">Guess the crowd. 10 rounds, 10 seconds each. Free to play. Your best: ${arcadeBest()}</span>
-      <span class="tile-tokens" aria-live="polite">${tokenLabel()}</span>
+      <span class="tile-name display">Arcade <span class="tile-tokens" aria-live="polite" title="Your tokens">${tokenLabel()}</span></span>
+      <span class="tile-n">Can you guess the crowd fave's? 10 rounds, 10 seconds a pop. 10 tokens a game. Your best: ${arcadeBest()}</span>
     </button>`;
 }
 const ARCADE_FAKE_KEYS = ["Beyoncé__Chicken Parm Sub", "Chicken Parm Sub__Collie", "Chicken Parm Sub__Montreal Smoked Meat", "Fried Chicken Sandwich__Golden Retriever", "Roast Beef Sandwich__Shar-Pei", "Acura MDX__Pastrami on Rye", "Adele__Chicken Parm Sub", "Adele__Lamborghini Aventador", "Akita__Cane Corso", "Akita__Chicken Parm Sub", "Akita__Lime", "Alabama__Chicken Parm Sub", "Alanis Morissette__Mango", "Alanis Morissette__Raspberry", "Alaska__Cherry", "Alaska__New Mexico", "Alaska__Raspberry", "Alaskan Malamute__Cadillac CT5", "Alaskan Malamute__Chicken Parm Sub", "Alaskan Malamute__Cubano", "Alaskan Malamute__Fried Chicken Sandwich", "Alaskan Malamute__Honda Civic", "Alaskan Malamute__Kumquat", "Alaskan Malamute__Labradoodle", "Alaskan Malamute__Lincoln Navigator", "Alaskan Malamute__Nectarine", "Alaskan Malamute__Nissan Leaf", "Alaskan Malamute__Pineapple", "Alaskan Malamute__Ram 1500", "Alaskan Malamute__Siberian Husky", "Amy Winehouse__Raspberry", "Annie Lennox__Chicken Parm Sub", "Apple__Bernese Mountain Dog", "Apple__Chicken Parm Sub", "Apple__Connecticut", "Apple__Land Rover Range Rover", "Apple__New Hampshire", "Apple__Olive", "Apple__Sloppy Joe", "Apple__Tesla Model 3", "Apricot__Chicken Parm Sub", "Apricot__Fried Chicken Sandwich", "Aretha Franklin__Montreal Smoked Meat", "Ariana Grande__Montreal Smoked Meat", "Ariana Grande__Siberian Husky", "Arizona__Chicken Parm Sub", "Arizona__Rolls-Royce Phantom", "Arkansas__Chicken Parm Sub", "Audi A4__Mangosteen", "Audi Q5__Beyoncé", "Audi Q5__New Mexico", "Australian Cattle Dog__Doner Kebab", "Australian Cattle Dog__Mangosteen", "Australian Cattle Dog__Shawarma Wrap", "Australian Shepherd__Cheesesteak", "Australian Shepherd__Fried Chicken Sandwich", "Australian Shepherd__New Mexico", "Australian Shepherd__Raspberry", "Avocado__Cheesesteak", "Avocado__Cubano", "Avocado__Mangosteen", "Avocado__Pastrami on Rye", "Avocado__Vizsla", "Banana__Chicken Parm Sub", "Banana__Lamborghini Aventador", "Banana__Sloppy Joe", "Banh Mi__Madonna", "Barbra Streisand__Chicken Parm Sub", "Barbra Streisand__Madonna", "Basset Hound__Chicken Parm Sub", "Basset Hound__Mangosteen", "Beyoncé__DeLorean DMC-12", "Beyoncé__Fiat 500", "Beyoncé__Ford Explorer", "Beyoncé__Grapefruit", "Beyoncé__Honeydew", "Beyoncé__Hyundai Elantra", "Beyoncé__Lamborghini Aventador", "Beyoncé__Mississippi", "Beyoncé__Nebraska", "Beyoncé__New Hampshire", "Beyoncé__North Carolina", "Beyoncé__Orange", "Beyoncé__Papaya", "Beyoncé__Shiba Inu", "Beyoncé__Volkswagen Beetle", "Billie Eilish__Guava", "Billie Eilish__Nectarine", "Björk__Lexus RX", "Björk__Siberian Husky", "Blackberry__Fried Chicken Sandwich", "BLT__Fried Chicken Sandwich", "Blueberry__Christina Aguilera", "Blueberry__Corviknight", "Blueberry__Grilled Cheese", "Blueberry__Nicki Minaj", "Blueberry__Peanut Butter & Jelly", "Blueberry__Sloppy Joe", "Blueberry__Utah", "BMW 3 Series__Doner Kebab", "BMW 3 Series__Raspberry", "BMW 3 Series__Sloppy Joe", "Border Collie__Tangerine", "Boston Terrier__Breakfast Sandwich", "Boston Terrier__Chicken Parm Sub", "Boston Terrier__Raspberry", "Boston Terrier__Sloppy Joe", "Boxer__Indiana", "Boxer__Montreal Smoked Meat", "Boxer__Nebraska", "Boxer__Nevada", "Boxer__Volkswagen Beetle", "Boxer__Wyoming", "Breakfast Sandwich__New Mexico", "Britney Spears__Chicken Parm Sub", "Buffalo Chicken Sandwich__Siberian Husky", "Bulbasaur__Chicken Parm Sub", "Bulldog__Sloppy Joe", "Cadillac CT5__Cheesesteak", "Cadillac CT5__Montreal Smoked Meat", "California__Chicken Parm Sub", "Cane Corso__Madonna", "Cane Corso__Tesla Model 3", "Cantaloupe__Fried Chicken Sandwich", "Cantaloupe__Siberian Husky", "Cardi B__Raspberry", "Cardi B__Volvo XC90", "Ceruledge__Chicken Parm Sub", "Chaka Khan__Chicken Parm Sub", "Chaka Khan__Doner Kebab", "Chaka Khan__Mango", "Chaka Khan__Peach", "Chaka Khan__Virginia", "Charizard__Chicken Parm Sub", "Charli xcx__Siberian Husky", "Cheesesteak__Ford Model T", "Cheesesteak__Mangosteen", "Cheesesteak__Minnesota", "Cheesesteak__Scottish Terrier", "Cherry__Chicken Parm Sub", "Cherry__Land Rover Range Rover", "Cherry__Mangosteen", "Cherry__New York", "Cherry__South Dakota", "Cherry__Tesla Model 3", "Cherry__Volvo XC90", "Chevrolet Bolt__Montreal Smoked Meat", "Chevrolet Bolt__Siberian Husky", "Chevrolet Camaro__Collie", "Chevrolet Silverado__Collie", "Chicken Parm Sub__Diana Ross", "Chicken Parm Sub__Dido", "Chicken Parm Sub__Doberman Pinscher", "Chicken Parm Sub__Doja Cat", "Chicken Parm Sub__Dolly Parton", "Chicken Parm Sub__Durian", "Chicken Parm Sub__Florida", "Chicken Parm Sub__Goldendoodle", "Chicken Parm Sub__Golisopod", "Chicken Parm Sub__Ohio", "Chicken Parm Sub__Olivia Newton-John", "Chicken Parm Sub__Peanut Butter & Jelly", "Chicken Parm Sub__Sabrina Carpenter", "Chicken Parm Sub__Tomato", "Chihuahua__Collie", "Chihuahua__Lime", "Chihuahua__Nissan Leaf", "Chow Chow__Mangosteen", "Christina Aguilera__Doner Kebab", "Clementine__Grilled Cheese", "Clementine__Mangosteen", "Clementine__Pastrami on Rye", "Cocker Spaniel__Dalmatian", "Cocker Spaniel__New Mexico", "Coconut__German Shorthaired Pointer", "Coconut__Shar-Pei", "Coconut__Vizsla", "Coconut__Volvo XC90", "Collie__Sloppy Joe", "Collie__Toyota Camry", "Collie__Toyota Corolla", "Collie__Volvo XC90", "Collie__Yuzu", "Connecticut__Fried Chicken Sandwich", "Connecticut__Raspberry", "Cranberry__Sloppy Joe", "Cubano__Janet Jackson", "Cubano__Pennsylvania", "Cubano__Vaporeon", "Cyndi Lauper__Mango", "Cyndi Lauper__Raspberry", "Dachshund__Madonna", "Dachshund__Sloppy Joe", "Dalmatian__Mangosteen", "Dalmatian__Raspberry", "Date__Louisiana", "Date__Montreal Smoked Meat", "Date__Scottish Terrier", "Date__Shar-Pei", "Debbie Harry__Lime", "Delaware__Madonna", "DeLorean DMC-12__Sloppy Joe", "Diana Ross__Lycanroc", "Diana Ross__Toxtricity", "Diana Ross__Utah", "Doberman Pinscher__Jeep Wrangler", "Doberman Pinscher__New Mexico", "Doberman Pinscher__Raspberry", "Doberman Pinscher__Sloppy Joe", "Dodge Charger__Sloppy Joe", "Doja Cat__Doner Kebab", "Dolly Parton__Raspberry", "Doner Kebab__Siberian Husky", "Doner Kebab__Tesla Model 3", "Donna Summer__Madonna", "Dragonfruit__Fried Chicken Sandwich", "Dragonfruit__Montreal Smoked Meat", "Dragonfruit__Pastrami on Rye", "Dragonfruit__Shawarma Wrap", "Dua Lipa__Montreal Smoked Meat", "Durian__Pastrami on Rye", "Durian__Peanut Butter & Jelly", "Durian__Tesla Model 3", "Fiat 500__Lime", "Fiat 500__Madonna", "Fiat 500__Mangosteen", "Fiat 500__Scottish Terrier", "Florida__Montreal Smoked Meat", "Ford Explorer__Mangosteen", "Ford F-150__New Mexico", "Ford F-150__Pastrami on Rye", "Ford F-150__Sloppy Joe", "Ford Focus__Fried Chicken Sandwich", "French Bulldog__Lamborghini Aventador", "French Bulldog__Mangosteen", "French Dip__Shawarma Wrap", "French Dip__Siberian Husky", "Fried Chicken Sandwich__Georgia", "Fried Chicken Sandwich__Guava", "Fried Chicken Sandwich__Honeydew", "Fried Chicken Sandwich__Idaho", "Fried Chicken Sandwich__Kelly Clarkson", "Fried Chicken Sandwich__Lime", "Fried Chicken Sandwich__Tuna Melt", "Fried Chicken Sandwich__Volkswagen Golf", "Genesis GV70__New Mexico", "Genesis GV70__Raspberry", "Genesis GV70__Tangerine", "Golden Retriever__New Mexico", "Golden Retriever__Nissan Leaf", "Golden Retriever__Sloppy Joe", "Goldendoodle__Raspberry", "Goldendoodle__Sloppy Joe", "Grapefruit__Shar-Pei", "Grapes__Grilled Cheese", "Grilled Cheese__Lamborghini Aventador", "Grilled Cheese__Mango", "Grilled Cheese__Mangosteen", "Grilled Cheese__Tesla Model 3", "Gwen Stefani__Tesla Model 3", "Hawaii__Lime", "Honda Civic__Tangerine", "Honeydew__Lamborghini Aventador", "Honeydew__Madonna", "Honeydew__Mangosteen", "Honeydew__Shawarma Wrap", "Hyundai Elantra__Raspberry", "Illinois__Lamborghini Aventador", "Illinois__Pastrami on Rye", "Indiana__Shawarma Wrap", "Iowa__Shawarma Wrap", "Jack Russell Terrier__Sloppy Joe", "Jack Russell Terrier__Utah", "Jackfruit__Mangosteen", "Janelle Monáe__Siberian Husky", "Jeep Wrangler__Louisiana", "Jeep Wrangler__Mango", "Jeep Wrangler__Montreal Smoked Meat", "Jeep Wrangler__Shiba Inu", "Kansas__Peach", "Katsu Sando__New Mexico", "Katsu Sando__Raspberry", "Kelly Clarkson__Volvo XC90", "Kesha__Montreal Smoked Meat", "Kia Soul__Mangosteen", "Kumquat__Tesla Model 3", "Kylie Minogue__Nectarine", "Labradoodle__Montreal Smoked Meat", "Lady Gaga__Siberian Husky", "Lamborghini Aventador__Madonna", "Lamborghini Aventador__Mangosteen", "Lamborghini Aventador__Missouri", "Lamborghini Aventador__Newfoundland", "Lamborghini Aventador__Nicki Minaj", "Lamborghini Aventador__Ohio", "Lamborghini Aventador__Strawberry", "Lemon__Madonna", "Lemon__Utah", "Lime__Nissan Leaf", "Lime__Olivia Rodrigo", "Lime__Samoyed", "Lime__Sloppy Joe", "Lime__Vizsla", "Lime__Wyoming", "Lychee__Montreal Smoked Meat", "Lychee__Siberian Husky", "Madonna__Massachusetts", "Madonna__Miniature Pinscher", "Madonna__Miniature Schnauzer", "Madonna__Nebraska", "Madonna__Nectarine", "Madonna__Nevada", "Madonna__New Hampshire", "Madonna__Porsche 911", "Madonna__Quince", "Madonna__Tomato", "Mango__Roast Beef Sandwich", "Mango__Rolls-Royce Phantom", "Mango__Ultimate Sandwich", "Maryland__Pastrami on Rye", "Maryland__Vaporeon", "Mastiff__Raspberry", "Megan Thee Stallion__Siberian Husky", "Mercedes-Benz S-Class__Sloppy Joe", "Mini Cooper__Shawarma Wrap", "Miniature Schnauzer__New Hampshire", "Miniature Schnauzer__Sloppy Joe", "Mississippi__Raspberry", "Montana__Tesla Model 3", "Montreal Smoked Meat__Tesla Model Y", "Montreal Smoked Meat__Toyota Prius", "Montreal Smoked Meat__Volkswagen Beetle", "Montreal Smoked Meat__Wisconsin", "Nectarine__Nissan Leaf", "Nectarine__North Carolina", "Nectarine__Papillon", "Nectarine__Ram 1500", "Nectarine__Shawarma Wrap", "Nectarine__Tina Turner", "Nectarine__Wyoming", "New Jersey__Peach", "New Mexico__Pomelo", "New Mexico__Saint Bernard", "New Mexico__Siberian Husky", "New Mexico__Tesla Model S", "Nissan Altima__Shar-Pei", "Nissan Leaf__Oregon", "Nissan Leaf__Scottish Terrier", "Nissan Leaf__Tangerine", "Oklahoma__Pastrami on Rye", "Oklahoma__Siberian Husky", "Olivia Rodrigo__Siberian Husky", "Pastrami on Rye__Pear", "Pastrami on Rye__Pomeranian", "Pastrami on Rye__Raspberry", "Pastrami on Rye__Shiba Inu", "Pastrami on Rye__Siberian Husky", "Pastrami on Rye__Texas", "Pastrami on Rye__Volkswagen Beetle", "Pastrami on Rye__Washington", "Peanut Butter & Jelly__Siberian Husky", "Pomegranate__Siberian Husky", "Pomegranate__Sloppy Joe", "Pomegranate__Volvo XC90", "Porsche 911__Sloppy Joe", "Pulled Pork__Raspberry", "Pulled Pork__Siberian Husky", "Quince__Sloppy Joe", "Ram 1500__Siberian Husky", "Raspberry__Rhode Island", "Raspberry__Rolls-Royce Phantom", "Raspberry__Shiba Inu", "Rhode Island__Tesla Model 3", "Shar-Pei__Toyota RAV4", "Shawarma Wrap__Siberian Husky", "Shawarma Wrap__Toyota Tacoma", "Shawarma Wrap__Whitney Houston", "Shiba Inu__Utah", "Sia__Tesla Model 3", "Siberian Husky__Starfruit", "Siberian Husky__Tina Turner", "Siberian Husky__Tuna Melt", "Siberian Husky__Vermont", "Sloppy Joe__Tesla Model Y", "Sloppy Joe__Toyota Prius", "Sloppy Joe__Volkswagen Golf", "Sloppy Joe__Whippet", "Tangerine__Utah", "Tangerine__Virginia", "Tangerine__Wyoming", "Utah__Watermelon", "Volvo XC90__Watermelon"];   // the matchups with ingested fake counts (B171). Arcade draws only from these.
@@ -2456,11 +2455,11 @@ function arcadeGuess(side){
   arcade.score += points;
   arcade.log.push({ a, b, guess, winner, ca, cb, result, points });
   const reason = {
-    right: "+1 point. You called the crowd's pick.",
-    wrong: "The crowd picked the other fighter.",
-    tie: "Dead heat. No point.",
-    thin: `Too few picks to call. This matchup needs ${ARCADE_MIN_PICKS}.`,
-    time: "Pick within 10 seconds or no points!"
+    right: "+1 point. You read the room!",
+    wrong: "The crowd went the other way. So close!",
+    tie: "Dead heat! No point.",
+    thin: `Not enough picks to call it yet. Needs ${ARCADE_MIN_PICKS}.`,
+    time: "Too slow! Pick within 10 seconds or no points."
   }[result];
   showArcadeResult(result === "right", reason, ca, cb, result === "time" ? "TIME'S UP" : null);
 }
@@ -2535,7 +2534,7 @@ function arcadeVerdict(score, total){
   if(score >= 8) return "Crowd whisperer";
   if(score >= 6) return "Sharp eye";
   if(score >= 4) return "Mixed signals";
-  return "Going against the crowd";
+  return "Rebel of the crowd";
 }
 function arcadeEnd(){
   clearInterval(arcade.timer);
