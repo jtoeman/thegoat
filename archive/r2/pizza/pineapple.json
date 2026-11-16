@@ -1,0 +1,14 @@
+{
+  "category": "pizza",
+  "slug": "pineapple",
+  "build": "B21",
+  "override": false,
+  "license": "Own asset (assumed)",
+  "author": null,
+  "title": "Pineapple",
+  "source_page": "https://unsplash.com/photos/a-man-holding-a-pineapple-on-top-of-a-pizza-xdggJmLhtHg",
+  "source_url": "https://images.unsplash.com/photo-1671572579366-89bec1184f5e?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
+  "content_type": "image/jpeg",
+  "bytes": 149043,
+  "ingested_at": "2026-11-16T00:13:33.637Z"
+}
