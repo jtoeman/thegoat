@@ -930,7 +930,7 @@ body.arcade .stage.picked .arcade-tagline{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B184";
+const BUILD = "B185";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1548,7 +1548,7 @@ async function connectPilot(){
   await refreshCounts();
   if(uid){
     await refreshTokens();
-    if(CUR === MASHUP) earnTokens(["first_mashup", "first_mashup"]);
+    if(CUR === MASHUP) earnTokens(markAction(), ["first_mashup", "first_mashup"]);
   }
   clearInterval(pollTimer);
   pollTimer = setInterval(() => { refreshVotes(); refreshCounts(); }, POLL_MS);
@@ -1581,7 +1581,13 @@ async function refreshTokens(){
   renderTokens();
 }
 /* Each grant is [reason, ref]. The total shows as one "+X Tokens" message. */
-async function earnTokens(...grants){
+/* Every token notice belongs to the action that earned it. markAction() starts one. The "+X Tokens" notice shows
+   only if the server answers within TOKEN_TOAST_MS of that action and no other action has started since. Otherwise
+   it is dropped: the balance still updates, but nothing shows late. */
+let actionSeq = 0;
+const TOKEN_TOAST_MS = 1500;
+function markAction(){ return { seq: ++actionSeq, at: Date.now() }; }
+async function earnTokens(act, ...grants){
   if(!db || !uid) return 0;
   let total = 0;
   for(const [reason, ref] of grants){
@@ -1594,7 +1600,8 @@ async function earnTokens(...grants){
   if(total > 0){
     tokenBalance = (tokenBalance || 0) + total;
     renderTokens();
-    toast(`+${total} ${total === 1 ? "Token" : "Tokens"}`);
+    const timely = act && act.seq === actionSeq && Date.now() - act.at <= TOKEN_TOAST_MS;
+    if(timely) toast(`+${total} ${total === 1 ? "Token" : "Tokens"}`);
   }
   return total;
 }
@@ -2065,6 +2072,7 @@ $("ladderEnd").addEventListener("click", e => {
 /* ---------- actions ---------- */
 function castVote(side){
   if(mode === "arcade"){ arcadeGuess(side); return; }
+  const act = markAction();
   if(voted){ if(isResultOpen()) $("nextBtn").click(); return; }   // after a pick, a tap on either image means Next matchup
   voted = true;
   buzz(18);
@@ -2108,8 +2116,8 @@ function castVote(side){
   }
   lastPick = { key, previous, snapshotS, time: Date.now() };
   lastVoteCoach = { winner, loser, cat: CUR.name };
-  coachEvents.add("vote");
-  if(Object.keys(myPicks).length === 10) coachEvents.add("tenth");
+  addCoach("vote");
+  if(Object.keys(myPicks).length === 10) addCoach("tenth");
   coachReadyEvent();
   showOops();
   pendingVotes.set(key, winner);
@@ -2121,7 +2129,7 @@ function castVote(side){
       const grants = CUR === MASHUP
         ? [["mashup_vote", null]]
         : [["rank_play", crypto.randomUUID()]].concat(firstInCat ? [["first_category", CUR.id]] : []);
-      earnTokens(...grants);
+      earnTokens(act, ...grants);
       if(mode === "challenge" && challengeOrigin) creditChallenge();
     }
     if(!ok){
@@ -2753,7 +2761,7 @@ function setCategory(cat){
   recomputeWins();
   if(cat === MASHUP){
     refreshMashup();
-    earnTokens(["first_mashup", "first_mashup"]);   // the server grants this once per player
+    earnTokens(markAction(), ["first_mashup", "first_mashup"]);   // the server grants this once per player
   }
   // A saved run with nothing in it (for example, saved before Mashups had items) starts fresh instead.
   S = loadLadder(cat);
@@ -2786,8 +2794,11 @@ function myGoatInfo(){
 // so a player who already passed a milestone never gets its tip on load.
 let coachReady = false;   // set once startup has opened the picker, so tips never beat it on load
 let coachEvents = new Set();
-function raiseCoach(ev){ coachEvents.add(ev); maybeCoach(); }
-function coachReadyEvent(){ if(readyCats().length === 2) coachEvents.add("ready"); }
+const coachAt = {};              // when each moment happened
+const COACH_WINDOW_MS = 2500;      // a tip not shown this soon after its moment is dropped, never shown later
+function addCoach(ev){ coachEvents.add(ev); coachAt[ev] = Date.now(); }
+function raiseCoach(ev){ addCoach(ev); maybeCoach(); }
+function coachReadyEvent(){ if(readyCats().length === 2) addCoach("ready"); }
 function coachSteps(){
   const goat = myGoatInfo();
   const share = (text) => () => openShare(text, catUrl());
@@ -2829,6 +2840,8 @@ function coachSteps(){
   ];
 }
 function maybeCoach(){
+  const now = Date.now();
+  for(const ev of [...coachEvents]) if(now - (coachAt[ev] || 0) >= COACH_WINDOW_MS) coachEvents.delete(ev);
   if(!coachReady || !readStore("goat_intro_seen")) return;   // the welcome card always comes first
   if(pendingCatWelcome || COACH_OPEN.some(id => !$(id).classList.contains("hidden"))) return;
   // While the category picker is up, only the pick tip can show; the rest wait until a match is on screen.
@@ -2957,7 +2970,7 @@ $("tiles").addEventListener("click", e => {
   closePicker();
   if(c === CUR && S && !S.queue.length){ startRunNow(); return; }
   pendingCatWelcome = true;
-  coachEvents.add("land");
+  addCoach("land");
   setCategory(c);
   showCatWelcome();
 });
@@ -3385,7 +3398,7 @@ $("statsBody").addEventListener("click", e => {
     if(!c || (c === MASHUP && !mashupUnlocked())) return;
     $("statsPanel").classList.add("hidden");
     pendingCatWelcome = true;
-    coachEvents.add("land");
+    addCoach("land");
     setCategory(c);
     closePicker();
     showCatWelcome();
@@ -3403,7 +3416,7 @@ function setCrownLabels(){
 
 /* New GOAT celebration: the full image, how many players have crowned it (you included), then on to the ranking. */
 function showGoatCrown(champ){
-  coachEvents.add("crown");
+  addCoach("crown");
   coachReadyEvent();
   const f = CUR.byName[champ];
   const b = globalBoards()[CUR.id];
@@ -3524,8 +3537,9 @@ async function crownGoat(){
   recomputeWins();
   writePicks();
   hideOops();
-  if(CUR === MASHUP) earnTokens(["mashup_goat", "mg:" + champ]);
-  else if(isTopFiveGoat(CUR, champ)) earnTokens(["top5_goat", "top5:" + CUR.id + ":" + champ]);
+  const act = markAction();
+  if(CUR === MASHUP) earnTokens(act, ["mashup_goat", "mg:" + champ]);
+  else if(isTopFiveGoat(CUR, champ)) earnTokens(act, ["top5_goat", "top5:" + CUR.id + ":" + champ]);
   if(!S.ranked.includes(champ)) S.ranked.push(champ);
   S.queue = [];
   saveLadder();
