@@ -868,8 +868,7 @@ body.arcade .stage.picked .arcade-tagline{display:none}
         <div class="intro-card">
           <div class="intro-band" aria-hidden="true"></div>
           <p class="display intro-title">Welcome to<br>The GOAT!</p>
-          <p class="dlg-body">Two items face off. Pick the one you like better. The winner stays on and faces the next, until one is left standing. That is your GOAT <img class='crown-ico' src='assets/goat-crown.png' alt=''>.</p>
-          <p class="dlg-body">Tap a fighter, or press and drag it toward the rival. Swipe or press Space for the next round.</p>
+          <p class="dlg-body">Two choices. Tap the one you like better. Your pick faces a new challenger.<br>Keep choosing until one remains: The GOAT! <img class='crown-ico' src='assets/goat-crown.png' alt=''></p>
           <p class="display intro-q">What <span>YOUR</span> Goat?</p>
           <p class="dlg-body intro-cta">Click to find out!</p>
           <div class="actions"><button class="btn primary intro-go" id="introGo"><span>Let's go</span></button></div>
@@ -940,7 +939,7 @@ body.arcade .stage.picked .arcade-tagline{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B198";
+const BUILD = "B199";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
