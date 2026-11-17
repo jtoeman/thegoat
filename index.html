@@ -276,6 +276,10 @@ section#unlock,section#arcadeEnd{position:fixed; inset:0; z-index:60; padding:12
 .intro-card.cw-card{width:min(360px, calc(100vw - 24px)); max-width:360px; height:auto; max-height:min(calc(100dvh - 24px), 820px); padding:0; display:flex; flex-direction:column; text-align:center; min-height:0}
 .cw-inner{position:relative; z-index:1; flex:1 1 auto; min-height:0; overflow-y:auto; padding:14px 14px 8px; display:flex; flex-direction:column; gap:12px}
 .cw-hero{position:relative; flex:none; height:min(240px, 34dvh); border-radius:12px; overflow:hidden; border:2px solid rgba(255,255,255,.12); background:#0b1024}
+/* B193: on the welcome cards the picture runs edge to edge from the top, so the skewed colour band behind it never shows during the card's rotate-in. */
+.intro-card.cw-card .cw-inner{padding:0 0 8px}
+.intro-card.cw-card .cw-inner > :not(.cw-hero){margin-left:14px; margin-right:14px}
+.intro-card.cw-card .cw-hero{height:min(300px, 42dvh); border-radius:0; border:0; border-bottom:2px solid rgba(255,255,255,.12)}
 .cw-hero-img{position:absolute; inset:0}
 .cw-hero-img img{width:100%; height:100%; object-fit:cover; display:block}
 .cw-hero-img .glyph{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:110px}
@@ -931,7 +935,7 @@ body.arcade .stage.picked .arcade-tagline{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B192";
+const BUILD = "B193";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
