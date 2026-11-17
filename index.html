@@ -327,7 +327,7 @@ body.home .brand{display:block; flex:1; min-width:0; font-style:italic; font-siz
 body.home .stats-btn{margin-top:0}
 body.home #resetBtn{display:none}
 #statsPanel{z-index:8}
-.overlay.dialog{z-index:9; background:rgba(7,10,20,.97); justify-content:center; gap:14px}
+.overlay.dialog{z-index:9; background:rgba(7,10,20,.97); justify-content:center; justify-content:safe center; gap:14px}
 #profilePanel{background:#070a14; justify-content:flex-start}
 .dlg-body{margin:0; font-size:15px; line-height:1.4; color:#cfd6ea}
 .btn.danger{background:#e8303a; color:#fff}
@@ -374,7 +374,7 @@ body.home #resetBtn{display:none}
 .goat-crown .actions{position:relative; width:100%; max-width:340px; margin-top:4px}
 @media (prefers-reduced-motion: reduce){ .goat-crown *{animation:none !important} }
 /* Crown confirmation: the GOAT's full-brightness image with a pulsing crown over it */
-.dlg-art{position:relative; width:100%; height:min(56vh,420px); flex:0 0 auto; margin:4px 0 0; align-self:stretch}
+.dlg-art{position:relative; width:100%; height:min(30vh,240px); flex:0 0 auto; margin:4px 0 0; align-self:stretch}
 .dlg-frame{position:absolute; inset:0; border:4px solid #000; border-radius:14px; overflow:hidden; background:radial-gradient(circle at 50% 35%, var(--c,#444) 0%, #111 92%); box-shadow:6px 6px 0 #000, 0 0 0 4px var(--yellow), 0 0 40px rgba(255,210,63,.35); display:flex; align-items:center; justify-content:center}
 .dlg-frame img{width:100%; height:100%; object-fit:cover; display:block; filter:none; opacity:1}
 .dlg-frame .fruit-svg{width:78%; height:78%}
@@ -931,7 +931,7 @@ body.arcade .stage.picked .arcade-tagline{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B188";
+const BUILD = "B189";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -2378,7 +2378,12 @@ function buildArcadeRounds(){
     if(!cat.byName[a] || !cat.byName[b]) continue;
     (same[catId] = same[catId] || []).push([a, b, catId, t]);
   }
-  const ok = ([a, b, catId]) => !isCrowned(a, catId === "mashup" ? null : catId) && !isCrowned(b, catId === "mashup" ? null : catId);
+  // Hidden categories stay out of Arcade: a same-category pair must be a visible category, and a Mashups pair's fighters must come from a visible one.
+  const vis = new Set(visibleCats().map(c => c.id));
+  const fromVisible = name => CATEGORIES.some(c => vis.has(c.id) && c.byName[name]);
+  const ok = ([a, b, catId]) => catId === "mashup"
+    ? fromVisible(a) && fromVisible(b) && !isCrowned(a, null) && !isCrowned(b, null)
+    : vis.has(catId) && !isCrowned(a, catId) && !isCrowned(b, catId);
   const topSame = Object.values(same).flatMap(list => list.sort((x, y) => y[3] - x[3]).slice(0, ARCADE_TOP_PER_CATEGORY)).filter(ok);
   const topMashup = mashup.filter(ok).sort((x, y) => y[3] - x[3]).slice(0, 60);
   // Up to half the game comes from the same-category challenges, the rest from Mashups, and any gap is filled from either.
