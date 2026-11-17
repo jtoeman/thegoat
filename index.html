@@ -940,7 +940,7 @@ body.arcade .stage.picked .arcade-tagline{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B197";
+const BUILD = "B198";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1958,17 +1958,31 @@ function ladderStat(name){
   const g = b.crowns[name] ? b.crowns[name].size : 0;
   return `${w} ${w === 1 ? "win" : "wins"} · <img class='crown-ico' src='assets/goat-crown.png' alt=''> ${g} GOAT${g === 1 ? "" : "s"}`;
 }
+/* The whole ranking in one order: your crowned GOATs (crown order), then this run's ranking without them. */
+function myRankOrder(){
+  const crowned = crownOrder(CUR);
+  return [...crowned, ...S.ranked.filter(n => !crowned.includes(n))];
+}
 function renderRankList(){
   const n = S.ranked.length;
-  const from = rankEdit ? 0 : 1; // the #1 pick is shown in the right column header, so the list starts at #2
-  $("rankList").innerHTML = S.ranked.slice(from).map((f, j) => { const i = j + from; return `
+  const order = myRankOrder();
+  if(rankEdit){
+    // Edit moves only the run's own ranking; the numbers follow the whole ranking.
+    $("rankList").innerHTML = S.ranked.map((f, i) => `
     <div class="le-box rank-row">
-      <div class="le-rowtxt"><span class="le-nm">${i + 1}. ${f}</span><small>${ladderStat(f)}</small></div>
-      ${rankEdit ? `<span class="rank-btns">
+      <div class="le-rowtxt"><span class="le-nm">${order.indexOf(f) + 1}. ${f}</span><small>${ladderStat(f)}</small></div>
+      <span class="rank-btns">
         <button class="mini" data-act="up" data-i="${i}" ${i === 0 ? "disabled" : ""} aria-label="Move ${f} up">&#9650;</button>
         <button class="mini" data-act="down" data-i="${i}" ${i === n - 1 ? "disabled" : ""} aria-label="Move ${f} down">&#9660;</button>
-      </span>` : ""}
-    </div>`; }).join("");
+      </span>
+    </div>`).join("");
+    return;
+  }
+  // The #1 is shown in the right column header, so the list starts at #2.
+  $("rankList").innerHTML = order.slice(1).map((f, j) => `
+    <div class="le-box rank-row">
+      <div class="le-rowtxt"><span class="le-nm">${j + 2}. ${f}</span><small>${ladderStat(f)}</small></div>
+    </div>`).join("");
 }
 /* justFinished: the run was completed in this visit (shows the full ranking). Otherwise a revisit shows only the overall GOAT. */
 let justFinished = false;
@@ -2044,11 +2058,7 @@ function showLadderEnd(){
   const topItem = myTop && CUR.byName[myTop];
   const stat = n => `${winsOf(n)} ${winsOf(n) === 1 ? "win" : "wins"}`;
   const goatLine = n => `<img class='crown-ico' src='assets/goat-crown.png' alt=''> ${goatsOf(n)} GOAT${goatsOf(n) === 1 ? "" : "s"}`;
-  const crowned = crownOrder(CUR);
-  // Your ranking: your crowned GOATs come first, in crown order, then this run's ranking (without them). So a run's
-  // #1 is #(crowns + 1) when you already have a GOAT, and only one entry can be #1.
-  const runOnly = S.ranked.filter(n => !crowned.includes(n));
-  const rank = crowned.includes(newName) ? crowned.indexOf(newName) + 1 : crowned.length + runOnly.indexOf(newName) + 1;
+  const rank = myRankOrder().indexOf(newName) + 1;
   const bg = bgItem ? `<div class="le-bg" aria-hidden="true">${portraitHTML(bgItem)}</div>` : "";
   const split = !!(newItem && topItem && myTop !== newName);
   // Full-height layer behind everything: new entry image on the left, divider down the middle.
@@ -2309,7 +2319,7 @@ function startNewLadder(){
   const prev = S && S.champ;
   mode = "ladder";
   challengePair = null;
-  S = newRunState(S.ranked || [], prev);
+  S = newRunState([], prev);   // a new ladder starts with an empty ranking; your crowned GOATs stay out of play
   saveLadder();
   renderMatch();
 }
