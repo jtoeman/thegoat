@@ -110,6 +110,7 @@ body{font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif; font
   max-width:100%; overflow-wrap:normal; word-break:normal; min-height:30px;
 }
 .plate span{display:block; transform:skewX(12deg)}
+.plate .plate-cat{display:block; margin-top:3px; font-style:normal; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; opacity:.9}
 .fighter.won .plate{background:var(--yellow)}
 .pick{
   pointer-events:auto;
@@ -930,7 +931,7 @@ body.arcade .stage.picked .arcade-tagline{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B185";
+const BUILD = "B186";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1374,7 +1375,7 @@ function renderStartRow(){
   row.classList.toggle("hidden", !fresh);
   if(!fresh) return;
   const pref = startPref(CUR);
-  const opts = ['<option value="">Most picked first</option>']
+  const opts = ['<option value="">Random</option>']
     .concat(playableItems(CUR).map(f => f.n).sort((a, b) => a.localeCompare(b))
       .map(n => `<option value="${n.replace(/"/g, "&quot;")}"${n === pref ? " selected" : ""}>${n}</option>`));
   $("startSel").innerHTML = opts.join("");
@@ -1393,16 +1394,25 @@ function playableItems(cat){
   const out = crownedIn(cat);
   return cat.items.filter(i => !out.has(i.n));
 }
+/* The category's current GOAT: the item the most players have crowned (null until someone has). */
+function crowdGoatOf(cat){
+  const board = globalBoards()[cat.id] || { crowns: {} };
+  const goatsOf = n => board.crowns[n] ? board.crowns[n].size : 0;
+  return cat.items.map(i => i.n).filter(n => goatsOf(n) > 0).sort((a, b) => goatsOf(b) - goatsOf(a))[0] || null;
+}
 function newRunState(ranked, prevChamp, shuffle){
-  // most-picked first (times picked as a winner), seeded shuffle on ties. The first item opens the run.
-  const tie = tieRanks(CUR);
-  // A fresh start (shuffle) uses a new random order every time instead of the fixed one.
-  const order = (shuffle || CUR.mashup)
-    ? shuffleList(CUR.items.map(f => f.n))
-    : CUR.items.map(f => f.n).sort((a, b) => (winCounts[b] || 0) - (winCounts[a] || 0) || tie[a] - tie[b]);
+  // Every run starts in a random order. The first item opens the run.
+  // A fresh run never opens on the category's GOAT while there are other options: the GOAT goes to the back of the queue.
+  const order = shuffleList(CUR.items.map(f => f.n));
   const out = crownedIn(CUR);
-  const left = order.filter(n => !ranked.includes(n) && !out.has(n) && n !== prevChamp);
-  if(prevChamp && CUR.byName[prevChamp] && !ranked.includes(prevChamp)){
+  let left = order.filter(n => !ranked.includes(n) && !out.has(n) && n !== prevChamp);
+  const opening = !ranked.length;
+  const goat = opening ? crowdGoatOf(CUR) : null;
+  if(goat && left.length >= 2){
+    if(prevChamp === goat) prevChamp = null;
+    left = left.filter(n => n !== goat).concat(left.includes(goat) ? [goat] : []);
+  }
+  if(prevChamp && CUR.byName[prevChamp] && !ranked.includes(prevChamp) && !(goat && prevChamp === goat)){
     return { champ: prevChamp, queue: left, round: 0, streak: 0, ranked };
   }
   return { champ: left.shift(), queue: left, round: 0, streak: 0, ranked };
@@ -1735,13 +1745,18 @@ function portraitHTML(f){
   }
   return fruitSVG(f);
 }
+/* The name plate. In Mashups and Arcade it also names the category the fighter comes from. */
+function plateHTML(name, showCat){
+  const c = showCat ? CATEGORIES.find(k => !k.mashup && k.byName[name]) : null;
+  return `<span>${name}</span>` + (c ? `<em class="plate-cat">${c.name}</em>` : "");
+}
 function setFighter(side, name){
   const f = CUR.byName[name];
   if(!f) throw new Error("name not in " + CUR.id + ": " + name);
   const portrait = $("p" + side);
   portrait.style.setProperty("--c", f.c);
   portrait.innerHTML = portraitHTML(f);
-  $("n" + side).innerHTML = `<span>${f.n}</span>`;
+  $("n" + side).innerHTML = plateHTML(f.n, CUR.mashup);
 }
 function updateStatus(){
   if(mode === "arcade") return;
@@ -2388,7 +2403,7 @@ function setArcadeFighter(side, name){
   const portrait = $("p" + side);
   portrait.style.setProperty("--c", f.c);
   portrait.innerHTML = portraitHTML(f);
-  $("n" + side).innerHTML = `<span>${f.n}</span>`;
+  $("n" + side).innerHTML = plateHTML(f.n, true);
 }
 /* /goat/arcade opens Arcade directly. Waits for the crowd counts (or a failed read) so the first round can score. */
 function openArcadeWhenReady(tries = 0){
