@@ -935,7 +935,7 @@ body.arcade .stage.picked .arcade-tagline{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B193";
+const BUILD = "B194";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -2037,7 +2037,10 @@ function showLadderEnd(){
   const stat = n => `${winsOf(n)} ${winsOf(n) === 1 ? "win" : "wins"}`;
   const goatLine = n => `<img class='crown-ico' src='assets/goat-crown.png' alt=''> ${goatsOf(n)} GOAT${goatsOf(n) === 1 ? "" : "s"}`;
   const crowned = crownOrder(CUR);
-  const rank = crowned.includes(newName) ? crowned.indexOf(newName) + 1 : S.ranked.indexOf(newName) + 1;
+  // Your ranking: your crowned GOATs come first, in crown order, then this run's ranking (without them). So a run's
+  // #1 is #(crowns + 1) when you already have a GOAT, and only one entry can be #1.
+  const runOnly = S.ranked.filter(n => !crowned.includes(n));
+  const rank = crowned.includes(newName) ? crowned.indexOf(newName) + 1 : crowned.length + runOnly.indexOf(newName) + 1;
   const bg = bgItem ? `<div class="le-bg" aria-hidden="true">${portraitHTML(bgItem)}</div>` : "";
   const split = !!(newItem && topItem && myTop !== newName);
   // Full-height layer behind everything: new entry image on the left, divider down the middle.
