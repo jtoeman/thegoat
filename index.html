@@ -931,7 +931,7 @@ body.arcade .stage.picked .arcade-tagline{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B187";
+const BUILD = "B188";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1321,7 +1321,11 @@ function showMashupCard(title, copy){
 function celebrateUnlock(){ showMashupCard("Mashups unlocked", "Fighters from every category you've finished now face off against each other."); }
 $("unlockPlay").addEventListener("click", () => { $("unlock").classList.add("hidden"); setCategory(MASHUP); closePicker(); });
 $("unlockLater").addEventListener("click", () => $("unlock").classList.add("hidden"));
-$("arcadeQuit").addEventListener("click", () => openPicker());
+$("arcadeQuit").addEventListener("click", async () => {
+  // A game in progress is not saved if quit, so ask first. A finished game has nothing to lose.
+  if(arcade && !arcade.done && !await confirmBox("Quit this game?", "Your score for this game will not be saved.", "Quit game")) return;
+  openPicker();
+});
 $("arcadeStart").addEventListener("click", () => {
   $("arcadeWelcome").classList.add("hidden");
   writeStore("goat_arcade_intro_seen", true);
@@ -2427,7 +2431,16 @@ async function startArcade(){
 }
 /* Overlays from the category view (its overview, welcome card, checkpoint, GOAT screen) must not sit over Arcade. */
 function hideMatchOverlays(){
-  ["ladderEnd", "catWelcome", "checkpoint", "goatCrown", "statsPanel", "resetPanel"].forEach(id => $(id).classList.add("hidden"));
+  ["ladderEnd", "catWelcome", "checkpoint", "goatCrown", "statsPanel", "resetPanel", "shareSheet", "winFlash"].forEach(id => $(id).classList.add("hidden"));
+  resetShareState();
+}
+/* Share state from an earlier match (open sheet, its link, a pending winner flash) must not carry into Arcade. */
+function resetShareState(){
+  clearTimeout(flashTimer);
+  shareOpen = false; flashHover = false;
+  $("shareMsg").textContent = "";
+  $("shareUrl").value = "";
+  $("shareText").textContent = "";
 }
 function beginArcade(pairs){
   hideMatchOverlays();
@@ -2601,6 +2614,7 @@ function arcadeEnd(){
   const rankable = arcade.pairs.map(([a, b, cat], i) => ({ a, b, cat, i })).filter(p => p.cat !== "mashup");
   $("arcadeRankList").innerHTML = rankable.map(p => `<button class="btn" data-i="${p.i}"><span>Rank ${p.a} vs ${p.b}</span></button>`).join("");
   $("arcadeRankList").classList.toggle("hidden", !rankable.length);
+  hideMatchOverlays();
   $("arcadeEnd").classList.remove("hidden");
 }
 /* From the game over screen: opens Rank mode in that matchup's category, on that one matchup. The pick is a real rank pick. */
