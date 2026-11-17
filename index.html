@@ -931,7 +931,7 @@ body.arcade .stage.picked .arcade-tagline{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B191";
+const BUILD = "B192";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -1416,7 +1416,8 @@ function newRunState(ranked, prevChamp, shuffle){
     if(prevChamp === goat) prevChamp = null;
     left = left.filter(n => n !== goat).concat(left.includes(goat) ? [goat] : []);
   }
-  if(prevChamp && CUR.byName[prevChamp] && !ranked.includes(prevChamp) && !(goat && prevChamp === goat)){
+  // A crowned GOAT is out of play, so it never becomes the opening champion (a Start with or a kept champion can name one).
+  if(prevChamp && CUR.byName[prevChamp] && !ranked.includes(prevChamp) && !out.has(prevChamp) && !(goat && prevChamp === goat)){
     return { champ: prevChamp, queue: left, round: 0, streak: 0, ranked };
   }
   return { champ: left.shift(), queue: left, round: 0, streak: 0, ranked };
@@ -1809,7 +1810,8 @@ function renderMatch(){
   }
   try{
     if(mode === "ladder" && S){
-      const bad = !CUR.byName[S.champ] || S.queue.some(n => !CUR.byName[n]);
+      const out = crownedIn(CUR);
+      const bad = !CUR.byName[S.champ] || S.queue.some(n => !CUR.byName[n]) || out.has(S.champ) || S.queue.some(n => out.has(n));
       if(bad){ S = newRunState((S.ranked || []).filter(n => CUR.byName[n])); saveLadder(); }
     }
     renderMatchInner();
