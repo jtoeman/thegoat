@@ -362,6 +362,11 @@ body.home #resetBtn{display:none}
 .gc-kicker{position:relative; margin:0; font-family:Impact,"Arial Narrow",sans-serif; text-transform:uppercase; letter-spacing:.08em; font-size:18px; color:#111; background:var(--yellow); border:3px solid #000; box-shadow:3px 3px 0 #000; padding:4px 14px; transform:skewX(-10deg); animation:gcPop .5s .1s cubic-bezier(.2,1.4,.4,1) both}
 .gc-frame{position:relative; width:min(72vw,280px,36vh); aspect-ratio:1/1; border:4px solid #000; border-radius:14px; overflow:hidden; background:radial-gradient(circle at 50% 35%, var(--c,#444) 0%, #111 92%); box-shadow:6px 6px 0 #000, 0 0 0 4px var(--yellow), 0 0 40px rgba(255,210,63,.35); animation:gcPop .6s .2s cubic-bezier(.2,1.4,.4,1) both; display:flex; align-items:center; justify-content:center}
 .gc-frame img{width:100%; height:100%; object-fit:contain; display:block}
+/* B196: the crown sits over the top of the picture, so the screen is shorter and the buttons stay on screen. */
+.gc-hero{position:relative; width:min(72vw,280px,40vh); max-width:100%}
+.gc-hero .gc-frame{width:100%}
+.gc-hero .gc-crown{position:absolute; left:0; right:0; top:5%; margin:0; pointer-events:none; z-index:2}
+.gc-hero .gc-crown .crown-ico{height:min(15vh,130px); margin:0 auto}
 .gc-frame .fruit-svg{width:78%; height:78%; max-width:none; max-height:none}
 .gc-frame .glyph{font-size:110px}
 .gc-frame .letter{font-size:130px; padding-bottom:0}
@@ -935,7 +940,7 @@ body.arcade .stage.picked .arcade-tagline{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B194";
+const BUILD = "B196";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -2827,9 +2832,18 @@ function setCategory(cat){
 }
 $("introGo").addEventListener("click", () => {
   writeStore("goat_intro_seen", true);
+  writeStore("goat_welcome_pending", true);   // set only when a new player finishes the welcome card
   $("intro").classList.add("hidden");
+  grantWelcome(markAction());
   raiseCoach("intro");
 });
+/* New players get 10 tokens to try Arcade. The server grants 'welcome' once per account (its ledger ref), so a
+   retry is safe. Until the player is signed in (uid), the grant waits and runs on a later load. */
+function grantWelcome(act){
+  if(!readStore("goat_welcome_pending") || !db || !uid) return;
+  writeStore("goat_welcome_pending", false);
+  earnTokens(act || null, ["welcome", "welcome"]);
+}
 
 /* ---------- contextual coach ----------
    One short tip at a time, shown when the player reaches that moment. Each tip is seen once (goat_coach). */
@@ -3494,9 +3508,11 @@ function showGoatCrown(champ){
   $("goatCrown").innerHTML = `
     <div class="gc-rays" aria-hidden="true"></div>
     <div class="gc-confetti" aria-hidden="true">${confetti}</div>
-    <div class="gc-crown" aria-hidden="true"><img class='crown-ico' src='assets/goat-crown.png' alt=''></div>
     <p class="gc-kicker">New GOAT</p>
-    <div class="gc-frame" style="--c:${f.c || "#333"}">${portraitHTML(f)}</div>
+    <div class="gc-hero">
+      <div class="gc-frame" style="--c:${f.c || "#333"}">${portraitHTML(f)}</div>
+      <div class="gc-crown" aria-hidden="true"><img class='crown-ico' src='assets/goat-crown.png' alt=''></div>
+    </div>
     <p class="ko gc-name">${champ}</p>
     <div class="gc-badge"><span class="gc-num">${n}</span><span>${n === 1 ? "GOAT crown" : "GOAT crowns"}</span></div>
     <p class="gc-line">${line}</p>
@@ -3915,6 +3931,7 @@ function init(){
   coachReady = true;
   maybeCoach();
   connectPilot();   // game works without it; stats appear when Supabase connects
+  grantWelcome(null);   // a grant that waited for sign-in (only set for a new player's welcome card)
 }
 loadWords().then(init, init);   // the word sheet loads first (5 second limit), then the game starts
 </script>
