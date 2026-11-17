@@ -931,7 +931,7 @@ body.arcade .stage.picked .arcade-tagline{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B186";
+const BUILD = "B187";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -2409,6 +2409,7 @@ function setArcadeFighter(side, name){
 function openArcadeWhenReady(tries = 0){
   if(!statsReady && !statsError && tries < 30){ setTimeout(() => openArcadeWhenReady(tries + 1), 200); return; }
   closePicker();
+  hideMatchOverlays();
   showArcadeWelcome();
 }
 function arcadeIntroSeen(){ return !!readStore("goat_arcade_intro_seen"); }
@@ -2424,7 +2425,12 @@ async function startArcade(){
   if(!await spendForArcade()) return;
   beginArcade(pairs);
 }
+/* Overlays from the category view (its overview, welcome card, checkpoint, GOAT screen) must not sit over Arcade. */
+function hideMatchOverlays(){
+  ["ladderEnd", "catWelcome", "checkpoint", "goatCrown", "statsPanel", "resetPanel"].forEach(id => $(id).classList.add("hidden"));
+}
 function beginArcade(pairs){
+  hideMatchOverlays();
   if(!/\/u\//.test(location.pathname) && !/\/arcade\/?$/.test(location.pathname)){
     try{ history.replaceState(null, "", location.pathname.replace(/\/+$/, "") + "/arcade"); }catch(e){}
   }
@@ -2972,6 +2978,7 @@ $("tiles").addEventListener("click", e => {
   }
   if(b.dataset.id === "arcade"){
     closePicker();
+    hideMatchOverlays();
     showArcadeWelcome();
     return;
   }
