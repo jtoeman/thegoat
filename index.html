@@ -940,7 +940,7 @@ body.arcade .stage.picked .arcade-tagline{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B196";
+const BUILD = "B197";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -2016,8 +2016,11 @@ function startFreshHere(){
   saveLadder();
   renderMatch();
 }
+/* Set by See my ranking: the ranking is shown to read, with Done (not Find #N), so it does not start more ranking play. */
+let rankingView = false;
 function showLadderEnd(){
   ladderView = "full";
+  const readOnly = rankingView;
   if(S.champ && !S.ranked.includes(S.champ)){ S.ranked.push(S.champ); saveLadder(); }
   const n = S.ranked.length;
   const done = n >= CUR.items.length;
@@ -2071,12 +2074,14 @@ function showLadderEnd(){
     <div class="le-grid${split ? "" : " single"}">${body}</div>
     <div class="actions">
       <button class="btn" id="rankEdit"><span>Edit</span></button>
-      <button class="btn primary" id="nextRank"><span>${done ? "Start fresh" : "Find #" + (n + 1)}</span></button>
+      <button class="btn primary" id="nextRank"><span>${readOnly ? "Done" : done ? "Start fresh" : "Find #" + (n + 1)}</span></button>
     </div>`;
   renderRankList();
   $("ladderEnd").classList.remove("hidden");
   fitNames();
   $("nextRank").onclick = () => {
+    if(readOnly){ rankingView = false; $("ladderEnd").classList.add("hidden"); openPicker(); return; }
+    rankingView = false;
     if(done){ openPicker(); return; }
     mode = "ladder";
     challengePair = null;
@@ -2880,7 +2885,7 @@ function coachSteps(){
       title: "Head to head",
       body: ["Every match is two items. Tap the one you like better, or drag it toward the rival. The winner stays on and faces the next, until one is left standing."],
       actions: [{ label: "Got it" }] },
-    { id: "firstVote", event: "vote", when: () => true,
+    { id: "firstVote", event: "vote", when: () => Object.keys(myPicks).length <= 1,   // only the very first pick ever
       title: "Your first pick is in",
       body: lastVoteCoach
         ? [`You picked ${lastVoteCoach.winner} over ${lastVoteCoach.loser} in ${lastVoteCoach.cat}.`, "Share it and see whether your friends pick the same winner."]
@@ -3523,7 +3528,7 @@ function showGoatCrown(champ){
     openShare(`I just declared ${champ} is The GOAT of ${CUR.name}. HBU?`, catUrl());
   };
   // See my ranking: the player's own ranking page (Find #N / Start fresh), not the category's Overall GOAT page.
-  $("gcContinue").onclick = () => { $("goatCrown").classList.add("hidden"); justFinished = true; renderMatch(); };
+  $("gcContinue").onclick = () => { $("goatCrown").classList.add("hidden"); justFinished = true; rankingView = true; renderMatch(); };
 }
 
 
