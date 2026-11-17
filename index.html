@@ -931,7 +931,7 @@ body.arcade .stage.picked .arcade-tagline{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B190";
+const BUILD = "B191";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -3293,6 +3293,11 @@ function yoursHTML(){
     const allWins = Object.entries(allTime).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
     const favourite = allWins.length ? `${allWins[0][0]} (${allWins[0][1]})` : "none yet";
     const myTopNow = categoryTop(CUR) || (S && S.ranked && S.ranked[0]) || "not ranked yet";
+    // GOAT facts: yours in this category (in crown order), your total across categories, and the crowd's GOAT here.
+    const myGoats = crownOrder(CUR);
+    const myGoatsAll = CATEGORIES.reduce((n, c) => n + crownOrder(c).length, 0);
+    const crowdBoard = globalBoards()[CUR.id] || { crowns: {} };
+    const crowdGoat = Object.entries(crowdBoard.crowns).map(([n, set]) => [n, set.size]).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0];
     const source = statsTab === "all" ? allTime : session;
     const entries = Object.entries(source).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
     const max = entries.length ? entries[0][1] : 1;
@@ -3310,6 +3315,9 @@ function yoursHTML(){
           <div><span>Went against the crowd</span><b>${counted ? counted - agree : "not yet"}</b></div>
           <div><span>Your most-picked</span><b>${favourite}</b></div>
           <div><span>Your current #1</span><b>${myTopNow}</b></div>
+          <div><span>Your GOATs here</span><b>${myGoats.length ? myGoats.map((n, i) => `${i + 1}. ${n}`).join(", ") : "none yet"}</b></div>
+          <div><span>Your GOATs, all categories</span><b>${myGoatsAll}</b></div>
+          <div><span>Crowd GOAT here</span><b>${crowdGoat ? `${crowdGoat[0]} (${crowdGoat[1]} ${crowdGoat[1] === 1 ? "crown" : "crowns"})` : "none yet"}</b></div>
         </div>
       </div>
       <div class="seg" role="tablist">
