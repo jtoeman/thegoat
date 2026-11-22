@@ -939,7 +939,7 @@ body.arcade .stage.picked .arcade-tagline{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B199";
+const BUILD = "B200";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -960,6 +960,18 @@ function track(name, props){ try{ if(window.amplitude) window.amplitude.track(na
   };
   document.head.appendChild(s);
 })();
+/* Game Completed: once per newly ranked item. showLadderEnd also runs when the ranking is only viewed or redrawn
+   (See my ranking, votes arriving, a reload), so remember the last count reported for each category.
+   GOAT has no daily puzzle and no win or lose, so there is no puzzle_date or result. */
+function reportLadderCompleted(n, done){
+  if(n < 1) return;
+  const key = "goat-completed-" + CUR.id;
+  try{
+    if(localStorage.getItem(key) === String(n)) return;
+    localStorage.setItem(key, String(n));
+  }catch(e){}
+  track("Game Completed", { category: CUR.id, items_ranked: n, items_total: CUR.items.length, fully_sorted: done });
+}
 document.getElementById("build").textContent = BUILD;
 /* Pilot storage: Supabase. Fill these in if the project ever changes. The publishable key is safe in the page. */
 const SB_URL = "https://ugzsvauamjjmmgyccujc.supabase.co";
@@ -2037,7 +2049,7 @@ function showLadderEnd(){
   if(S.champ && !S.ranked.includes(S.champ)){ S.ranked.push(S.champ); saveLadder(); }
   const n = S.ranked.length;
   const done = n >= CUR.items.length;
-  track("Game Completed", { category: CUR.id, items_ranked: n, items_total: CUR.items.length, fully_sorted: done });
+  reportLadderCompleted(n, done);
   const heading = done ? "Fully sorted" : (n === 0 ? "" : n === 1 ? `Your GOAT of ${CUR.name.toLowerCase()} <img class='crown-ico' src='assets/goat-crown.png' alt=''>` : `Rank #${n}`);
   rankEdit = false;
   // Header: the category's overall GOAT. Background: the same, full-bleed and dimmed.
