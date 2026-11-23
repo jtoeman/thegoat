@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Pick the better of two, round after round. Crown the GOAT of each category.">
 <meta property="og:site_name" content="The GOAT">
 <meta property="og:type" content="website">
 <meta property="og:title" content="The GOAT">
@@ -805,7 +806,7 @@ body.arcade .stage.picked .arcade-tagline{display:none}
         <p class="about-p">Jeremy has spent about 30 years building products, websites, apps, and games. He studied at Carnegie Mellon and lives in the New York area with his family. He would like you to know he has strong opinions about what the GOAT is. He’s been nurturing this idea for over a decade!</p>
         <p class="ko-sub">Images</p>
         <p class="about-p">We've used best efforts to confirm that every image is licensed for this use: openly licensed, public domain, or used with permission. Where we couldn't confirm a license, we'll replace the image. If you hold rights to an image here and want it changed or removed, tell us and we will.</p>
-        <p class="about-p" id="kofiWrap">if you like playing the Goat, support it here: <a id="kofiLink" href="http://ko-fi.com/jtoeman" target="_blank" rel="noopener">ko-fi.com/jtoeman</a></p>
+        <p class="about-p" id="kofiWrap">if you like playing the Goat, support it here: <a id="kofiLink" href="https://ko-fi.com/jeremyt37" target="_blank" rel="noopener">ko-fi.com/jeremyt37</a></p>
         <div class="actions"><button class="btn" id="suggestCat"><span>Suggest a category</span></button><button class="btn" id="aboutClose"><span>Close</span></button></div>
       </section>
 
@@ -939,7 +940,7 @@ body.arcade .stage.picked .arcade-tagline{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const BUILD = "B200";
+const BUILD = "B201";
 /* Analytics: the Froobaloo Amplitude project, shared with the hub. Every event carries game "goat". */
 const AMP_KEY = "6ae928be8b28b6eb768a79b0fdf1fb3f";
 function track(name, props){ try{ if(window.amplitude) window.amplitude.track(name, Object.assign({ game: "goat", build: BUILD }, props || {})); }catch(e){} }
@@ -3554,7 +3555,7 @@ function showGoatCrown(champ){
 
 
 /* About. KOFI_URL is set to the Ko-fi page; the button shows only once it is set. */
-const KOFI_URL = "http://ko-fi.com/jtoeman";
+const KOFI_URL = "https://ko-fi.com/jeremyt37";
 $("aboutBtn").addEventListener("click", () => {
   if(KOFI_URL){ $("kofiLink").href = KOFI_URL; $("kofiWrap").classList.add("show"); } else { $("kofiWrap").classList.remove("show"); }
   $("aboutPanel").classList.remove("hidden");
